@@ -28,6 +28,9 @@ from pokemon_save_core import (
     validate_pokemon,
     rom_constraints_loaded,
     set_rom_path,
+    growth_rate_for_species,
+    experience_for_level,
+    level_for_experience,
 )
 from rom_data import OUTPUT as ROM_TEXT_OUTPUT, load_rom_text, save_charmap, save_rom_text, set_default_rom_path
 
@@ -110,6 +113,13 @@ class Handler(BaseHTTPRequestHandler):
             species = int(query.get("species", ["0"])[0])
             level = int(query.get("level", ["1"])[0])
             self.send(*response(api_pokemon_constraints(species, level)))
+            return
+        if parsed.path == "/api/experience_level":
+            query = parse_qs(parsed.query)
+            species = int(query.get("species", ["0"])[0])
+            level = int(query.get("level", ["1"])[0])
+            experience = int(query.get("experience", ["0"])[0])
+            self.send(*response(api_experience_level(species, level, experience)))
             return
         if parsed.path == "/api/load":
             query = parse_qs(parsed.query)
@@ -246,7 +256,7 @@ def pokemon_payload(p, label: str):
         "ability_bit": p.ability_bit,
         "is_egg": p.is_egg,
         "checksum_ok": p.checksum_stored == p.checksum_calculated,
-        "legality": validate_pokemon(p, label, check_level=not p.box, move_level=100 if p.box else None),
+        "legality": validate_pokemon(p, label, check_level=not p.box, move_level=(p.level or 100) if p.box else None),
     }
 
 
@@ -438,6 +448,27 @@ def api_pokemon_constraints(species: int, level: int):
     }
 
 
+def api_experience_level(species: int, level: int, experience: int):
+    growth_rate = growth_rate_for_species(species)
+    if growth_rate is None:
+        return {
+            "ok": True,
+            "available": False,
+            "message": "未加载 ROM 经验曲线数据",
+            "species": species,
+            "level": level,
+            "experience": experience,
+        }
+    return {
+        "ok": True,
+        "available": True,
+        "species": species,
+        "growth_rate": growth_rate,
+        "level": level_for_experience(species, experience),
+        "experience": experience_for_level(growth_rate, level),
+    }
+
+
 def observed_from_save() -> dict[str, dict[int, list[str]]]:
     observed: dict[str, dict[int, list[str]]] = {"species": {}, "items": {}, "moves": {}, "abilities": {}, "natures": {}, "balls": {}}
     save = STATE.save
@@ -547,6 +578,7 @@ def api_update_pokemon(body):
         "nature_id": int(body["nature_id"]),
         "gender": str(body["gender"]),
         "is_shiny": bool(int(body["is_shiny"])),
+        "caught_ball": int(body["caught_ball"]),
         "moves": parse_list(body["moves"], 4),
         "pps": parse_list(body["pps"], 4),
         "evs": parse_list(body["evs"], 6),
@@ -562,7 +594,6 @@ def api_update_pokemon(body):
         return {"ok": True, "message": f"已写入盒子 {box}-{box_slot}：{format_species(pokemon.species)}"}
     slot = int(body["slot"])
     updates["level"] = int(body["level"])
-    updates["current_hp"] = int(body["current_hp"])
     pokemon = save.update_party_pokemon(slot, updates)
     return {"ok": True, "message": f"已写入队伍 {slot}：{format_species(pokemon.species)}"}
 
@@ -867,7 +898,7 @@ function renderBoxes() {
     const i = state.boxes.indexOf(p);
     const held = p.held_item ? `${p.held_item} ${romLink("items", p.held_item, p.held_item_name)}` : "空";
     const moves = p.moves.map((id, idx) => romLink("moves", id, p.move_names[idx])).join(" / ");
-    html += `<tr onclick="selectBox(${i})"><td>${p.box}</td><td>${p.box_slot}</td><td>${p.species} ${romLink("species", p.species, p.species_name)}</td><td>PC</td><td>${p.nature_name}</td><td>${p.gender}</td><td>${p.ability_id} ${romLink("abilities", p.ability_id, p.ability_name)}</td><td>${p.caught_ball_name}</td><td>${p.is_shiny?"是":"否"}</td><td>${held}</td><td>${moves}</td><td>${p.checksum_ok?"OK":"错误"}</td><td>${legalityBadge(p)}</td></tr>`;
+    html += `<tr onclick="selectBox(${i})"><td>${p.box}</td><td>${p.box_slot}</td><td>${p.species} ${romLink("species", p.species, p.species_name)}</td><td>${p.level || "未知"}</td><td>${p.nature_name}</td><td>${p.gender}</td><td>${p.ability_id} ${romLink("abilities", p.ability_id, p.ability_name)}</td><td>${p.caught_ball_name}</td><td>${p.is_shiny?"是":"否"}</td><td>${held}</td><td>${moves}</td><td>${p.checksum_ok?"OK":"错误"}</td><td>${legalityBadge(p)}</td></tr>`;
   });
   document.getElementById("content").innerHTML = renderSubtabs(tabs, boxView, "setBoxView") + html + "</tbody></table>";
 }
@@ -886,23 +917,20 @@ async function selectParty(i) {
 }
 function renderPokemonForm(p, constraints, location) {
   const isBox = location === "box";
-  const constraintLevel = formConstraintLevel(p, location);
   document.getElementById("form").innerHTML = `
     <input type="hidden" id="location" value="${location}">
     ${isBox ? `<label>盒子<input id="box" value="${p.box}" readonly></label><label>格位<input id="box_slot" value="${p.box_slot}" readonly></label>` : field("slot","槽位",p.slot,true)}
     ${field("personality","PID",p.personality,true)}
-    ${field("species","种族 ID",p.species,false,"species-list", "refreshPokemonConstraintsFromForm()")}
+    ${field("species","种族 ID",p.species,false,"species-list", "syncLevelFromExperience().then(refreshPokemonConstraintsFromForm)")}
     ${field("held_item","携带道具 ID",p.held_item,false,"item-list")}
     ${natureField(p.nature_id)}
     ${genderField(p.gender, constraints)}
     ${abilityField(p.ability_bit, constraints)}
-    <label>当前特性<input value="${p.ability_id} ${escapeHtml(p.ability_name)}" readonly></label>
-    <label>捕获球<input value="${p.caught_ball} ${escapeHtml(p.caught_ball_name)}" readonly></label>
+    ${ballField(p.caught_ball)}
     ${shinyField(p.is_shiny)}
-    ${field("experience","经验值",p.experience)}
+    ${field("experience","经验值",p.experience,false,"", "syncLevelFromExperience()")}
     ${field("friendship","亲密度",p.friendship)}
-    ${isBox ? field("constraint_level","约束等级",constraintLevel,false,"", "refreshPokemonConstraintsFromForm()") : field("level","当前等级",p.level,false,"", "refreshPokemonConstraintsFromForm()")}
-    ${isBox ? "" : field("current_hp","当前 HP",p.current_hp)}
+    ${field("level","等级",p.level || 1,false,"", "syncExperienceFromLevel().then(refreshPokemonConstraintsFromForm)")}
     <div id="move-controls">${moveFields(p.moves, p.pps, constraints)}</div>
     ${field("evs","努力值 HP/攻/防/速/特攻/特防",p.evs.join(","))}
     ${field("ivs","个体值 HP/攻/防/速/特攻/特防",p.ivs.join(","))}
@@ -912,12 +940,12 @@ function renderPokemonForm(p, constraints, location) {
 async function selectBox(i) {
   const p = state.boxes[i];
   document.getElementById("detail").textContent = p.legality.join("\n");
-  pokemonFormConstraints = await loadPokemonConstraints(p.species, formConstraintLevel(p, "box"));
+  pokemonFormConstraints = await loadPokemonConstraints(p.species, p.level || 100);
   renderPokemonForm(p, pokemonFormConstraints, "box");
 }
 async function updatePokemon() {
   const location = val("location");
-  const ids = ["location","species","held_item","nature_id","gender","is_shiny","experience","friendship","evs","ivs","ability_bit","is_egg"];
+  const ids = ["location","species","held_item","nature_id","gender","is_shiny","caught_ball","experience","friendship","evs","ivs","ability_bit","is_egg"];
   const body = {};
   ids.forEach(id => body[id] = val(id));
   if (location === "box") {
@@ -925,9 +953,8 @@ async function updatePokemon() {
     body.box_slot = val("box_slot");
   } else {
     body.slot = val("slot");
-    body.level = val("level");
-    body.current_hp = val("current_hp");
   }
+  body.level = val("level");
   body.moves = [0,1,2,3].map(i => num(`move_${i}`));
   body.pps = [0,1,2,3].map(i => num(`pp_${i}`));
   const data = await request("/api/pokemon", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
@@ -945,6 +972,14 @@ function genderField(current, constraints=null) {
 function abilityField(current, constraints=null) {
   const values = constraints?.ability_options?.length ? constraints.ability_options : [{bit:0, id:"", name:"特性位 0"}, {bit:1, id:"", name:"特性位 1"}];
   return `<label>特性<select id="ability_bit">${values.map(a => `<option value="${a.bit}" ${Number(a.bit)===Number(current)?"selected":""}>${a.bit} ${a.id ? a.id + " " : ""}${escapeHtml(a.name)}</option>`).join("")}</select></label>`;
+}
+function ballField(current) {
+  const names = ["无","大师球","高级球","超级球","精灵球","狩猎球","捕网球","潜水球","巢穴球","重复球","计时球","豪华球","纪念球"];
+  const options = Array.from({length: 16}, (_, id) => {
+    const name = names[id] || `球 ${id}`;
+    return `<option value="${id}" ${Number(id)===Number(current)?"selected":""}>${id} ${escapeHtml(name)}</option>`;
+  }).join("");
+  return `<label>捕获球<select id="caught_ball">${options}</select></label>`;
 }
 function moveFields(moves, pps, constraints=null) {
   const options = buildMoveOptions(moves, constraints);
@@ -996,7 +1031,7 @@ async function loadPokemonConstraints(species, level) {
 }
 async function refreshPokemonConstraintsFromForm() {
   const species = num("species");
-  const level = document.getElementById("constraint_level") ? num("constraint_level") : num("level");
+  const level = num("level");
   pokemonFormConstraints = await loadPokemonConstraints(species, level);
   const moves = [0,1,2,3].map(i => num(`move_${i}`));
   const pps = [0,1,2,3].map(i => num(`pp_${i}`));
@@ -1008,9 +1043,30 @@ async function refreshPokemonConstraintsFromForm() {
   abilityWrapper.outerHTML = abilityField(currentAbility, pokemonFormConstraints);
   document.getElementById("move-controls").innerHTML = moveFields(moves, pps, pokemonFormConstraints);
 }
-function formConstraintLevel(p, location) {
-  if (location !== "box") return p.level || 1;
-  return 100;
+async function syncLevelFromExperience() {
+  const species = num("species");
+  const experience = num("experience");
+  const level = num("level");
+  const data = await loadExperienceLevel(species, level, experience);
+  if (data?.available) document.getElementById("level").value = data.level || 1;
+  await refreshPokemonConstraintsFromForm();
+}
+async function syncExperienceFromLevel() {
+  const species = num("species");
+  const level = num("level");
+  const experience = num("experience");
+  const data = await loadExperienceLevel(species, level, experience);
+  if (data?.available) document.getElementById("experience").value = data.experience || 0;
+}
+async function loadExperienceLevel(species, level, experience) {
+  try {
+    const data = await request(`/api/experience_level?species=${encodeURIComponent(species)}&level=${encodeURIComponent(level)}&experience=${encodeURIComponent(experience)}`);
+    if (data && data.available === false) setStatus(data.message || "未加载 ROM 经验曲线数据");
+    return data;
+  } catch (error) {
+    setStatus(error.message);
+    return null;
+  }
 }
 function shinyField(current) {
   return `<label>闪光<select id="is_shiny"><option value="0" ${current?"":"selected"}>否</option><option value="1" ${current?"selected":""}>是</option></select></label>`;

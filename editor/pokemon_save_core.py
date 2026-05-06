@@ -57,6 +57,7 @@ COINS_OFFSET = 0x0494
 ROM_PATH: Path | None = None
 BASE_STATS_OFFSET = 0x3203CC
 BASE_STATS_SIZE = 28
+BASE_STATS_GROWTH_RATE_OFFSET = 19
 ROM_SPECIES_COUNT = 412
 ROM_MOVE_COUNT = 472
 MOVE_DATA_OFFSET = 0x1900000
@@ -756,6 +757,7 @@ def parse_pokemon(raw: bytes, slot: int = 0) -> PokemonView:
     origin_word = _u16(misc, 2)
     iv_values = [(iv_word >> shift) & 0x1F for shift in (0, 5, 10, 15, 20, 25)]
     species = _u16(growth, 0)
+    experience = _u32(growth, 4)
     ability_bit = (iv_word >> 31) & 1
     if len(raw) >= 100:
         level = raw[0x54]
@@ -767,7 +769,8 @@ def parse_pokemon(raw: bytes, slot: int = 0) -> PokemonView:
         sp_attack = _u16(raw, 0x60)
         sp_defense = _u16(raw, 0x62)
     else:
-        level = current_hp = max_hp = attack = defense = speed = sp_attack = sp_defense = 0
+        level = level_for_experience(species, experience)
+        current_hp = max_hp = attack = defense = speed = sp_attack = sp_defense = 0
     return PokemonView(
         slot=slot,
         raw=raw,
@@ -775,7 +778,7 @@ def parse_pokemon(raw: bytes, slot: int = 0) -> PokemonView:
         ot_id=ot_id,
         species=species,
         held_item=_u16(growth, 2),
-        experience=_u32(growth, 4),
+        experience=experience,
         friendship=growth[9],
         moves=[_u16(attacks, i * 2) for i in range(4)],
         pps=[attacks[8 + i] for i in range(4)],
@@ -815,6 +818,10 @@ def edit_pokemon(raw: bytes, updates: dict[str, int | list[int]]) -> bytes:
         _w32(parts["G"], 4, _clamp_int(int(updates["experience"]), 0, 0xFFFFFFFF))
     if "friendship" in updates:
         parts["G"][9] = _clamp_int(int(updates["friendship"]), 0, 255)
+    if "caught_ball" in updates:
+        old = _u16(parts["M"], 2)
+        ball = _clamp_int(int(updates["caught_ball"]), 0, 15)
+        _w16(parts["M"], 2, (old & ~(0xF << 11)) | (ball << 11))
     if "moves" in updates:
         moves = list(updates["moves"])  # type: ignore[arg-type]
         for i in range(4):
@@ -946,6 +953,54 @@ def gender_options_for_species(species_id: int) -> list[str]:
     if ratio == 0:
         return ["雄"]
     return ["雄", "雌"]
+
+
+def growth_rate_for_species(species_id: int) -> int | None:
+    stats = BASE_STATS.get(species_id)
+    if not stats or len(stats) <= BASE_STATS_GROWTH_RATE_OFFSET:
+        return None
+    return stats[BASE_STATS_GROWTH_RATE_OFFSET]
+
+
+def experience_for_level(growth_rate: int, level: int) -> int:
+    level = _clamp_int(level, 1, 100)
+    cube = level * level * level
+    if growth_rate == 0:
+        return cube
+    if growth_rate == 1:
+        if level <= 50:
+            return cube * (100 - level) // 50
+        if level <= 68:
+            return cube * (150 - level) // 100
+        if level <= 98:
+            return cube * ((1911 - 10 * level) // 3) // 500
+        return cube * (160 - level) // 100
+    if growth_rate == 2:
+        if level <= 15:
+            return cube * (((level + 1) // 3) + 24) // 50
+        if level <= 36:
+            return cube * (level + 14) // 50
+        return cube * ((level // 2) + 32) // 50
+    if growth_rate == 3:
+        return max(0, (6 * cube) // 5 - 15 * level * level + 100 * level - 140)
+    if growth_rate == 4:
+        return 4 * cube // 5
+    if growth_rate == 5:
+        return 5 * cube // 4
+    return cube
+
+
+def level_for_experience(species_id: int, experience: int) -> int:
+    growth_rate = growth_rate_for_species(species_id)
+    if growth_rate is None:
+        return 0
+    experience = max(0, int(experience))
+    level = 1
+    for candidate in range(2, 101):
+        if experience_for_level(growth_rate, candidate) > experience:
+            break
+        level = candidate
+    return level
 
 
 @lru_cache(maxsize=ROM_SPECIES_COUNT + 1)
