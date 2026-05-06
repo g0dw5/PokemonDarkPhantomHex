@@ -599,7 +599,7 @@ HTML = r"""<!doctype html>
         <button id="tab-party" onclick="showTab('party')">队伍</button>
         <button id="tab-boxes" onclick="showTab('boxes')">盒子</button>
         <button id="tab-bag" onclick="showTab('bag')">背包</button>
-        <button id="tab-names" onclick="showTab('names')">名字典表</button>
+        <button id="tab-names" onclick="showTab('names')">字典表</button>
       </div>
       <div class="summary" id="summary">加载中</div>
       <div class="table-wrap" id="content"></div>
@@ -950,8 +950,10 @@ function renderNames() {
   if (!names) return;
   const stats = names.stats;
   const rows = filteredNameRows();
+  const staticRows = filteredStaticNameRows();
+  const dictionaryTabs = [["all", "全部"], ["species", "宝可梦"], ["abilities", "特性"], ["moves", "招式"], ["items", "道具"], ["natures", "性格"], ["balls", "球"]];
   document.getElementById("summary").innerHTML =
-    `<span>名字典表：存档出现 ${names.rows.filter(r => r.observed).length} 条 / 全部 ${names.rows.length} 条</span>
+    `<span>字典表：存档出现 ${names.rows.filter(r => r.observed).length} 条 / 全部 ${names.rows.length} 条</span>
      <span class="summary-controls"><button type="button" onclick="reloadNames()">刷新码表</button></span>`;
   let html = `
     <div class="metrics">
@@ -964,21 +966,13 @@ function renderNames() {
       <div class="metric"><b>${stats.bag_filled}/${stats.bag_slots}</b>背包占用</div>
       <div class="metric"><b>${stats.charmap.observed_keys}</b>存档引用字符码</div>
     </div>
+    ${renderSubtabs(dictionaryTabs, collectTable, "setCollectTable")}
     <div class="filters">
       <label>范围
         <select onchange="setCollectFilter(this.value)">
           <option value="observed" ${collectFilter==="observed"?"selected":""}>存档</option>
           <option value="unknown" ${collectFilter==="unknown"?"selected":""}>未知</option>
           <option value="all" ${collectFilter==="all"?"selected":""}>全部</option>
-        </select>
-      </label>
-      <label>类型
-        <select onchange="setCollectTable(this.value)">
-          <option value="all" ${collectTable==="all"?"selected":""}>全部</option>
-          <option value="species" ${collectTable==="species"?"selected":""}>宝可梦</option>
-          <option value="moves" ${collectTable==="moves"?"selected":""}>招式</option>
-          <option value="abilities" ${collectTable==="abilities"?"selected":""}>特性</option>
-          <option value="items" ${collectTable==="items"?"selected":""}>道具</option>
         </select>
       </label>
       <label>排序
@@ -989,7 +983,7 @@ function renderNames() {
         </select>
       </label>
       <input value="${escapeHtml(collectSearch)}" onchange="setCollectSearch(this.value)" placeholder="按 ID、解码、位置搜索">
-      <span class="badge">当前 ${rows.length} 条</span>
+      <span class="badge">当前 ${rows.length + staticRows.length} 条</span>
     </div>
     <table><thead><tr><th>类型</th><th>ID</th><th>存档位置</th><th>当前解码</th><th>字码</th><th>游戏显示文字</th><th>操作</th></tr></thead><tbody>`;
   rows.forEach(({r, idx, location}, viewIndex) => {
@@ -1001,15 +995,13 @@ function renderNames() {
     html += `<tr id="rom-${r.table}-${r.id}" class="${selectedClass}" onclick="selectNameIndex(${idx}, '${escapeJsString(displayLocation)}')"><td>${r.observed ? "存档" : "ROM"} ${escapeHtml(r.table_label)}</td><td>${r.id}</td><td>${escapeHtml(displayLocation)}</td><td>${escapeHtml(decoded)}${unknown}</td><td>${escapeHtml((r.tokens || []).join(" "))}</td><td><input id="${inputId}" value="" placeholder="按游戏里看到的文字填写" onclick="event.stopPropagation();"></td><td><button type="button" onclick="saveNameCollected('${r.table}', ${r.id}, '${inputId}'); event.stopPropagation();">写入码表</button></td></tr>`;
   });
   html += "</tbody></table>";
-  if (names.static_rows.length) {
+  if (staticRows.length) {
     html += `<table><thead><tr><th colspan="4">存档可枚举但不参与字码录入的值</th></tr><tr><th>类型</th><th>ID</th><th>名称</th><th>存档位置</th></tr></thead><tbody>`;
-    names.static_rows
-      .filter(r => r.observed || collectFilter !== "observed")
-      .forEach(r => html += `<tr><td>${escapeHtml(r.table_label)}</td><td>${r.id}</td><td>${escapeHtml(r.name)}</td><td>${escapeHtml((r.locations || []).join(" / "))}</td></tr>`);
+    staticRows.forEach(r => html += `<tr><td>${escapeHtml(r.table_label)}</td><td>${r.id}</td><td>${escapeHtml(r.name)}</td><td>${escapeHtml((r.locations || []).join(" / "))}</td></tr>`);
     html += "</tbody></table>";
   }
   document.getElementById("content").innerHTML = html;
-  document.getElementById("detail").textContent = "名字典表来自 data/rom_text.json。字码是 ROM 文本编码单元，可能是 1 字节或 2 字节，不等同于半角/全角字符；填写完整显示名后会更新 character_map，并刷新其他 tab。";
+  document.getElementById("detail").textContent = "字典表来自 data/rom_text.json。字码是 ROM 文本编码单元，可能是 1 字节或 2 字节，不等同于半角/全角字符；填写完整显示名后会更新 character_map，并刷新其他 tab。";
 }
 function filteredNameRows() {
   const q = collectSearch.trim().toLowerCase();
@@ -1033,6 +1025,15 @@ function filteredNameRows() {
   }
   return rows.map(row => ({...row, location: ""}));
 }
+function filteredStaticNameRows() {
+  if (!names?.static_rows || !["all", "natures", "balls"].includes(collectTable)) return [];
+  const q = collectSearch.trim().toLowerCase();
+  return names.static_rows
+    .filter(r => collectTable === "all" || r.table === collectTable)
+    .filter(r => collectFilter === "all" || (collectFilter === "observed" ? r.observed : false))
+    .filter(r => !q || String(r.id).includes(q) || String(r.name || "").toLowerCase().includes(q) || (r.locations || []).join(" / ").toLowerCase().includes(q))
+    .sort((a, b) => tableRank(a.table) - tableRank(b.table) || a.id - b.id);
+}
 function setCollectFilter(next) { collectFilter = next; renderNames(); }
 function setCollectTable(next) { collectTable = next; renderNames(); }
 function setCollectSearch(next) { collectSearch = next; renderNames(); }
@@ -1055,7 +1056,7 @@ function locationKey(location) {
   return [9, 9999, 9999];
 }
 function tableRank(table) {
-  return {species: 0, abilities: 1, moves: 2, items: 3}[table] ?? 9;
+  return {species: 0, abilities: 1, moves: 2, items: 3, natures: 4, balls: 5}[table] ?? 9;
 }
 async function reloadNames() {
   names = await request("/api/names");
