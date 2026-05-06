@@ -130,6 +130,60 @@ chmod +x run_editor.command
 
 这些 offset 目前定义在 `editor/rom_data.py`。
 
+已知文本异常：
+
+- `moves:128` 的原始 token 是 `71 07D5 05BB`。游戏内显示为前面带一个很窄空白的“壳夹”，不是“贝壳夹”。
+- 正常“贝”使用的是双字节 token `0171`，其中后半字节同样是 `71`；例如 `贝壳` 通常编码为 `0171 07D5`。
+- 因此不要把单字节 `71` 直接映射为“贝”。当前将 `71` 作为窄空白 `U+2009` 记录，保留 ROM 原始显示现象。
+
+描述文本调研记录：
+
+- 当前主流程只解析名称表，不解析招式/特性描述。
+- 招式描述表基本可定位：主指针表在 `0x1904A00`，旧表镜像在 `0x61C524`。按指针解析可覆盖 `move 1..471`，`move 472` 在当前 ROM 中是空指针。
+- 特性描述只部分定位：基础特性描述为连续文本，范围约 `0x31AF95..0x31B6D0`，可得到 `78` 条；另找到一段扩展特性描述，范围约 `0x1BA0000..0x1BA0396`，可得到 `30` 条。
+- 扩展特性 `78..120` 的描述尚未可靠定位，可能在其他区域，也可能没有完整接入描述表。
+- 基于当前 `data/rom_text.json` 的 `character_map_count = 1195` 估算：只加入招式描述会新增约 `406` 个码，投影到 `1601`；只加入已确认特性描述会新增约 `75` 个码，投影到 `1270`；两者合并去重后新增约 `430` 个码，投影到 `1625`。
+- 这部分应单独开分支尝试，先区分真实字符码和控制/格式 token，再决定是否纳入主 `character_map`。
+
+### ROM species 图像资源表
+
+当前 ROM 的 species 图像资源表基本沿用绿宝石结构，但图像槽扩展到 `0..439`，共 `440` 个槽。当前名称表只解析到 `412`，所以后续存在有图像资源但未纳入名称表的 species 槽。
+
+已定位资源表：
+
+- front sprite table：`0x30A18C`，每项 `8 bytes`，`440` 项。
+- back sprite table：`0x3028B8`，每项 `8 bytes`，`440` 项。
+- normal palette table：`0x303678`，每项 `8 bytes`，`440` 项。
+- shiny palette table：`0x304438`，每项 `8 bytes`，`440` 项。
+- icon pointer table：`0x57BCA8`，每项 `4 bytes`，`440` 项。
+- icon palette index table：`0x57C388`，每项 `1 byte`，`440` 项。
+- icon palette table：`0x57C540`，每项 `8 bytes`；当前 icon palette index 使用 `0, 1, 2` 三种。
+
+front/back/palette 表项格式：
+
+| 偏移 | 字段 | 说明 |
+| --- | --- | --- |
+| `+0` | `gfx_or_palette_ptr u32` | GBA 指针，减 `0x08000000` 得文件 offset |
+| `+4` | `size_or_tag u16` | front/back 通常为 `2048`；palette 项常与 species/tag 相关 |
+| `+6` | `tag u16` | front/back 通常等于 species id；palette 当前多为 `0` |
+
+资源格式判断：
+
+- front sprite、back sprite、normal palette、shiny palette 都是 GBA LZ77，目标数据以 `0x10` 开头。
+- front sprite 解压大小通常为 `0x1000`，back sprite 解压大小通常为 `0x0800`。
+- normal/shiny palette 解压大小为 `0x20`，即 16 色调色板。
+- icon pointer table 指向的图标数据不是 LZ77，疑似未压缩 4bpp tile 数据。
+
+例：`species 25` 皮卡丘：
+
+| 资源 | 文件 offset | 解压大小/说明 |
+| --- | --- | --- |
+| front | `0x106D7C0` | LZ77 out `0x1000` |
+| back | `0x1078A70` | LZ77 out `0x0800` |
+| normal palette | `0x0C40524` | LZ77 out `0x20` |
+| shiny palette | `0x0C40824` | LZ77 out `0x20` |
+| icon | `0x0C4084C` | 未压缩图标数据 |
+
 ### ROM 种族基础数据表
 
 species 的基础数据在 ROM base stats 表中。当前工具主要使用其中的性别比例和特性字段，但同一条 28 bytes 记录还包含基础能力、属性、经验类型等信息。
