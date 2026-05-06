@@ -135,6 +135,10 @@ def tokenize_name(raw: bytes, charmap: dict[str, str] | None = None) -> list[byt
                 tokens.append(pair)
                 i += 2
                 continue
+            if byte < 0x20 and raw[i + 1] < 0x80:
+                tokens.append(pair)
+                i += 2
+                continue
         if byte in single_byte_codes:
             tokens.append(bytes([byte]))
             i += 1
