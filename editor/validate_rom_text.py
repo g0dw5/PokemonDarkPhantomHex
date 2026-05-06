@@ -1,16 +1,20 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
-from rom_data import DEFAULT_ROM, ROOT, extract_rom_text
+from rom_data import ROOT, extract_rom_text
 
 
 CASES_PATH = ROOT / "data" / "rom_text_validation_cases.json"
 
 
 def main() -> int:
-    data = extract_rom_text(DEFAULT_ROM)
+    if len(sys.argv) < 2:
+        print("用法：python3 editor/validate_rom_text.py /path/to/game.gba")
+        return 2
+    data = extract_rom_text(Path(sys.argv[1]).expanduser())
     expected_names = json.loads(CASES_PATH.read_text(encoding="utf-8"))
     failed = []
     total = 0

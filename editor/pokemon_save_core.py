@@ -3,7 +3,6 @@ from __future__ import annotations
 import shutil
 import struct
 import json
-import os
 from dataclasses import dataclass
 from datetime import datetime
 from functools import lru_cache
@@ -55,7 +54,7 @@ PLAY_TIME_SECONDS_OFFSET = 0x0011
 PLAY_TIME_FRAMES_OFFSET = 0x0012
 MONEY_OFFSET = 0x0490
 COINS_OFFSET = 0x0494
-ROM_PATH = Path(os.environ["POKEMON_ROM_PATH"]).expanduser() if os.environ.get("POKEMON_ROM_PATH") else None
+ROM_PATH: Path | None = None
 BASE_STATS_OFFSET = 0x3203CC
 BASE_STATS_SIZE = 28
 ROM_SPECIES_COUNT = 412
@@ -342,6 +341,15 @@ def _load_base_stats() -> dict[int, bytes]:
 
 
 BASE_STATS = _load_base_stats()
+
+
+def set_rom_path(path: Path | str | None) -> None:
+    global ROM_PATH, BASE_STATS
+    ROM_PATH = Path(path).expanduser() if path else None
+    _read_rom.cache_clear()
+    constraints_for_species.cache_clear()
+    _previous_species_by_target.cache_clear()
+    BASE_STATS = _load_base_stats()
 
 
 @dataclass(frozen=True)
@@ -959,6 +967,10 @@ def constraints_for_species(species_id: int) -> SpeciesConstraints | None:
     )
 
 
+def rom_constraints_loaded() -> bool:
+    return bool(_read_rom())
+
+
 def move_legality_for_species(species_id: int, level: int, move_id: int) -> MoveLegality:
     if move_id == 0:
         return MoveLegality(move_id=move_id, sources=["空"], future_levels=[])
@@ -1209,9 +1221,22 @@ def validate_pokemon(pokemon: PokemonView, label: str = "宝可梦", check_level
         issues.append(f"{label} 当前 HP 大于最大 HP：{pokemon.current_hp}/{pokemon.max_hp}")
     if any(pp > 64 for pp in pokemon.pps):
         issues.append(f"{label} PP 看起来过高：{pokemon.pps}")
+    nonzero_moves = [move_id for move_id in pokemon.moves if move_id]
+    duplicate_moves = sorted({move_id for move_id in nonzero_moves if nonzero_moves.count(move_id) > 1})
+    if duplicate_moves:
+        issues.append(f"{label} 招式重复：{', '.join(format_move(move_id) for move_id in duplicate_moves)}")
+    for slot, move_id in enumerate(pokemon.moves, start=1):
+        pp = pokemon.pps[slot - 1] if slot - 1 < len(pokemon.pps) else 0
+        if move_id == 0:
+            if pp:
+                issues.append(f"{label} 招式槽 {slot} 为空但 PP 为 {pp}")
+            continue
+        if not (1 <= move_id <= ROM_MOVE_COUNT):
+            issues.append(f"{label} 招式槽 {slot} 编号异常：{move_id}")
     constraints = constraints_for_species(pokemon.species)
     if constraints is None:
-        issues.append(f"{label} 无法读取种族 {pokemon.species} 的 ROM 约束数据")
+        if rom_constraints_loaded():
+            issues.append(f"{label} 无法读取种族 {pokemon.species} 的 ROM 约束数据")
     else:
         valid_ability_bits = {bit for bit, _ in constraints.ability_options}
         if pokemon.ability_bit not in valid_ability_bits:
@@ -1225,18 +1250,10 @@ def validate_pokemon(pokemon: PokemonView, label: str = "宝可梦", check_level
             )
         if pokemon.gender not in constraints.gender_options:
             issues.append(f"{label} 性别异常：{pokemon.gender}，当前种族可用性别为 {'、'.join(constraints.gender_options)}")
-        nonzero_moves = [move_id for move_id in pokemon.moves if move_id]
-        duplicate_moves = sorted({move_id for move_id in nonzero_moves if nonzero_moves.count(move_id) > 1})
-        if duplicate_moves:
-            issues.append(f"{label} 招式重复：{', '.join(format_move(move_id) for move_id in duplicate_moves)}")
         for slot, move_id in enumerate(pokemon.moves, start=1):
-            pp = pokemon.pps[slot - 1] if slot - 1 < len(pokemon.pps) else 0
             if move_id == 0:
-                if pp:
-                    issues.append(f"{label} 招式槽 {slot} 为空但 PP 为 {pp}")
                 continue
             if not (1 <= move_id <= ROM_MOVE_COUNT):
-                issues.append(f"{label} 招式槽 {slot} 编号异常：{move_id}")
                 continue
             legality = move_legality_for_species(pokemon.species, move_level if move_level is not None else pokemon.level, move_id)
             if not legality.is_known_legal:

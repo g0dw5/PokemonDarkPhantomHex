@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import socket
 import subprocess
 import sys
@@ -27,17 +26,20 @@ from pokemon_save_core import (
     format_species,
     reload_rom_names,
     validate_pokemon,
+    rom_constraints_loaded,
+    set_rom_path,
 )
-from rom_data import OUTPUT as ROM_TEXT_OUTPUT, load_rom_text, save_charmap, save_rom_text
+from rom_data import OUTPUT as ROM_TEXT_OUTPUT, load_rom_text, save_charmap, save_rom_text, set_default_rom_path
 
 
-DEFAULT_SAVE = Path(os.environ["POKEMON_SAVE_PATH"]).expanduser() if os.environ.get("POKEMON_SAVE_PATH") else None
+DEFAULT_SAVE = None
 HOST = "127.0.0.1"
 PORT = 8765
 
 
 class State:
     save_path: Path | None = DEFAULT_SAVE
+    rom_path: Path | None = None
     save: EmeraldSave | None = None
     error = "请选择存档文件"
 
@@ -54,14 +56,33 @@ def load_save(path: Path | None = None) -> None:
         STATE.save_path = path
     if STATE.save_path is None:
         STATE.save = None
+        STATE.rom_path = None
+        configure_rom(None)
         STATE.error = "请选择存档文件"
         return
     try:
         STATE.save = EmeraldSave(STATE.save_path)
+        configure_rom(find_matching_rom(STATE.save_path))
         STATE.error = ""
     except Exception as exc:
         STATE.save = None
+        STATE.rom_path = None
+        configure_rom(None)
         STATE.error = str(exc)
+
+
+def find_matching_rom(save_path: Path) -> Path | None:
+    for suffix in (".gba", ".GBA"):
+        candidate = save_path.with_suffix(suffix)
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def configure_rom(path: Path | None) -> None:
+    STATE.rom_path = path
+    set_rom_path(path)
+    set_default_rom_path(path)
 
 
 def response(payload, status=200):
@@ -138,7 +159,7 @@ class Handler(BaseHTTPRequestHandler):
 def api_state():
     save = STATE.save
     if not save:
-        return {"ok": False, "path": str(STATE.save_path) if STATE.save_path else "", "error": STATE.error, "bag": [], "party": [], "validation": []}
+        return {"ok": False, "path": str(STATE.save_path) if STATE.save_path else "", "rom_path": str(STATE.rom_path) if STATE.rom_path else "", "error": STATE.error, "bag": [], "party": [], "validation": []}
     bag = [{"pocket": e.pocket, "slot": e.slot, "item_id": e.item_id, "name": format_item(e.item_id) if e.item_id else "空", "quantity": e.quantity} for e in save.read_bag()]
     party = []
     for p in save.party():
@@ -158,6 +179,7 @@ def api_state():
     return {
         "ok": True,
         "path": str(save.path),
+        "rom_path": str(STATE.rom_path) if STATE.rom_path else "",
         "active": active,
         "security_key": f"0x{save.security_key():08X}",
         "trainer": save.trainer_summary(),
@@ -316,7 +338,17 @@ def api_names():
 def api_pokemon_constraints(species: int, level: int):
     constraints = constraints_for_species(species)
     if constraints is None:
-        return {"ok": False, "error": f"无法读取种族 {species} 的 ROM 约束数据"}
+        return {
+            "ok": True,
+            "available": False,
+            "message": "未加载 ROM 约束数据" if not rom_constraints_loaded() else f"无法读取种族 {species} 的 ROM 约束数据",
+            "species": species,
+            "level": level,
+            "gender_options": [],
+            "ability_options": [],
+            "moves": [],
+            "future_moves": [],
+        }
     move_sources: dict[int, set[str]] = {}
     future_levels: dict[int, list[int]] = {}
     future_sources: dict[int, set[str]] = {}
@@ -393,6 +425,7 @@ def api_pokemon_constraints(species: int, level: int):
     ]
     return {
         "ok": True,
+        "available": True,
         "species": species,
         "level": level,
         "gender_options": constraints.gender_options,
@@ -953,7 +986,9 @@ function syncMovePp(index) {
 }
 async function loadPokemonConstraints(species, level) {
   try {
-    return await request(`/api/pokemon_constraints?species=${encodeURIComponent(species)}&level=${encodeURIComponent(level)}`);
+    const data = await request(`/api/pokemon_constraints?species=${encodeURIComponent(species)}&level=${encodeURIComponent(level)}`);
+    if (data && data.available === false) setStatus(data.message || "未加载 ROM 约束数据");
+    return data;
   } catch (error) {
     setStatus(error.message);
     return null;

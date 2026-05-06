@@ -2,17 +2,7 @@
 
 macOS 自带 Python 3 即可运行，不依赖第三方库。页面启动后点击“打开/加载”选择 `.sav` 存档文件。
 
-ROM 路径不写死在工程里。需要重新抽取 ROM 字典表或使用 ROM 约束数据时，先设置环境变量：
-
-```bash
-export POKEMON_ROM_PATH="/path/to/game.gba"
-```
-
-如果希望启动时自动加载某个存档，可以设置：
-
-```bash
-export POKEMON_SAVE_PATH="/path/to/save.sav"
-```
+ROM 路径不写死在工程里。加载 `xxx.sav` 时，工具会自动搜索同目录下的同名 `xxx.gba`，用于特性、性别、招式和 PP 等 ROM 约束数据；如果找不到同名 ROM，仍可查看和编辑存档，但会跳过依赖 ROM 的合法性检查。
 
 ## 运行
 
