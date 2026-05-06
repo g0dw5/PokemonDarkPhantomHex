@@ -552,6 +552,7 @@ HTML = r"""<!doctype html>
     .panel { background: white; border: 1px solid #c9c9c9; min-height: 0; }
     .tabs { display: flex; gap: 4px; padding: 6px; background: #eee; border-bottom: 1px solid #ccc; flex-wrap: wrap; }
     .tabs button.active { background: #111; color: white; }
+    .dictionary-tabs input { margin-left: auto; width: min(260px, 100%); }
     .summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px; border-bottom: 1px solid #ddd; font-weight: 600; }
     .summary-controls { display: flex; align-items: center; gap: 6px; font-weight: 400; font-size: 13px; }
     .summary-controls select { padding: 4px 6px; }
@@ -622,10 +623,8 @@ let selected = null;
 let bagSort = "slot";
 let bagPocket = "all";
 let boxView = "all";
-let collectFilter = "observed";
 let collectTable = "all";
 let collectSearch = "";
-let collectSort = "location";
 let pokemonFormConstraints = null;
 
 async function request(url, options) {
@@ -953,11 +952,12 @@ function shinyField(current) {
 function renderNames() {
   if (!names) return;
   const stats = names.stats;
+  const dictionaryTabs = [["all", "全部"], ["species", "宝可梦"], ["abilities", "特性"], ["moves", "招式"], ["items", "道具"]];
+  if (!dictionaryTabs.some(([id]) => id === collectTable)) collectTable = "all";
   const rows = filteredNameRows();
-  const staticRows = filteredStaticNameRows();
-  const dictionaryTabs = [["all", "全部"], ["species", "宝可梦"], ["abilities", "特性"], ["moves", "招式"], ["items", "道具"], ["natures", "性格"], ["balls", "球"]];
+  const dictionaryTabButtons = dictionaryTabs.map(([id, label]) => `<button class="${collectTable===id?"active":""}" onclick="setCollectTable('${escapeJsString(id)}')">${escapeHtml(label)}</button>`).join("");
   document.getElementById("summary").innerHTML =
-    `<span>字典表：存档出现 ${names.rows.filter(r => r.observed).length} 条 / 全部 ${names.rows.length} 条</span>
+    `<span>字典表：全部 ${names.rows.length} 条</span>
      <span class="summary-controls"><button type="button" onclick="reloadNames()">刷新码表</button></span>`;
   let html = `
     <div class="metrics">
@@ -970,38 +970,20 @@ function renderNames() {
       <div class="metric"><b>${stats.bag_filled}/${stats.bag_slots}</b>背包占用</div>
       <div class="metric"><b>${stats.charmap.observed_keys}</b>存档引用字符码</div>
     </div>
-    ${renderSubtabs(dictionaryTabs, collectTable, "setCollectTable")}
-    <div class="filters">
-      <label>范围
-        <select onchange="setCollectFilter(this.value)">
-          <option value="observed" ${collectFilter==="observed"?"selected":""}>存档</option>
-          <option value="all" ${collectFilter==="all"?"selected":""}>全部</option>
-        </select>
-      </label>
-      <label>排序
-        <select onchange="setCollectSort(this.value)">
-          <option value="location" ${collectSort==="location"?"selected":""}>位置</option>
-          <option value="rom" ${collectSort==="rom"?"selected":""}>ID</option>
-        </select>
-      </label>
-      <input value="${escapeHtml(collectSearch)}" onchange="setCollectSearch(this.value)" placeholder="按 ID、解码、位置搜索">
-      <span class="badge">当前 ${rows.length + staticRows.length} 条</span>
+    <div class="tabs subtabs dictionary-tabs">
+      ${dictionaryTabButtons}
+      <input value="${escapeHtml(collectSearch)}" onchange="setCollectSearch(this.value)" placeholder="按 ID、字码、当前值搜索">
+      <span class="badge">当前 ${rows.length} 条</span>
     </div>
-    <table><thead><tr><th>类型</th><th>ID</th><th>存档位置</th><th>当前解码</th><th>字码</th><th>游戏显示文字</th><th>操作</th></tr></thead><tbody>`;
-  rows.forEach(({r, idx, location}, viewIndex) => {
-    const displayLocation = location || (r.locations && r.locations.length ? r.locations.slice(0, 4).join(" / ") + (r.locations.length > 4 ? ` 等 ${r.locations.length} 处` : "") : "");
+    <table><thead><tr><th>ID</th><th>字码</th><th>当前值</th><th>修改值</th><th>操作</th></tr></thead><tbody>`;
+  rows.forEach(({r, idx}, viewIndex) => {
     const decoded = r.decoded || r.name || "";
     const unknown = r.unknown_count ? ` <span class="bad">${r.unknown_count}</span>` : "";
     const inputId = `name-${viewIndex}`;
     const selectedClass = selected && selected.table === r.table && selected.id === r.id ? "selected" : "";
-    html += `<tr id="rom-${r.table}-${r.id}" class="${selectedClass}" onclick="selectNameIndex(${idx}, '${escapeJsString(displayLocation)}')"><td>${r.observed ? "存档" : "ROM"} ${escapeHtml(r.table_label)}</td><td>${r.id}</td><td>${escapeHtml(displayLocation)}</td><td>${escapeHtml(decoded)}${unknown}</td><td>${escapeHtml((r.tokens || []).join(" "))}</td><td><input id="${inputId}" value="" placeholder="按游戏里看到的文字填写" onclick="event.stopPropagation();"></td><td><button type="button" onclick="saveNameCollected('${r.table}', ${r.id}, '${inputId}'); event.stopPropagation();">写入码表</button></td></tr>`;
+    html += `<tr id="rom-${r.table}-${r.id}" class="${selectedClass}" onclick="selectNameIndex(${idx})"><td>${r.id}</td><td>${escapeHtml((r.tokens || []).join(" "))}</td><td>${escapeHtml(decoded)}${unknown}</td><td><input id="${inputId}" value="" placeholder="按游戏里看到的文字填写" onclick="event.stopPropagation();"></td><td><button type="button" onclick="saveNameCollected('${r.table}', ${r.id}, '${inputId}'); event.stopPropagation();">写入码表</button></td></tr>`;
   });
   html += "</tbody></table>";
-  if (staticRows.length) {
-    html += `<table><thead><tr><th colspan="4">存档可枚举但不参与字码录入的值</th></tr><tr><th>类型</th><th>ID</th><th>名称</th><th>存档位置</th></tr></thead><tbody>`;
-    staticRows.forEach(r => html += `<tr><td>${escapeHtml(r.table_label)}</td><td>${r.id}</td><td>${escapeHtml(r.name)}</td><td>${escapeHtml((r.locations || []).join(" / "))}</td></tr>`);
-    html += "</tbody></table>";
-  }
   document.getElementById("content").innerHTML = html;
   document.getElementById("detail").textContent = "字典表来自 data/rom_text.json。字码是 ROM 文本编码单元，可能是 1 字节或 2 字节，不等同于半角/全角字符；填写完整显示名后会更新 character_map，并刷新其他 tab。";
 }
@@ -1010,42 +992,11 @@ function filteredNameRows() {
   const rows = names.rows
     .map((r, idx) => ({r, idx}))
     .filter(({r}) => collectTable === "all" || r.table === collectTable)
-    .filter(({r}) => collectFilter === "all" || r.observed)
-    .filter(({r}) => !q || String(r.id).includes(q) || String(r.decoded || r.name || "").toLowerCase().includes(q) || (r.locations || []).join(" / ").toLowerCase().includes(q));
-  if (collectSort === "location") {
-    return rows
-      .flatMap(({r, idx}) => {
-        const locations = r.locations && r.locations.length ? r.locations : [""];
-        return locations.map(location => ({r, idx, location}));
-      })
-      .sort(compareLocationRows);
-  }
-  return rows
-    .map(row => ({...row, location: ""}))
-    .sort(compareRomRows);
+    .filter(({r}) => !q || String(r.id).includes(q) || String(r.decoded || r.name || "").toLowerCase().includes(q) || (r.tokens || []).join(" ").toLowerCase().includes(q));
+  return rows.map(row => ({...row, location: ""}));
 }
-function filteredStaticNameRows() {
-  if (!names?.static_rows || !["all", "natures", "balls"].includes(collectTable)) return [];
-  const q = collectSearch.trim().toLowerCase();
-  return names.static_rows
-    .filter(r => collectTable === "all" || r.table === collectTable)
-    .filter(r => collectFilter === "all" || r.observed)
-    .filter(r => !q || String(r.id).includes(q) || String(r.name || "").toLowerCase().includes(q) || (r.locations || []).join(" / ").toLowerCase().includes(q))
-    .sort((a, b) => tableRank(a.table) - tableRank(b.table) || a.id - b.id);
-}
-function setCollectFilter(next) { collectFilter = next === "all" ? "all" : "observed"; renderNames(); }
 function setCollectTable(next) { collectTable = next; renderNames(); }
 function setCollectSearch(next) { collectSearch = next; renderNames(); }
-function setCollectSort(next) { collectSort = next === "location" ? "location" : "rom"; renderNames(); }
-function compareLocationRows(a, b) {
-  return tableRank(a.r.table) - tableRank(b.r.table) || a.r.id - b.r.id;
-}
-function compareRomRows(a, b) {
-  return a.r.id - b.r.id || tableRank(a.r.table) - tableRank(b.r.table);
-}
-function tableRank(table) {
-  return {species: 0, abilities: 1, moves: 2, items: 3, natures: 4, balls: 5}[table] ?? 9;
-}
 async function reloadNames() {
   names = await request("/api/names");
   renderNames();
@@ -1066,7 +1017,7 @@ function selectNameRow(table, id) {
     `字符码：${(row.tokens || []).join(" ")}`,
   ].join("\n");
 }
-function selectNameIndex(idx, location="") {
+function selectNameIndex(idx) {
   const row = names.rows[idx];
   if (!row) return;
   selected = {table: row.table, id: row.id};
@@ -1074,15 +1025,11 @@ function selectNameIndex(idx, location="") {
     `${row.table_label} #${row.id}`,
     `当前解码：${row.decoded || row.name || ""}`,
     `字符码：${(row.tokens || []).join(" ")}`,
-    `当前行位置：${location || "未按位置展开"}`,
-    `全部存档位置：${(row.locations || []).join(" / ") || "未在当前存档出现"}`,
   ].join("\n");
 }
 function jumpToRom(table, id) {
   collectTable = table;
-  collectFilter = "all";
   collectSearch = String(id);
-  collectSort = "rom";
   tab = "names";
   selected = {table, id};
   render();
