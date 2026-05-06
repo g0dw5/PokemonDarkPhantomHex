@@ -810,6 +810,10 @@ def edit_pokemon(raw: bytes, updates: dict[str, int | list[int]]) -> bytes:
     ot_id = _u32(buf, 4)
     decrypted = bytearray(decrypt_substructures(buf))
     parts = split_substructures(personality, decrypted)
+    manual_personality = "personality" in updates
+    if manual_personality:
+        personality = _clamp_int(int(updates["personality"]), 0, 0xFFFFFFFF)
+        _w32(buf, 0, personality)
     if "species" in updates:
         _w16(parts["G"], 0, _clamp_int(int(updates["species"]), 0, 65535))
     if "held_item" in updates:
@@ -845,17 +849,18 @@ def edit_pokemon(raw: bytes, updates: dict[str, int | list[int]]) -> bytes:
         word |= egg << 30
         word |= ability << 31
         _w32(parts["M"], 4, word)
-    target_personality = adjust_personality(
-        personality,
-        ot_id,
-        _u16(parts["G"], 0),
-        nature_id=int(updates["nature_id"]) if "nature_id" in updates else None,
-        gender=str(updates["gender"]) if "gender" in updates else None,
-        shiny=bool(updates["is_shiny"]) if "is_shiny" in updates else None,
-    )
-    if target_personality != personality:
-        _w32(buf, 0, target_personality)
-        personality = target_personality
+    if not manual_personality:
+        target_personality = adjust_personality(
+            personality,
+            ot_id,
+            _u16(parts["G"], 0),
+            nature_id=int(updates["nature_id"]) if "nature_id" in updates else None,
+            gender=str(updates["gender"]) if "gender" in updates else None,
+            shiny=bool(updates["is_shiny"]) if "is_shiny" in updates else None,
+        )
+        if target_personality != personality:
+            _w32(buf, 0, target_personality)
+            personality = target_personality
     rebuilt = join_substructures(personality, parts)
     _w16(buf, 0x1C, pokemon_checksum(rebuilt))
     encrypted = encrypt_substructures(buf, rebuilt)

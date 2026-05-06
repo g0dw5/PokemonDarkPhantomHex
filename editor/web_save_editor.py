@@ -31,6 +31,8 @@ from pokemon_save_core import (
     growth_rate_for_species,
     experience_for_level,
     level_for_experience,
+    gender_for_species,
+    is_shiny,
 )
 from rom_data import OUTPUT as ROM_TEXT_OUTPUT, load_rom_text, save_charmap, save_rom_text, set_default_rom_path
 
@@ -120,6 +122,13 @@ class Handler(BaseHTTPRequestHandler):
             level = int(query.get("level", ["1"])[0])
             experience = int(query.get("experience", ["0"])[0])
             self.send(*response(api_experience_level(species, level, experience)))
+            return
+        if parsed.path == "/api/personality_preview":
+            query = parse_qs(parsed.query)
+            species = int(query.get("species", ["0"])[0])
+            personality = int(query.get("personality", ["0"])[0])
+            ot_id = int(query.get("ot_id", ["0"])[0])
+            self.send(*response(api_personality_preview(species, personality, ot_id)))
             return
         if parsed.path == "/api/load":
             query = parse_qs(parsed.query)
@@ -271,19 +280,20 @@ def api_names():
         for key, entry in sorted(raw.get(name, {}).items(), key=lambda item: int(item[0])):
             item_id = int(key)
             tokens = entry.get("tokens") or []
-            rows.append(
-                {
-                    "table": name,
-                    "table_label": label,
-                    "id": item_id,
-                    "name": entry.get("name") or "",
-                    "decoded": entry.get("decoded") or "",
-                    "tokens": tokens,
-                    "observed": item_id in observed[name],
-                    "locations": observed[name].get(item_id, []),
-                    "unknown_count": sum(1 for token in tokens if "{" + token + "}" in (entry.get("decoded") or "")),
-                }
-            )
+            row = {
+                "table": name,
+                "table_label": label,
+                "id": item_id,
+                "name": entry.get("name") or "",
+                "decoded": entry.get("decoded") or "",
+                "tokens": tokens,
+                "observed": item_id in observed[name],
+                "locations": observed[name].get(item_id, []),
+                "unknown_count": sum(1 for token in tokens if "{" + token + "}" in (entry.get("decoded") or "")),
+            }
+            if name == "moves":
+                row["pp"] = default_pp_for_move(item_id)
+            rows.append(row)
         return rows
 
     static_rows = []
@@ -469,6 +479,17 @@ def api_experience_level(species: int, level: int, experience: int):
     }
 
 
+def api_personality_preview(species: int, personality: int, ot_id: int):
+    return {
+        "ok": True,
+        "species": species,
+        "personality": personality,
+        "nature_id": personality % 25,
+        "gender": gender_for_species(species, personality),
+        "is_shiny": is_shiny(personality, ot_id),
+    }
+
+
 def observed_from_save() -> dict[str, dict[int, list[str]]]:
     observed: dict[str, dict[int, list[str]]] = {"species": {}, "items": {}, "moves": {}, "abilities": {}, "natures": {}, "balls": {}}
     save = STATE.save
@@ -571,9 +592,9 @@ def api_update_bag(body):
 def api_update_pokemon(body):
     save = require_save()
     updates = {
-        "species": int(body["species"]),
-        "held_item": int(body["held_item"]),
-        "experience": int(body["experience"]),
+        "species": parse_id(body["species"]),
+        "personality": int(body["personality"]),
+        "held_item": parse_id(body["held_item"]),
         "friendship": int(body["friendship"]),
         "nature_id": int(body["nature_id"]),
         "gender": str(body["gender"]),
@@ -586,6 +607,12 @@ def api_update_pokemon(body):
         "ability_bit": int(body["ability_bit"]),
         "is_egg": bool(int(body["is_egg"])),
     }
+    if "level" in body:
+        species = updates["species"]
+        level = int(body["level"])
+        growth_rate = growth_rate_for_species(species)
+        if growth_rate is not None:
+            updates["experience"] = experience_for_level(growth_rate, level)
     location = str(body.get("location", "party"))
     if location == "box":
         box = int(body["box"])
@@ -621,6 +648,13 @@ def parse_list(value, expected: int) -> list[int]:
     return [int(v) for v in values]
 
 
+def parse_id(value) -> int:
+    text = str(value).strip()
+    if text.startswith("#"):
+        text = text[1:]
+    return int(text.split()[0])
+
+
 HTML = r"""<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -636,7 +670,7 @@ HTML = r"""<!doctype html>
     button.primary { background: #1f6feb; color: white; border-color: #185abc; }
     button.link { border: 0; background: transparent; color: #0969da; padding: 0; text-align: left; text-decoration: underline; }
     #path { flex: 1; }
-    main { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 8px; padding: 8px; height: calc(100vh - 45px); }
+    main { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 8px; padding: 8px; height: calc(100vh - 45px); }
     .panel { background: white; border: 1px solid #c9c9c9; min-height: 0; }
     .tabs { display: flex; gap: 4px; padding: 6px; background: #eee; border-bottom: 1px solid #ccc; flex-wrap: wrap; }
     .tabs button.active { background: #111; color: white; }
@@ -650,6 +684,8 @@ HTML = r"""<!doctype html>
     .filters { display: flex; gap: 6px; align-items: center; padding: 6px; border-bottom: 1px solid #ddd; background: #f7f7f7; flex-wrap: wrap; }
     .filters input { width: min(220px, 100%); }
     .badge { display: inline-block; border: 1px solid #aaa; border-radius: 999px; padding: 1px 7px; font-size: 12px; background: #fff; }
+    .id-chip { display: inline-block; font-variant-numeric: tabular-nums; color: #555; margin-right: 3px; }
+    .shiny-badge { color: #9a6700; font-weight: 700; }
     .bad { color: #b42318; font-weight: 600; }
     .table-wrap { overflow: auto; height: calc(100% - 74px); }
     table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: auto; }
@@ -665,9 +701,14 @@ HTML = r"""<!doctype html>
     aside input, aside select, aside textarea { width: 100%; margin-top: 3px; }
     #detail { height: 120px; white-space: pre-wrap; overflow: auto; background: #fafafa; border: 1px solid #ccc; padding: 8px; }
     #status { margin-top: 10px; color: #333; white-space: pre-wrap; }
-    .move-grid { display: grid; grid-template-columns: minmax(0, 1fr) 72px; gap: 6px; align-items: end; margin-top: 8px; }
+    .move-grid { display: grid; grid-template-columns: minmax(0, 1fr) 132px; gap: 6px; align-items: end; margin-top: 8px; }
     .move-grid label { margin-top: 0; }
     .move-grid select, .move-grid input { width: 100%; }
+    .move-grid select { min-width: 0; }
+    .pp-up-control { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; margin-top: 3px; }
+    .pp-up-control button { padding: 5px 0; min-width: 0; }
+    .pp-up-control button.active { background: #111; color: white; }
+    select.invalid-move { border-color: #b42318; background: #fff1f0; color: #7a1d15; }
     @media (max-width: 1100px) {
       main { grid-template-columns: 1fr; height: auto; min-height: calc(100vh - 45px); }
       aside { min-height: 170px; }
@@ -771,9 +812,12 @@ function render() {
 }
 function renderDatalists() {
   if (!names) return;
-  document.getElementById("species-list").innerHTML = names.species.map(e => `<option value="${e.id}" label="${escapeHtml(e.name)}"></option>`).join("");
-  document.getElementById("item-list").innerHTML = names.items.map(e => `<option value="${e.id}" label="${escapeHtml(e.name)}"></option>`).join("");
+  document.getElementById("species-list").innerHTML = names.species.map(e => `<option value="${idName(e.id, e.name)}"></option>`).join("");
+  document.getElementById("item-list").innerHTML = names.items.map(e => `<option value="${idName(e.id, e.name)}"></option>`).join("");
   document.getElementById("move-list").innerHTML = names.moves.map(e => `<option value="${e.id}" label="${escapeHtml(e.name)}"></option>`).join("");
+}
+function idName(id, name) {
+  return `#${id} · ${escapeHtml(name || "")}`.trim();
 }
 function escapeHtml(text) {
   return String(text).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -784,6 +828,9 @@ function escapeJsString(text) {
 function romLink(table, id, text) {
   if (!id) return escapeHtml(text || "空");
   return `<button type="button" class="link" onclick="jumpToRom('${table}', ${id}); event.stopPropagation();">${escapeHtml(text)}</button>`;
+}
+function displayName(table, id, text) {
+  return `<span class="id-chip">#${id}</span> ${romLink(table, id, text)}`;
 }
 function renderSubtabs(items, current, onclickName) {
   return `<div class="tabs subtabs">${items.map(([id, label]) => `<button class="${current===id?"active":""}" onclick="${onclickName}('${escapeJsString(id)}')">${escapeHtml(label)}</button>`).join("")}</div>`;
@@ -878,10 +925,11 @@ async function updateBag() {
 function clearBag() { document.getElementById("item_id").value = 0; document.getElementById("quantity").value = 0; updateBag(); }
 function renderParty() {
   document.getElementById("summary").textContent = `队伍：${state.party.length} 只，当前槽 ${state.active}`;
-  let html = "<table><thead><tr><th>槽位</th><th>种族</th><th>等级</th><th>性格</th><th>性别</th><th>特性</th><th>球</th><th>闪光</th><th>HP</th><th>招式</th><th>数据校验</th><th>合法性</th></tr></thead><tbody>";
+  let html = "<table><thead><tr><th>位置</th><th>种族</th><th>等级</th><th>性格</th><th>性别</th><th>特性</th><th>球</th><th>闪光</th><th>携带</th><th>HP</th><th>招式</th><th>合法性</th></tr></thead><tbody>";
   state.party.forEach((p, i) => {
     const moves = p.moves.map((id, idx) => romLink("moves", id, p.move_names[idx])).join(" / ");
-    html += `<tr onclick="selectParty(${i})"><td>${p.slot}</td><td>${p.species} ${romLink("species", p.species, p.species_name)}</td><td>${p.level}</td><td>${p.nature_name}</td><td>${p.gender}</td><td>${p.ability_id} ${romLink("abilities", p.ability_id, p.ability_name)}</td><td>${p.caught_ball_name}</td><td>${p.is_shiny?"是":"否"}</td><td>${p.current_hp}/${p.max_hp}</td><td>${moves}</td><td>${p.checksum_ok?"OK":"错误"}</td><td>${legalityBadge(p)}</td></tr>`;
+    const held = p.held_item ? displayName("items", p.held_item, p.held_item_name) : "空";
+    html += `<tr onclick="selectParty(${i})"><td>队伍 ${p.slot}</td><td>${displayName("species", p.species, p.species_name)} ${shinyBadge(p)}</td><td>${p.level}</td><td>${p.nature_name}</td><td>${p.gender}</td><td>${displayName("abilities", p.ability_id, p.ability_name)}</td><td>${p.caught_ball_name}</td><td>${p.is_shiny?"是":"否"}</td><td>${held}</td><td>${p.current_hp}/${p.max_hp}</td><td>${moves}</td><td>${legalityBadge(p)}</td></tr>`;
   });
   document.getElementById("content").innerHTML = html + "</tbody></table>";
 }
@@ -893,12 +941,12 @@ function renderBoxes() {
   })];
   const rows = state.boxes.filter(p => boxView === "all" || String(p.box) === boxView);
   document.getElementById("summary").textContent = `盒子：${state.boxes.length} 只非空宝可梦`;
-  let html = "<table><thead><tr><th>盒子</th><th>格位</th><th>种族</th><th>等级</th><th>性格</th><th>性别</th><th>特性</th><th>球</th><th>闪光</th><th>携带</th><th>招式</th><th>数据校验</th><th>合法性</th></tr></thead><tbody>";
+  let html = "<table><thead><tr><th>位置</th><th>种族</th><th>等级</th><th>性格</th><th>性别</th><th>特性</th><th>球</th><th>闪光</th><th>携带</th><th>HP</th><th>招式</th><th>合法性</th></tr></thead><tbody>";
   rows.forEach((p) => {
     const i = state.boxes.indexOf(p);
-    const held = p.held_item ? `${p.held_item} ${romLink("items", p.held_item, p.held_item_name)}` : "空";
+    const held = p.held_item ? displayName("items", p.held_item, p.held_item_name) : "空";
     const moves = p.moves.map((id, idx) => romLink("moves", id, p.move_names[idx])).join(" / ");
-    html += `<tr onclick="selectBox(${i})"><td>${p.box}</td><td>${p.box_slot}</td><td>${p.species} ${romLink("species", p.species, p.species_name)}</td><td>${p.level || "未知"}</td><td>${p.nature_name}</td><td>${p.gender}</td><td>${p.ability_id} ${romLink("abilities", p.ability_id, p.ability_name)}</td><td>${p.caught_ball_name}</td><td>${p.is_shiny?"是":"否"}</td><td>${held}</td><td>${moves}</td><td>${p.checksum_ok?"OK":"错误"}</td><td>${legalityBadge(p)}</td></tr>`;
+    html += `<tr onclick="selectBox(${i})"><td>盒子 ${p.box}-${p.box_slot}</td><td>${displayName("species", p.species, p.species_name)} ${shinyBadge(p)}</td><td>${p.level || "未知"}</td><td>${p.nature_name}</td><td>${p.gender}</td><td>${displayName("abilities", p.ability_id, p.ability_name)}</td><td>${p.caught_ball_name}</td><td>${p.is_shiny?"是":"否"}</td><td>${held}</td><td>-</td><td>${moves}</td><td>${legalityBadge(p)}</td></tr>`;
   });
   document.getElementById("content").innerHTML = renderSubtabs(tabs, boxView, "setBoxView") + html + "</tbody></table>";
 }
@@ -908,6 +956,9 @@ function legalityBadge(p) {
   const ok = rows.length === 1 && /合法性通过$/.test(rows[0]);
   if (ok) return "通过";
   return `<span class="bad">可疑 ${rows.length}</span>`;
+}
+function shinyBadge(p) {
+  return p.is_shiny ? `<span class="shiny-badge">闪</span>` : "";
 }
 async function selectParty(i) {
   const p = state.party[i];
@@ -919,21 +970,21 @@ function renderPokemonForm(p, constraints, location) {
   const isBox = location === "box";
   document.getElementById("form").innerHTML = `
     <input type="hidden" id="location" value="${location}">
-    ${isBox ? `<label>盒子<input id="box" value="${p.box}" readonly></label><label>格位<input id="box_slot" value="${p.box_slot}" readonly></label>` : field("slot","槽位",p.slot,true)}
-    ${field("personality","PID",p.personality,true)}
-    ${field("species","种族 ID",p.species,false,"species-list", "syncLevelFromExperience().then(refreshPokemonConstraintsFromForm)")}
-    ${field("held_item","携带道具 ID",p.held_item,false,"item-list")}
+    ${isBox ? `<label>盒子<input id="box" value="${p.box}" readonly></label><label>格位<input id="box_slot" value="${p.box_slot}" readonly></label>` : `<input type="hidden" id="slot" value="${p.slot}">`}
+    <input type="hidden" id="ot_id" value="${p.ot_id}">
+    ${field("personality","PID",p.personality,false,"", "refreshPersonalityDerivedFields()")}
+    ${field("species","种族",idName(p.species, p.species_name),false,"species-list", "syncExperienceFromLevel().then(refreshPokemonConstraintsFromForm)")}
+    ${field("held_item","携带道具",idName(p.held_item, p.held_item_name),false,"item-list")}
     ${natureField(p.nature_id)}
     ${genderField(p.gender, constraints)}
-    ${abilityField(p.ability_bit, constraints)}
+    ${abilityField(p.ability_bit, constraints, p.ability_id, p.ability_name)}
     ${ballField(p.caught_ball)}
     ${shinyField(p.is_shiny)}
-    ${field("experience","经验值",p.experience,false,"", "syncLevelFromExperience()")}
     ${field("friendship","亲密度",p.friendship)}
     ${field("level","等级",p.level || 1,false,"", "syncExperienceFromLevel().then(refreshPokemonConstraintsFromForm)")}
     <div id="move-controls">${moveFields(p.moves, p.pps, constraints)}</div>
-    ${field("evs","努力值 HP/攻/防/速/特攻/特防",p.evs.join(","))}
     ${field("ivs","个体值 HP/攻/防/速/特攻/特防",p.ivs.join(","))}
+    ${field("evs","努力值 HP/攻/防/速/特攻/特防",p.evs.join(","))}
     ${field("is_egg","蛋 0/1",p.is_egg ? 1 : 0)}
     <p><button type="button" class="primary" onclick="updatePokemon()">写入宝可梦</button></p>`;
 }
@@ -945,7 +996,7 @@ async function selectBox(i) {
 }
 async function updatePokemon() {
   const location = val("location");
-  const ids = ["location","species","held_item","nature_id","gender","is_shiny","caught_ball","experience","friendship","evs","ivs","ability_bit","is_egg"];
+  const ids = ["location","personality","species","held_item","nature_id","gender","is_shiny","caught_ball","friendship","evs","ivs","ability_bit","is_egg"];
   const body = {};
   ids.forEach(id => body[id] = val(id));
   if (location === "box") {
@@ -956,42 +1007,58 @@ async function updatePokemon() {
   }
   body.level = val("level");
   body.moves = [0,1,2,3].map(i => num(`move_${i}`));
-  body.pps = [0,1,2,3].map(i => num(`pp_${i}`));
+  body.pps = [0,1,2,3].map(i => ppFromMoveSlot(i));
   const data = await request("/api/pokemon", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
   setStatus(data.message + "\n尚未保存到文件");
   await refresh();
 }
 function natureField(current) {
   const names = ["勤奋","怕寂寞","勇敢","固执","顽皮","大胆","坦率","悠闲","淘气","乐天","胆小","急躁","认真","爽朗","天真","内敛","慢吞吞","冷静","害羞","马虎","温和","温顺","自大","慎重","浮躁"];
-  return `<label>性格<select id="nature_id">${names.map((name, id) => `<option value="${id}" ${id===current?"selected":""}>${id} ${name}</option>`).join("")}</select></label>`;
+  return `<label>性格<select id="nature_id">${names.map((name, id) => `<option value="${id}" ${id===current?"selected":""}>#${id} · ${name}</option>`).join("")}</select></label>`;
 }
 function genderField(current, constraints=null) {
   const values = constraints?.gender_options?.length ? constraints.gender_options : ["雄","雌","无性别"];
   return `<label>性别<select id="gender">${values.map(v => `<option value="${v}" ${v===current?"selected":""}>${v}</option>`).join("")}</select></label>`;
 }
-function abilityField(current, constraints=null) {
-  const values = constraints?.ability_options?.length ? constraints.ability_options : [{bit:0, id:"", name:"特性位 0"}, {bit:1, id:"", name:"特性位 1"}];
-  return `<label>特性<select id="ability_bit">${values.map(a => `<option value="${a.bit}" ${Number(a.bit)===Number(current)?"selected":""}>${a.bit} ${a.id ? a.id + " " : ""}${escapeHtml(a.name)}</option>`).join("")}</select></label>`;
+function abilityField(current, constraints=null, currentAbilityId="", currentAbilityName="") {
+  const values = constraints?.ability_options?.length
+    ? constraints.ability_options
+    : [{bit: current, id: currentAbilityId, name: currentAbilityName || "当前特性"}];
+  return `<label>特性<select id="ability_bit">${values.map(a => `<option value="${a.bit}" ${Number(a.bit)===Number(current)?"selected":""}>${abilityLabel(a)}</option>`).join("")}</select></label>`;
+}
+function abilityLabel(ability) {
+  const id = ability.id !== "" && ability.id !== undefined ? `#${ability.id} · ` : "";
+  return `${id}${escapeHtml(ability.name || "未知特性")}`;
 }
 function ballField(current) {
   const names = ["无","大师球","高级球","超级球","精灵球","狩猎球","捕网球","潜水球","巢穴球","重复球","计时球","豪华球","纪念球"];
   const options = Array.from({length: 16}, (_, id) => {
     const name = names[id] || `球 ${id}`;
-    return `<option value="${id}" ${Number(id)===Number(current)?"selected":""}>${id} ${escapeHtml(name)}</option>`;
+    return `<option value="${id}" ${Number(id)===Number(current)?"selected":""}>#${id} · ${escapeHtml(name)}</option>`;
   }).join("");
   return `<label>捕获球<select id="caught_ball">${options}</select></label>`;
 }
 function moveFields(moves, pps, constraints=null) {
   const options = buildMoveOptions(moves, constraints);
+  const validMoveIds = new Set((constraints?.moves || []).map(m => Number(m.id)));
+  const constraintsAvailable = constraints?.available !== false && Boolean(constraints?.moves);
   return [0,1,2,3].map(i => `
     <div class="move-grid">
       <label>招式 ${i + 1}
-        <select id="move_${i}" onchange="syncMovePp(${i})">
+        <select id="move_${i}" class="${isInvalidMove(moves[i], validMoveIds, constraintsAvailable) ? "invalid-move" : ""}" onchange="syncMovePp(${i})">
           ${options.map(o => `<option value="${o.id}" data-pp="${o.pp || 0}" ${o.disabled?"disabled":""} ${Number(o.id)===Number(moves[i])?"selected":""}>${escapeHtml(o.label)}</option>`).join("")}
         </select>
       </label>
-      <label>PP<input id="pp_${i}" value="${pps[i] ?? 0}"></label>
+      <label>PP提升
+        <input type="hidden" id="pp_up_${i}" value="${ppUpsForMove(moves[i], pps[i], options)}" data-current-pp="${pps[i] ?? 0}">
+        <span class="pp-up-control">${ppUpButtons(i, ppUpsForMove(moves[i], pps[i], options))}</span>
+      </label>
     </div>`).join("");
+}
+function isInvalidMove(moveId, validMoveIds, constraintsAvailable) {
+  const id = Number(moveId);
+  if (!id || !constraintsAvailable) return false;
+  return !validMoveIds.has(id);
 }
 function buildMoveOptions(currentMoves, constraints=null) {
   const seen = new Set();
@@ -1001,23 +1068,58 @@ function buildMoveOptions(currentMoves, constraints=null) {
     if (seen.has(Number(id))) return;
     seen.add(Number(id));
     const suffix = sources && sources.length ? ` [${sources.join("/")}]` : "";
-    rows.push({id, pp, label:`${id} ${name}${suffix}`, disabled});
+    rows.push({id, pp, label:`#${id} · ${name}${suffix}`, disabled});
   }
   (constraints?.moves || []).forEach(m => add(m.id, m.name, m.pp, m.sources, false));
   (constraints?.future_moves || []).forEach(m => add(m.id, m.name, m.pp, m.sources, true));
   currentMoves.forEach(id => {
     if (!seen.has(Number(id))) {
       const row = (names?.moves || []).find(m => Number(m.id) === Number(id));
-      add(id, row?.name || `招式 ${id}`, 0, ["当前"], false);
+      add(id, row?.name || `招式 ${id}`, row?.pp || 0, ["当前"], false);
     }
   });
   return rows;
 }
 function syncMovePp(index) {
   const move = document.getElementById(`move_${index}`);
-  const pp = document.getElementById(`pp_${index}`);
-  const selected = move.options[move.selectedIndex];
-  pp.value = selected?.dataset?.pp || 0;
+  const ppUp = document.getElementById(`pp_up_${index}`);
+  if (Number(move.value) === 0) ppUp.value = 0;
+}
+function ppUpButtons(index, current) {
+  return [0,1,2,3].map(value => `<button type="button" class="${Number(value)===Number(current)?"active":""}" onclick="setPpUp(${index}, ${value})">+${value}</button>`).join("");
+}
+function setPpUp(index, value) {
+  document.getElementById(`pp_up_${index}`).value = value;
+  document.querySelectorAll(`#pp_up_${index} + .pp-up-control button`).forEach((button, i) => button.classList.toggle("active", i === value));
+}
+function ppUpsForMove(moveId, currentPp, options) {
+  const id = Number(moveId);
+  if (!id) return 0;
+  const row = options.find(o => Number(o.id) === id);
+  const base = Number(row?.pp || defaultMovePp(id));
+  if (!base) return 0;
+  const pp = Number(currentPp || 0);
+  for (let ups = 0; ups <= 3; ups++) {
+    if (pp <= ppFromBaseAndUps(base, ups)) return ups;
+  }
+  return 3;
+}
+function ppFromMoveSlot(index) {
+  const move = document.getElementById(`move_${index}`);
+  const ppUp = document.getElementById(`pp_up_${index}`);
+  const id = Number(move?.value || 0);
+  if (!id) return 0;
+  const selected = move?.options?.[move.selectedIndex];
+  const base = Number(selected?.dataset?.pp || defaultMovePp(id));
+  if (!base) return Number(ppUp?.dataset?.currentPp || 0);
+  return ppFromBaseAndUps(base, Number(ppUp?.value || 0));
+}
+function ppFromBaseAndUps(base, ups) {
+  return Math.floor(Number(base || 0) * (5 + Number(ups || 0)) / 5);
+}
+function defaultMovePp(moveId) {
+  const row = (names?.moves || []).find(m => Number(m.id) === Number(moveId));
+  return Number(row?.pp || 0);
 }
 async function loadPokemonConstraints(species, level) {
   try {
@@ -1030,11 +1132,11 @@ async function loadPokemonConstraints(species, level) {
   }
 }
 async function refreshPokemonConstraintsFromForm() {
-  const species = num("species");
+  const species = idNum("species");
   const level = num("level");
   pokemonFormConstraints = await loadPokemonConstraints(species, level);
   const moves = [0,1,2,3].map(i => num(`move_${i}`));
-  const pps = [0,1,2,3].map(i => num(`pp_${i}`));
+  const pps = [0,1,2,3].map(i => ppFromMoveSlot(i));
   const currentGender = val("gender");
   const currentAbility = val("ability_bit");
   const genderWrapper = document.getElementById("gender").parentElement;
@@ -1043,20 +1145,26 @@ async function refreshPokemonConstraintsFromForm() {
   abilityWrapper.outerHTML = abilityField(currentAbility, pokemonFormConstraints);
   document.getElementById("move-controls").innerHTML = moveFields(moves, pps, pokemonFormConstraints);
 }
-async function syncLevelFromExperience() {
-  const species = num("species");
-  const experience = num("experience");
-  const level = num("level");
-  const data = await loadExperienceLevel(species, level, experience);
-  if (data?.available) document.getElementById("level").value = data.level || 1;
-  await refreshPokemonConstraintsFromForm();
+async function refreshPersonalityDerivedFields() {
+  const species = idNum("species");
+  const personality = num("personality");
+  const otId = num("ot_id");
+  try {
+    const data = await request(`/api/personality_preview?species=${encodeURIComponent(species)}&personality=${encodeURIComponent(personality)}&ot_id=${encodeURIComponent(otId)}`);
+    if (data.ok) {
+      document.getElementById("nature_id").value = data.nature_id;
+      document.getElementById("gender").value = data.gender;
+      document.getElementById("is_shiny").value = data.is_shiny ? "1" : "0";
+    }
+  } catch (error) {
+    setStatus(error.message);
+  }
 }
 async function syncExperienceFromLevel() {
-  const species = num("species");
+  const species = idNum("species");
   const level = num("level");
-  const experience = num("experience");
-  const data = await loadExperienceLevel(species, level, experience);
-  if (data?.available) document.getElementById("experience").value = data.experience || 0;
+  const experience = 0;
+  await loadExperienceLevel(species, level, experience);
 }
 async function loadExperienceLevel(species, level, experience) {
   try {
@@ -1172,6 +1280,7 @@ async function saveNameCollected(table, id, inputId) {
 function field(id, label, value, readonly=false, list="", onchange="") { return `<label>${label}<input id="${id}" value="${value}" ${list?`list="${list}"`:""} ${readonly?"readonly":""} ${onchange?`onchange="${onchange}"`:""}></label>`; }
 function val(id) { return document.getElementById(id).value; }
 function num(id) { return parseInt(val(id), 10); }
+function idNum(id) { return parseInt(String(val(id)).trim().split(/\s+/)[0], 10); }
 refresh().catch(err => setStatus(err.message));
 </script>
 </body>
