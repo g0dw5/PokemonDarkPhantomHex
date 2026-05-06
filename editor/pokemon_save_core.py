@@ -3,6 +3,7 @@ from __future__ import annotations
 import shutil
 import struct
 import json
+import os
 from dataclasses import dataclass
 from datetime import datetime
 from functools import lru_cache
@@ -54,7 +55,7 @@ PLAY_TIME_SECONDS_OFFSET = 0x0011
 PLAY_TIME_FRAMES_OFFSET = 0x0012
 MONEY_OFFSET = 0x0490
 COINS_OFFSET = 0x0494
-ROM_PATH = Path("/Users/wang.song/Desktop/pokemon/漆黑的魅影 5.0EX BW.gba")
+ROM_PATH = Path(os.environ["POKEMON_ROM_PATH"]).expanduser() if os.environ.get("POKEMON_ROM_PATH") else None
 BASE_STATS_OFFSET = 0x3203CC
 BASE_STATS_SIZE = 28
 ROM_SPECIES_COUNT = 412
@@ -324,7 +325,7 @@ reload_rom_names()
 
 
 def _load_base_stats() -> dict[int, bytes]:
-    if not ROM_PATH.exists():
+    if ROM_PATH is None or not ROM_PATH.exists():
         return {}
     try:
         rom = ROM_PATH.read_bytes()
@@ -1000,7 +1001,7 @@ def default_pp_for_move(move_id: int) -> int:
 
 @lru_cache(maxsize=1)
 def _read_rom() -> bytes:
-    if not ROM_PATH.exists():
+    if ROM_PATH is None or not ROM_PATH.exists():
         return b""
     try:
         return ROM_PATH.read_bytes()

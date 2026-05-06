@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import socket
 import subprocess
 import sys
@@ -30,15 +31,15 @@ from pokemon_save_core import (
 from rom_data import OUTPUT as ROM_TEXT_OUTPUT, load_rom_text, save_charmap, save_rom_text
 
 
-DEFAULT_SAVE = Path("/Users/wang.song/Desktop/pokemon/漆黑的魅影 5.0EX BW.sav")
+DEFAULT_SAVE = Path(os.environ["POKEMON_SAVE_PATH"]).expanduser() if os.environ.get("POKEMON_SAVE_PATH") else None
 HOST = "127.0.0.1"
 PORT = 8765
 
 
 class State:
-    save_path = DEFAULT_SAVE
+    save_path: Path | None = DEFAULT_SAVE
     save: EmeraldSave | None = None
-    error = ""
+    error = "请选择存档文件"
 
 
 STATE = State()
@@ -51,6 +52,10 @@ def table_sort_rank(table: str) -> int:
 def load_save(path: Path | None = None) -> None:
     if path is not None:
         STATE.save_path = path
+    if STATE.save_path is None:
+        STATE.save = None
+        STATE.error = "请选择存档文件"
+        return
     try:
         STATE.save = EmeraldSave(STATE.save_path)
         STATE.error = ""
@@ -87,9 +92,13 @@ class Handler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/load":
             query = parse_qs(parsed.query)
-            path = Path(query.get("path", [str(STATE.save_path)])[0]).expanduser()
+            raw_path = query.get("path", [""])[0] or (str(STATE.save_path) if STATE.save_path else "")
+            path = Path(raw_path).expanduser() if raw_path else None
             load_save(path)
             self.send(*response(api_state()))
+            return
+        if parsed.path == "/api/pick_save":
+            self.send(*response(api_pick_save()))
             return
         self.send(404, "text/plain; charset=utf-8", b"Not found")
 
@@ -129,7 +138,7 @@ class Handler(BaseHTTPRequestHandler):
 def api_state():
     save = STATE.save
     if not save:
-        return {"ok": False, "path": str(STATE.save_path), "error": STATE.error, "bag": [], "party": [], "validation": []}
+        return {"ok": False, "path": str(STATE.save_path) if STATE.save_path else "", "error": STATE.error, "bag": [], "party": [], "validation": []}
     bag = [{"pocket": e.pocket, "slot": e.slot, "item_id": e.item_id, "name": format_item(e.item_id) if e.item_id else "空", "quantity": e.quantity} for e in save.read_bag()]
     party = []
     for p in save.party():
@@ -167,6 +176,21 @@ def api_state():
             "items": len(ITEM_NAMES),
         },
     }
+
+
+def api_pick_save():
+    try:
+        result = subprocess.run(
+            ["osascript", "-e", 'POSIX path of (choose file with prompt "选择存档文件")'],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except subprocess.CalledProcessError:
+        return {"ok": False, "path": str(STATE.save_path) if STATE.save_path else "", "error": "已取消选择"}
+    path = Path(result.stdout.strip()).expanduser()
+    load_save(path)
+    return api_state()
 
 
 def pokemon_payload(p, label: str):
@@ -639,17 +663,24 @@ async function refresh() {
   render();
 }
 async function loadPath() {
-  const p = encodeURIComponent(document.getElementById("path").value);
-  state = await request("/api/load?path=" + p);
-  names = await request("/api/names");
-  selected = null;
-  render();
+  try {
+    state = await request("/api/pick_save");
+    names = await request("/api/names");
+    selected = null;
+    render();
+  } catch (err) {
+    setStatus(err.message);
+  }
 }
 async function reload() {
-  state = await request("/api/load?path=" + encodeURIComponent(document.getElementById("path").value));
-  names = await request("/api/names");
-  selected = null;
-  render();
+  try {
+    state = await request("/api/load?path=" + encodeURIComponent(document.getElementById("path").value));
+    names = await request("/api/names");
+    selected = null;
+    render();
+  } catch (err) {
+    setStatus(err.message);
+  }
 }
 async function saveFile() {
   const data = await request("/api/save", {method:"POST", headers:{"Content-Type":"application/json"}, body:"{}"});

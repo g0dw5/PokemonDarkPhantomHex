@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
 
-DEFAULT_ROM = Path("/Users/wang.song/Desktop/pokemon/漆黑的魅影 5.0EX BW.gba")
+DEFAULT_ROM = Path(os.environ["POKEMON_ROM_PATH"]).expanduser() if os.environ.get("POKEMON_ROM_PATH") else None
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "data" / "rom_text.json"
 
@@ -293,7 +294,14 @@ def extract_table(rom: bytes, spec: TableSpec, charmap: dict[str, str]) -> dict[
     return table
 
 
-def extract_rom_text(rom_path: Path = DEFAULT_ROM) -> dict:
+def require_rom_path(rom_path: Path | None = DEFAULT_ROM) -> Path:
+    if rom_path is None:
+        raise ValueError("未设置 ROM 路径，请先设置 POKEMON_ROM_PATH")
+    return rom_path
+
+
+def extract_rom_text(rom_path: Path | None = DEFAULT_ROM) -> dict:
+    rom_path = require_rom_path(rom_path)
     rom = rom_path.read_bytes()
     charmap, candidate_charmap, _char_sources, gb2312_row_bases = build_charmaps()
     observed_codes = collect_observed_char_codes(rom, charmap)
@@ -332,7 +340,8 @@ def extract_rom_text(rom_path: Path = DEFAULT_ROM) -> dict:
     }
 
 
-def save_rom_text(rom_path: Path = DEFAULT_ROM, output: Path = OUTPUT, charmap: dict[str, str] | None = None) -> dict:
+def save_rom_text(rom_path: Path | None = DEFAULT_ROM, output: Path = OUTPUT, charmap: dict[str, str] | None = None) -> dict:
+    rom_path = require_rom_path(rom_path)
     if charmap is None:
         charmap = load_charmap(output)
     rom = rom_path.read_bytes()
