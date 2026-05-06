@@ -64,9 +64,9 @@
       ]
     },
     "103": {
-      "decoded": "干{1004}{058C}肤",
+      "decoded": "干燥肌肤",
       "id": 103,
-      "name": "干{1004}{058C}肤",
+      "name": "干燥肌肤",
       "tokens": [
         "0433",
         "1004",
@@ -191,9 +191,9 @@
       ]
     },
     "115": {
-      "decoded": "{0781}击手",
+      "decoded": "狙击手",
       "id": 115,
-      "name": "{0781}击手",
+      "name": "狙击手",
       "tokens": [
         "0781",
         "0584",
@@ -201,9 +201,9 @@
       ]
     },
     "116": {
-      "decoded": "怒冲{075D}穴",
+      "decoded": "怒冲经穴",
       "id": 116,
-      "name": "怒冲{075D}穴",
+      "name": "怒冲经穴",
       "tokens": [
         "0A0A",
         "0267",
@@ -223,9 +223,9 @@
       ]
     },
     "118": {
-      "decoded": "单{029F}",
+      "decoded": "单纯",
       "id": 118,
-      "name": "单{029F}",
+      "name": "单纯",
       "tokens": [
         "02E3",
         "029F"
@@ -260,9 +260,9 @@
       ]
     },
     "121": {
-      "decoded": "{0C0F}{0F54}力",
+      "decoded": "适应力",
       "id": 121,
-      "name": "{0C0F}{0F54}力",
+      "name": "适应力",
       "tokens": [
         "0C0F",
         "0F54",
@@ -281,9 +281,9 @@
       ]
     },
     "123": {
-      "decoded": "{0D69}限预知",
+      "decoded": "危险预知",
       "id": 123,
-      "name": "{0D69}限预知",
+      "name": "危险预知",
       "tokens": [
         "0D69",
         "0E02",
@@ -311,9 +311,9 @@
       ]
     },
     "126": {
-      "decoded": "洞{0210}",
+      "decoded": "洞察",
       "id": 126,
-      "name": "洞{0210}",
+      "name": "洞察",
       "tokens": [
         "0359",
         "0210"
@@ -429,9 +429,9 @@
       ]
     },
     "137": {
-      "decoded": "涡{0910}火花",
+      "decoded": "涡轮火花",
       "id": 137,
-      "name": "涡{0910}火花",
+      "name": "涡轮火花",
       "tokens": [
         "0D96",
         "0910",
@@ -440,9 +440,9 @@
       ]
     },
     "138": {
-      "decoded": "{12A6}级电压",
+      "decoded": "垓级电压",
       "id": 138,
-      "name": "{12A6}级电压",
+      "name": "垓级电压",
       "tokens": [
         "12A6",
         "05A1",
@@ -490,18 +490,18 @@
       ]
     },
     "142": {
-      "decoded": "分{0DBC}",
+      "decoded": "分析",
       "id": 142,
-      "name": "分{0DBC}",
+      "name": "分析",
       "tokens": [
         "03D9",
         "0DBC"
       ]
     },
     "143": {
-      "decoded": "自信过{0BDF}",
+      "decoded": "自信过剩",
       "id": 143,
-      "name": "自信过{0BDF}",
+      "name": "自信过剩",
       "tokens": [
         "110C",
         "0E50",
@@ -550,9 +550,9 @@
       ]
     },
     "148": {
-      "decoded": "心灵感{0F54}",
+      "decoded": "心灵感应",
       "id": 148,
-      "name": "心灵感{0F54}",
+      "name": "心灵感应",
       "tokens": [
         "0E4F",
         "08BC",
@@ -581,9 +581,9 @@
       ]
     },
     "150": {
-      "decoded": "收{057E}",
+      "decoded": "收获",
       "id": 150,
-      "name": "收{057E}",
+      "name": "收获",
       "tokens": [
         "0C1A",
         "057E"
@@ -839,9 +839,9 @@
       ]
     },
     "4": {
-      "decoded": "战斗{19E5}甲",
+      "decoded": "战斗铠甲",
       "id": 4,
-      "name": "战斗{19E5}甲",
+      "name": "战斗铠甲",
       "tokens": [
         "1030",
         "035C",
@@ -850,9 +850,9 @@
       ]
     },
     "40": {
-      "decoded": "熔岩{19E5}甲",
+      "decoded": "熔岩铠甲",
       "id": 40,
-      "name": "熔岩{19E5}甲",
+      "name": "熔岩铠甲",
       "tokens": [
         "0B5B",
         "0EBB",
@@ -1384,18 +1384,18 @@
       ]
     },
     "90": {
-      "decoded": "梦{1E29}",
+      "decoded": "梦魇",
       "id": 90,
-      "name": "梦{1E29}",
+      "name": "梦魇",
       "tokens": [
         "0966",
         "1E29"
       ]
     },
     "91": {
-      "decoded": "电引{0B08}",
+      "decoded": "电引擎",
       "id": 91,
-      "name": "电引{0B08}",
+      "name": "电引擎",
       "tokens": [
         "032E",
         "0F4D",
@@ -1403,9 +1403,9 @@
       ]
     },
     "92": {
-      "decoded": "{0CB1}{0256}",
+      "decoded": "贪吃",
       "id": 92,
-      "name": "{0CB1}{0256}",
+      "name": "贪吃",
       "tokens": [
         "0CB1",
         "0256"
@@ -1464,9 +1464,9 @@
       ]
     },
     "98": {
-      "decoded": "{0539}雪",
+      "decoded": "滑雪",
       "id": 98,
-      "name": "{0539}雪",
+      "name": "滑雪",
       "tokens": [
         "0539",
         "0E92"
@@ -1485,13 +1485,7 @@
     }
   },
   "candidate_unresolved_character_codes": [
-    "01C4",
-    "02E2",
-    "0407",
     "040A",
-    "0BDF",
-    "12A6",
-    "19E5",
     "3D",
     "71"
   ],
@@ -1557,6 +1551,7 @@
     "01B6": "冰",
     "01C1": "泼",
     "01C3": "波",
+    "01C4": "博",
     "01C5": "病",
     "01D1": "捕",
     "01D4": "补",
@@ -1576,6 +1571,7 @@
     "020A": "叉",
     "020C": "茶",
     "020F": "搽",
+    "0210": "察",
     "0214": "拆",
     "021C": "缠",
     "021E": "产",
@@ -1594,6 +1590,7 @@
     "024A": "橙",
     "024D": "乘",
     "024F": "惩",
+    "0256": "吃",
     "0259": "匙",
     "025B": "迟",
     "0262": "赤",
@@ -1616,6 +1613,7 @@
     "0298": "锤",
     "0299": "垂",
     "029D": "唇",
+    "029F": "纯",
     "02A5": "磁",
     "02AC": "刺",
     "02B0": "葱",
@@ -1631,6 +1629,7 @@
     "02D9": "殆",
     "02DA": "代",
     "02DC": "袋",
+    "02E2": "丹",
     "02E3": "单",
     "02EC": "单",
     "02ED": "弹",
@@ -1707,6 +1706,7 @@
     "03BF": "芳",
     "03C0": "方",
     "03C1": "肪",
+    "03C2": "房",
     "03C3": "防",
     "03C5": "仿",
     "03C8": "放",
@@ -1726,6 +1726,7 @@
     "03F2": "凤",
     "04": "肤",
     "0401": "服",
+    "0407": "符",
     "0408": "伏",
     "040B": "浮",
     "040C": "涪",
@@ -1828,6 +1829,7 @@
     "0535": "花",
     "0537": "华",
     "0538": "扇",
+    "0539": "滑",
     "053C": "化",
     "053D": "话",
     "0540": "怀",
@@ -1848,10 +1850,12 @@
     "0579": "混",
     "057B": "活",
     "057D": "火",
+    "057E": "获",
     "0580": "惑",
     "0584": "击",
     "0586": "基",
     "0587": "机",
+    "058C": "肌",
     "058E": "迹",
     "058F": "激",
     "0590": "讥",
@@ -1923,6 +1927,7 @@
     "0758": "鲸",
     "075A": "惊",
     "075B": "精",
+    "075D": "经",
     "0762": "静",
     "0763": "境",
     "0765": "镜",
@@ -1930,6 +1935,7 @@
     "076B": "净",
     "0775": "九",
     "0779": "旧",
+    "0781": "狙",
     "0783": "居",
     "0785": "菊",
     "078B": "聚",
@@ -1997,7 +2003,7 @@
     "0845": "佬",
     "0846": "姥",
     "084A": "勒",
-    "084B": "铁",
+    "084B": "乐",
     "084C": "雷",
     "084E": "蕾",
     "0850": "累",
@@ -2094,6 +2100,7 @@
     "0905": "滤",
     "0906": "绿",
     "090C": "乱",
+    "0910": "轮",
     "0917": "螺",
     "0918": "罗",
     "091E": "落",
@@ -2199,6 +2206,7 @@
     "0A6A": "漂",
     "0A6B": "瓢",
     "0A6C": "票",
+    "0A70": "频",
     "0A76": "苹",
     "0A78": "平",
     "0A7A": "瓶",
@@ -2232,6 +2240,7 @@
     "0B04": "请",
     "0B05": "庆",
     "0B07": "穷",
+    "0B08": "擎",
     "0B09": "晴",
     "0B0A": "邱",
     "0B0B": "情",
@@ -2310,6 +2319,7 @@
     "0BDB": "升",
     "0BDC": "绳",
     "0BDE": "盛",
+    "0BDF": "剩",
     "0BE0": "胜",
     "0BE1": "圣",
     "0BE2": "师",
@@ -2333,6 +2343,7 @@
     "0C08": "拭",
     "0C0B": "势",
     "0C0E": "噬",
+    "0C0F": "适",
     "0C10": "仕",
     "0C12": "释",
     "0C19": "试",
@@ -2377,6 +2388,7 @@
     "0CAA": "泰",
     "0CAC": "太",
     "0CAD": "态",
+    "0CB1": "贪",
     "0CBD": "碳",
     "0CBE": "探",
     "0CC0": "炭",
@@ -2435,6 +2447,7 @@
     "0D62": "旺",
     "0D64": "忘",
     "0D66": "威",
+    "0D69": "危",
     "0D6D": "围",
     "0D70": "为",
     "0D72": "维",
@@ -2455,6 +2468,7 @@
     "0DAE": "舞",
     "0DB3": "雾",
     "0DB5": "物",
+    "0DBC": "析",
     "0DBD": "西",
     "0DC2": "吸",
     "0DC6": "息",
@@ -2473,7 +2487,7 @@
     "0DEC": "先",
     "0DED": "仙",
     "0E01": "陷",
-    "0E02": "限",
+    "0E02": "险",
     "0E03": "线",
     "0E04": "相",
     "0E05": "厢",
@@ -2585,6 +2599,7 @@
     "0F4F": "印",
     "0F51": "樱",
     "0F53": "鹰",
+    "0F54": "应",
     "0F57": "萤",
     "0F5E": "影",
     "0F60": "硬",
@@ -2631,6 +2646,7 @@
     "0FF3": "早",
     "10": "噪",
     "1001": "造",
+    "1004": "燥",
     "1005": "赠",
     "1008": "渣",
     "100B": "增",
@@ -2645,11 +2661,13 @@
     "1027": "沾",
     "1029": "斩",
     "1030": "战",
+    "1035": "章",
     "1038": "张",
     "1039": "掌",
     "1043": "招",
     "1046": "沼",
     "1049": "罩",
+    "104A": "兆",
     "104E": "折",
     "1052": "者",
     "1057": "珍",
@@ -2720,6 +2738,7 @@
     "113D": "恶",
     "1193": "伽",
     "11F1": "冥",
+    "12A6": "垓",
     "1327": "莓",
     "1388": "薇",
     "13EA": "摔",
@@ -2741,6 +2760,7 @@
     "1421": "咩",
     "1422": "咪",
     "1435": "喵",
+    "1455": "喙",
     "1459": "嘟",
     "1462": "嗥",
     "1477": "噗",
@@ -2762,6 +2782,7 @@
     "177D": "柚",
     "17B8": "槌",
     "17DE": "橘",
+    "19E5": "铠",
     "1A2E": "镖",
     "1A56": "黏",
     "1A76": "鹉",
@@ -2786,6 +2807,7 @@
     "1E14": "鞯",
     "1E1B": "骷",
     "1E27": "魅",
+    "1E29": "魇",
     "1E47": "麒",
     "1E4A": "麟",
     "1E57": "鼬",
@@ -2920,7 +2942,7 @@
     "ED": "y",
     "EE": "z"
   },
-  "character_map_count": 1423,
+  "character_map_count": 1451,
   "gb2312_row_bases": {
     "01": 162,
     "16": 256,
@@ -3238,9 +3260,9 @@
       ]
     },
     "119": {
-      "decoded": "{01C4}闻眼镜",
+      "decoded": "博闻眼镜",
       "id": 119,
-      "name": "{01C4}闻眼镜",
+      "name": "博闻眼镜",
       "tokens": [
         "01C4",
         "0D8B",
@@ -3553,9 +3575,9 @@
       ]
     },
     "146": {
-      "decoded": "绿铁芭",
+      "decoded": "绿乐芭",
       "id": 146,
-      "name": "绿铁芭",
+      "name": "绿乐芭",
       "tokens": [
         "0906",
         "084B",
@@ -3725,9 +3747,9 @@
       ]
     },
     "161": {
-      "decoded": "绿毛{02E2}",
+      "decoded": "绿毛丹",
       "id": 161,
-      "name": "绿毛{02E2}",
+      "name": "绿毛丹",
       "tokens": [
         "0906",
         "0943",
@@ -3745,9 +3767,9 @@
       ]
     },
     "163": {
-      "decoded": "辣铁奇",
+      "decoded": "辣乐奇",
       "id": 163,
-      "name": "辣铁奇",
+      "name": "辣乐奇",
       "tokens": [
         "0826",
         "084B",
@@ -4058,9 +4080,9 @@
       ]
     },
     "190": {
-      "decoded": "穷名之{0407}",
+      "decoded": "穷名之符",
       "id": 190,
-      "name": "穷名之{0407}",
+      "name": "穷名之符",
       "tokens": [
         "0B07",
         "0993",
@@ -4185,9 +4207,9 @@
       ]
     },
     "200": {
-      "decoded": "{0BDF}饭",
+      "decoded": "剩饭",
       "id": 200,
-      "name": "{0BDF}饭",
+      "name": "剩饭",
       "tokens": [
         "0BDF",
         "03BC"
@@ -4291,9 +4313,9 @@
       ]
     },
     "210": {
-      "decoded": "锐利之{1455}",
+      "decoded": "锐利之喙",
       "id": 210,
-      "name": "锐利之{1455}",
+      "name": "锐利之喙",
       "tokens": [
         "0B71",
         "0870",
@@ -4322,9 +4344,9 @@
       ]
     },
     "213": {
-      "decoded": "魔影之{0407}",
+      "decoded": "魔影之符",
       "id": 213,
-      "name": "魔影之{0407}",
+      "name": "魔影之符",
       "tokens": [
         "111F",
         "10B5",
@@ -5147,9 +5169,9 @@
       ]
     },
     "281": {
-      "decoded": "1号{03C2}的钥匙",
+      "decoded": "1号房的钥匙",
       "id": 281,
-      "name": "1号{03C2}的钥匙",
+      "name": "1号房的钥匙",
       "tokens": [
         "A2",
         "04EB",
@@ -5160,9 +5182,9 @@
       ]
     },
     "282": {
-      "decoded": "2号{03C2}的钥匙",
+      "decoded": "2号房的钥匙",
       "id": 282,
-      "name": "2号{03C2}的钥匙",
+      "name": "2号房的钥匙",
       "tokens": [
         "A3",
         "04EB",
@@ -5173,9 +5195,9 @@
       ]
     },
     "283": {
-      "decoded": "4号{03C2}的钥匙",
+      "decoded": "4号房的钥匙",
       "id": 283,
-      "name": "4号{03C2}的钥匙",
+      "name": "4号房的钥匙",
       "tokens": [
         "A5",
         "04EB",
@@ -5186,9 +5208,9 @@
       ]
     },
     "284": {
-      "decoded": "6号{03C2}的钥匙",
+      "decoded": "6号房的钥匙",
       "id": 284,
-      "name": "6号{03C2}的钥匙",
+      "name": "6号房的钥匙",
       "tokens": [
         "A7",
         "04EB",
@@ -6614,9 +6636,9 @@
       ]
     },
     "56": {
-      "decoded": "圆形护身{0407}",
+      "decoded": "圆形护身符",
       "id": 56,
-      "name": "圆形护身{0407}",
+      "name": "圆形护身符",
       "tokens": [
         "0FBE",
         "0E59",
@@ -6626,9 +6648,9 @@
       ]
     },
     "57": {
-      "decoded": "闪光护身{0407}",
+      "decoded": "闪光护身符",
       "id": 57,
-      "name": "闪光护身{0407}",
+      "name": "闪光护身符",
       "tokens": [
         "0B9F",
         "04AA",
@@ -10643,9 +10665,9 @@
       ]
     },
     "413": {
-      "decoded": "黑色铁{1035}",
+      "decoded": "黑色乐章",
       "id": 413,
-      "name": "黑色铁{1035}",
+      "name": "黑色乐章",
       "tokens": [
         "0509",
         "0B89",
@@ -10710,9 +10732,9 @@
       ]
     },
     "419": {
-      "decoded": "{104A}{0A70}虫噪",
+      "decoded": "兆频虫噪",
       "id": 419,
-      "name": "{104A}{0A70}虫噪",
+      "name": "兆频虫噪",
       "tokens": [
         "104A",
         "0A70",
@@ -11867,7 +11889,7 @@
     }
   },
   "rom": "/Users/wang.song/Desktop/pokemon/漆黑的魅影 5.0EX BW.gba",
-  "rom_unknown_character_key_count": 35,
+  "rom_unknown_character_key_count": 7,
   "rom_used_character_key_count": 1195,
   "species": {
     "0": {
@@ -14123,9 +14145,9 @@
       ]
     },
     "297": {
-      "decoded": "铁天很士",
+      "decoded": "乐天很士",
       "id": 297,
-      "name": "铁天很士",
+      "name": "乐天很士",
       "tokens": [
         "084B",
         "0CED",
@@ -16111,251 +16133,15 @@
     "token_policy": "main decode uses data/rom_text.json character_map; gb2312 row inference is exported as candidates only"
   },
   "unresolved_character_codes": [
-    "01C4",
-    "0210",
-    "0256",
-    "029F",
-    "02E2",
-    "03C2",
-    "0407",
     "040A",
-    "0539",
-    "057E",
-    "058C",
-    "075D",
-    "0781",
-    "0910",
     "0A23",
-    "0A70",
-    "0B08",
-    "0BDF",
-    "0C0F",
     "0C29",
-    "0CB1",
-    "0D69",
-    "0DBC",
     "0F35",
-    "0F54",
     "0F7E",
-    "1004",
-    "1035",
-    "104A",
-    "12A6",
-    "1455",
-    "19E5",
-    "1E29",
     "3D",
     "71"
   ],
   "used_character_keys": [
-    {
-      "char": "",
-      "code": "01C4",
-      "known": false,
-      "references": [
-        {
-          "decoded": "{01C4}闻眼镜",
-          "id": 119,
-          "table": "items",
-          "token_index": 0,
-          "tokens": [
-            "01C4",
-            "0D8B",
-            "0EC4",
-            "0765"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "0210",
-      "known": false,
-      "references": [
-        {
-          "decoded": "洞{0210}",
-          "id": 126,
-          "table": "abilities",
-          "token_index": 1,
-          "tokens": [
-            "0359",
-            "0210"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "0256",
-      "known": false,
-      "references": [
-        {
-          "decoded": "{0CB1}{0256}",
-          "id": 92,
-          "table": "abilities",
-          "token_index": 1,
-          "tokens": [
-            "0CB1",
-            "0256"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "029F",
-      "known": false,
-      "references": [
-        {
-          "decoded": "单{029F}",
-          "id": 118,
-          "table": "abilities",
-          "token_index": 1,
-          "tokens": [
-            "02E3",
-            "029F"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "02E2",
-      "known": false,
-      "references": [
-        {
-          "decoded": "绿毛{02E2}",
-          "id": 161,
-          "table": "items",
-          "token_index": 2,
-          "tokens": [
-            "0906",
-            "0943",
-            "02E2"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "03C2",
-      "known": false,
-      "references": [
-        {
-          "decoded": "1号{03C2}的钥匙",
-          "id": 281,
-          "table": "items",
-          "token_index": 2,
-          "tokens": [
-            "A2",
-            "04EB",
-            "03C2",
-            "030B",
-            "0FCB",
-            "0259"
-          ]
-        },
-        {
-          "decoded": "2号{03C2}的钥匙",
-          "id": 282,
-          "table": "items",
-          "token_index": 2,
-          "tokens": [
-            "A3",
-            "04EB",
-            "03C2",
-            "030B",
-            "0FCB",
-            "0259"
-          ]
-        },
-        {
-          "decoded": "4号{03C2}的钥匙",
-          "id": 283,
-          "table": "items",
-          "token_index": 2,
-          "tokens": [
-            "A5",
-            "04EB",
-            "03C2",
-            "030B",
-            "0FCB",
-            "0259"
-          ]
-        },
-        {
-          "decoded": "6号{03C2}的钥匙",
-          "id": 284,
-          "table": "items",
-          "token_index": 2,
-          "tokens": [
-            "A7",
-            "04EB",
-            "03C2",
-            "030B",
-            "0FCB",
-            "0259"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "0407",
-      "known": false,
-      "references": [
-        {
-          "decoded": "圆形护身{0407}",
-          "id": 56,
-          "table": "items",
-          "token_index": 4,
-          "tokens": [
-            "0FBE",
-            "0E59",
-            "0531",
-            "0BCB",
-            "0407"
-          ]
-        },
-        {
-          "decoded": "闪光护身{0407}",
-          "id": 57,
-          "table": "items",
-          "token_index": 4,
-          "tokens": [
-            "0B9F",
-            "04AA",
-            "0531",
-            "0BCB",
-            "0407"
-          ]
-        },
-        {
-          "decoded": "穷名之{0407}",
-          "id": 190,
-          "table": "items",
-          "token_index": 3,
-          "tokens": [
-            "0B07",
-            "0993",
-            "107F",
-            "0407"
-          ]
-        },
-        {
-          "decoded": "魔影之{0407}",
-          "id": 213,
-          "table": "items",
-          "token_index": 3,
-          "tokens": [
-            "111F",
-            "10B5",
-            "107F",
-            "0407"
-          ]
-        }
-      ]
-    },
     {
       "char": "",
       "code": "040A",
@@ -16370,115 +16156,6 @@
             "01D6",
             "040A",
             "0C29"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "0539",
-      "known": false,
-      "references": [
-        {
-          "decoded": "{0539}雪",
-          "id": 98,
-          "table": "abilities",
-          "token_index": 0,
-          "tokens": [
-            "0539",
-            "0E92"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "057E",
-      "known": false,
-      "references": [
-        {
-          "decoded": "收{057E}",
-          "id": 150,
-          "table": "abilities",
-          "token_index": 1,
-          "tokens": [
-            "0C1A",
-            "057E"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "058C",
-      "known": false,
-      "references": [
-        {
-          "decoded": "干{1004}{058C}肤",
-          "id": 103,
-          "table": "abilities",
-          "token_index": 2,
-          "tokens": [
-            "0433",
-            "1004",
-            "058C",
-            "04"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "075D",
-      "known": false,
-      "references": [
-        {
-          "decoded": "怒冲{075D}穴",
-          "id": 116,
-          "table": "abilities",
-          "token_index": 2,
-          "tokens": [
-            "0A0A",
-            "0267",
-            "075D",
-            "0E91"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "0781",
-      "known": false,
-      "references": [
-        {
-          "decoded": "{0781}击手",
-          "id": 115,
-          "table": "abilities",
-          "token_index": 0,
-          "tokens": [
-            "0781",
-            "0584",
-            "0C1B"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "0910",
-      "known": false,
-      "references": [
-        {
-          "decoded": "涡{0910}火花",
-          "id": 137,
-          "table": "abilities",
-          "token_index": 1,
-          "tokens": [
-            "0D96",
-            "0910",
-            "057D",
-            "0535"
           ]
         }
       ]
@@ -16502,90 +16179,6 @@
     },
     {
       "char": "",
-      "code": "0A70",
-      "known": false,
-      "references": [
-        {
-          "decoded": "{104A}{0A70}虫噪",
-          "id": 419,
-          "table": "moves",
-          "token_index": 1,
-          "tokens": [
-            "104A",
-            "0A70",
-            "0268",
-            "10"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "0B08",
-      "known": false,
-      "references": [
-        {
-          "decoded": "电引{0B08}",
-          "id": 91,
-          "table": "abilities",
-          "token_index": 2,
-          "tokens": [
-            "032E",
-            "0F4D",
-            "0B08"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "0BDF",
-      "known": false,
-      "references": [
-        {
-          "decoded": "自信过{0BDF}",
-          "id": 143,
-          "table": "abilities",
-          "token_index": 3,
-          "tokens": [
-            "110C",
-            "0E50",
-            "04C5",
-            "0BDF"
-          ]
-        },
-        {
-          "decoded": "{0BDF}饭",
-          "id": 200,
-          "table": "items",
-          "token_index": 0,
-          "tokens": [
-            "0BDF",
-            "03BC"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "0C0F",
-      "known": false,
-      "references": [
-        {
-          "decoded": "{0C0F}{0F54}力",
-          "id": 121,
-          "table": "abilities",
-          "token_index": 0,
-          "tokens": [
-            "0C0F",
-            "0F54",
-            "0879"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
       "code": "0C29",
       "known": false,
       "references": [
@@ -16598,59 +16191,6 @@
             "01D6",
             "040A",
             "0C29"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "0CB1",
-      "known": false,
-      "references": [
-        {
-          "decoded": "{0CB1}{0256}",
-          "id": 92,
-          "table": "abilities",
-          "token_index": 0,
-          "tokens": [
-            "0CB1",
-            "0256"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "0D69",
-      "known": false,
-      "references": [
-        {
-          "decoded": "{0D69}限预知",
-          "id": 123,
-          "table": "abilities",
-          "token_index": 0,
-          "tokens": [
-            "0D69",
-            "0E02",
-            "0FB0",
-            "107B"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "0DBC",
-      "known": false,
-      "references": [
-        {
-          "decoded": "分{0DBC}",
-          "id": 142,
-          "table": "abilities",
-          "token_index": 1,
-          "tokens": [
-            "03D9",
-            "0DBC"
           ]
         }
       ]
@@ -16676,36 +16216,6 @@
     },
     {
       "char": "",
-      "code": "0F54",
-      "known": false,
-      "references": [
-        {
-          "decoded": "{0C0F}{0F54}力",
-          "id": 121,
-          "table": "abilities",
-          "token_index": 1,
-          "tokens": [
-            "0C0F",
-            "0F54",
-            "0879"
-          ]
-        },
-        {
-          "decoded": "心灵感{0F54}",
-          "id": 148,
-          "table": "abilities",
-          "token_index": 3,
-          "tokens": [
-            "0E4F",
-            "08BC",
-            "043A",
-            "0F54"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
       "code": "0F7E",
       "known": false,
       "references": [
@@ -16719,149 +16229,6 @@
             "0B89",
             "0EC4",
             "0765"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "1004",
-      "known": false,
-      "references": [
-        {
-          "decoded": "干{1004}{058C}肤",
-          "id": 103,
-          "table": "abilities",
-          "token_index": 1,
-          "tokens": [
-            "0433",
-            "1004",
-            "058C",
-            "04"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "1035",
-      "known": false,
-      "references": [
-        {
-          "decoded": "黑色铁{1035}",
-          "id": 413,
-          "table": "moves",
-          "token_index": 3,
-          "tokens": [
-            "0509",
-            "0B89",
-            "084B",
-            "1035"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "104A",
-      "known": false,
-      "references": [
-        {
-          "decoded": "{104A}{0A70}虫噪",
-          "id": 419,
-          "table": "moves",
-          "token_index": 0,
-          "tokens": [
-            "104A",
-            "0A70",
-            "0268",
-            "10"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "12A6",
-      "known": false,
-      "references": [
-        {
-          "decoded": "{12A6}级电压",
-          "id": 138,
-          "table": "abilities",
-          "token_index": 0,
-          "tokens": [
-            "12A6",
-            "05A1",
-            "032E",
-            "0EA2"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "1455",
-      "known": false,
-      "references": [
-        {
-          "decoded": "锐利之{1455}",
-          "id": 210,
-          "table": "items",
-          "token_index": 3,
-          "tokens": [
-            "0B71",
-            "0870",
-            "107F",
-            "1455"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "19E5",
-      "known": false,
-      "references": [
-        {
-          "decoded": "战斗{19E5}甲",
-          "id": 4,
-          "table": "abilities",
-          "token_index": 2,
-          "tokens": [
-            "1030",
-            "035C",
-            "19E5",
-            "05C2"
-          ]
-        },
-        {
-          "decoded": "熔岩{19E5}甲",
-          "id": 40,
-          "table": "abilities",
-          "token_index": 2,
-          "tokens": [
-            "0B5B",
-            "0EBB",
-            "19E5",
-            "05C2"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "1E29",
-      "known": false,
-      "references": [
-        {
-          "decoded": "梦{1E29}",
-          "id": 90,
-          "table": "abilities",
-          "token_index": 1,
-          "tokens": [
-            "0966",
-            "1E29"
           ]
         }
       ]
@@ -18840,7 +18207,7 @@
           ]
         },
         {
-          "decoded": "绿铁芭",
+          "decoded": "绿乐芭",
           "id": 146,
           "table": "items",
           "token_index": 2,
@@ -21041,6 +20408,25 @@
       ]
     },
     {
+      "char": "博",
+      "code": "01C4",
+      "known": true,
+      "references": [
+        {
+          "decoded": "博闻眼镜",
+          "id": 119,
+          "table": "items",
+          "token_index": 0,
+          "tokens": [
+            "01C4",
+            "0D8B",
+            "0EC4",
+            "0765"
+          ]
+        }
+      ]
+    },
+    {
       "char": "病",
       "code": "01C5",
       "known": true,
@@ -21505,6 +20891,23 @@
       ]
     },
     {
+      "char": "察",
+      "code": "0210",
+      "known": true,
+      "references": [
+        {
+          "decoded": "洞察",
+          "id": 126,
+          "table": "abilities",
+          "token_index": 1,
+          "tokens": [
+            "0359",
+            "0210"
+          ]
+        }
+      ]
+    },
+    {
       "char": "缠",
       "code": "021C",
       "known": true,
@@ -21941,6 +21344,23 @@
       ]
     },
     {
+      "char": "吃",
+      "code": "0256",
+      "known": true,
+      "references": [
+        {
+          "decoded": "贪吃",
+          "id": 92,
+          "table": "abilities",
+          "token_index": 1,
+          "tokens": [
+            "0CB1",
+            "0256"
+          ]
+        }
+      ]
+    },
+    {
       "char": "匙",
       "code": "0259",
       "known": true,
@@ -21982,7 +21402,7 @@
           ]
         },
         {
-          "decoded": "1号{03C2}的钥匙",
+          "decoded": "1号房的钥匙",
           "id": 281,
           "table": "items",
           "token_index": 5,
@@ -21996,7 +21416,7 @@
           ]
         },
         {
-          "decoded": "2号{03C2}的钥匙",
+          "decoded": "2号房的钥匙",
           "id": 282,
           "table": "items",
           "token_index": 5,
@@ -22010,7 +21430,7 @@
           ]
         },
         {
-          "decoded": "4号{03C2}的钥匙",
+          "decoded": "4号房的钥匙",
           "id": 283,
           "table": "items",
           "token_index": 5,
@@ -22024,7 +21444,7 @@
           ]
         },
         {
-          "decoded": "6号{03C2}的钥匙",
+          "decoded": "6号房的钥匙",
           "id": 284,
           "table": "items",
           "token_index": 5,
@@ -22250,7 +21670,7 @@
           ]
         },
         {
-          "decoded": "怒冲{075D}穴",
+          "decoded": "怒冲经穴",
           "id": 116,
           "table": "abilities",
           "token_index": 1,
@@ -22381,7 +21801,7 @@
           ]
         },
         {
-          "decoded": "{104A}{0A70}虫噪",
+          "decoded": "兆频虫噪",
           "id": 419,
           "table": "moves",
           "token_index": 2,
@@ -22933,6 +22353,23 @@
             "096C",
             "029D",
             "0D46"
+          ]
+        }
+      ]
+    },
+    {
+      "char": "纯",
+      "code": "029F",
+      "known": true,
+      "references": [
+        {
+          "decoded": "单纯",
+          "id": 118,
+          "table": "abilities",
+          "token_index": 1,
+          "tokens": [
+            "02E3",
+            "029F"
           ]
         }
       ]
@@ -24046,6 +23483,24 @@
       ]
     },
     {
+      "char": "丹",
+      "code": "02E2",
+      "known": true,
+      "references": [
+        {
+          "decoded": "绿毛丹",
+          "id": 161,
+          "table": "items",
+          "token_index": 2,
+          "tokens": [
+            "0906",
+            "0943",
+            "02E2"
+          ]
+        }
+      ]
+    },
+    {
       "char": "单",
       "code": "02E3",
       "known": true,
@@ -24062,7 +23517,7 @@
           ]
         },
         {
-          "decoded": "单{029F}",
+          "decoded": "单纯",
           "id": 118,
           "table": "abilities",
           "token_index": 0,
@@ -24658,7 +24113,7 @@
           ]
         },
         {
-          "decoded": "1号{03C2}的钥匙",
+          "decoded": "1号房的钥匙",
           "id": 281,
           "table": "items",
           "token_index": 3,
@@ -24672,7 +24127,7 @@
           ]
         },
         {
-          "decoded": "2号{03C2}的钥匙",
+          "decoded": "2号房的钥匙",
           "id": 282,
           "table": "items",
           "token_index": 3,
@@ -24686,7 +24141,7 @@
           ]
         },
         {
-          "decoded": "4号{03C2}的钥匙",
+          "decoded": "4号房的钥匙",
           "id": 283,
           "table": "items",
           "token_index": 3,
@@ -24700,7 +24155,7 @@
           ]
         },
         {
-          "decoded": "6号{03C2}的钥匙",
+          "decoded": "6号房的钥匙",
           "id": 284,
           "table": "items",
           "token_index": 3,
@@ -25578,7 +25033,7 @@
           ]
         },
         {
-          "decoded": "电引{0B08}",
+          "decoded": "电引擎",
           "id": 91,
           "table": "abilities",
           "token_index": 0,
@@ -25589,7 +25044,7 @@
           ]
         },
         {
-          "decoded": "{12A6}级电压",
+          "decoded": "垓级电压",
           "id": 138,
           "table": "abilities",
           "token_index": 2,
@@ -26052,7 +25507,7 @@
           ]
         },
         {
-          "decoded": "洞{0210}",
+          "decoded": "洞察",
           "id": 126,
           "table": "abilities",
           "token_index": 0,
@@ -26109,7 +25564,7 @@
           ]
         },
         {
-          "decoded": "战斗{19E5}甲",
+          "decoded": "战斗铠甲",
           "id": 4,
           "table": "abilities",
           "token_index": 1,
@@ -27375,7 +26830,7 @@
           ]
         },
         {
-          "decoded": "{0BDF}饭",
+          "decoded": "剩饭",
           "id": 200,
           "table": "items",
           "token_index": 1,
@@ -27449,6 +26904,69 @@
             "0520",
             "107D",
             "03C1"
+          ]
+        }
+      ]
+    },
+    {
+      "char": "房",
+      "code": "03C2",
+      "known": true,
+      "references": [
+        {
+          "decoded": "1号房的钥匙",
+          "id": 281,
+          "table": "items",
+          "token_index": 2,
+          "tokens": [
+            "A2",
+            "04EB",
+            "03C2",
+            "030B",
+            "0FCB",
+            "0259"
+          ]
+        },
+        {
+          "decoded": "2号房的钥匙",
+          "id": 282,
+          "table": "items",
+          "token_index": 2,
+          "tokens": [
+            "A3",
+            "04EB",
+            "03C2",
+            "030B",
+            "0FCB",
+            "0259"
+          ]
+        },
+        {
+          "decoded": "4号房的钥匙",
+          "id": 283,
+          "table": "items",
+          "token_index": 2,
+          "tokens": [
+            "A5",
+            "04EB",
+            "03C2",
+            "030B",
+            "0FCB",
+            "0259"
+          ]
+        },
+        {
+          "decoded": "6号房的钥匙",
+          "id": 284,
+          "table": "items",
+          "token_index": 2,
+          "tokens": [
+            "A7",
+            "04EB",
+            "03C2",
+            "030B",
+            "0FCB",
+            "0259"
           ]
         }
       ]
@@ -27811,7 +27329,7 @@
           ]
         },
         {
-          "decoded": "分{0DBC}",
+          "decoded": "分析",
           "id": 142,
           "table": "abilities",
           "token_index": 0,
@@ -28363,7 +27881,7 @@
           ]
         },
         {
-          "decoded": "干{1004}{058C}肤",
+          "decoded": "干燥肌肤",
           "id": 103,
           "table": "abilities",
           "token_index": 3,
@@ -28396,6 +27914,63 @@
             "058E",
             "0A5F",
             "04"
+          ]
+        }
+      ]
+    },
+    {
+      "char": "符",
+      "code": "0407",
+      "known": true,
+      "references": [
+        {
+          "decoded": "圆形护身符",
+          "id": 56,
+          "table": "items",
+          "token_index": 4,
+          "tokens": [
+            "0FBE",
+            "0E59",
+            "0531",
+            "0BCB",
+            "0407"
+          ]
+        },
+        {
+          "decoded": "闪光护身符",
+          "id": 57,
+          "table": "items",
+          "token_index": 4,
+          "tokens": [
+            "0B9F",
+            "04AA",
+            "0531",
+            "0BCB",
+            "0407"
+          ]
+        },
+        {
+          "decoded": "穷名之符",
+          "id": 190,
+          "table": "items",
+          "token_index": 3,
+          "tokens": [
+            "0B07",
+            "0993",
+            "107F",
+            "0407"
+          ]
+        },
+        {
+          "decoded": "魔影之符",
+          "id": 213,
+          "table": "items",
+          "token_index": 3,
+          "tokens": [
+            "111F",
+            "10B5",
+            "107F",
+            "0407"
           ]
         }
       ]
@@ -28851,7 +28426,7 @@
           ]
         },
         {
-          "decoded": "干{1004}{058C}肤",
+          "decoded": "干燥肌肤",
           "id": 103,
           "table": "abilities",
           "token_index": 0,
@@ -28954,7 +28529,7 @@
           ]
         },
         {
-          "decoded": "心灵感{0F54}",
+          "decoded": "心灵感应",
           "id": 148,
           "table": "abilities",
           "token_index": 2,
@@ -30456,7 +30031,7 @@
           ]
         },
         {
-          "decoded": "闪光护身{0407}",
+          "decoded": "闪光护身符",
           "id": 57,
           "table": "items",
           "token_index": 1,
@@ -31351,7 +30926,7 @@
           ]
         },
         {
-          "decoded": "自信过{0BDF}",
+          "decoded": "自信过剩",
           "id": 143,
           "table": "abilities",
           "token_index": 2,
@@ -31697,7 +31272,7 @@
           ]
         },
         {
-          "decoded": "1号{03C2}的钥匙",
+          "decoded": "1号房的钥匙",
           "id": 281,
           "table": "items",
           "token_index": 1,
@@ -31711,7 +31286,7 @@
           ]
         },
         {
-          "decoded": "2号{03C2}的钥匙",
+          "decoded": "2号房的钥匙",
           "id": 282,
           "table": "items",
           "token_index": 1,
@@ -31725,7 +31300,7 @@
           ]
         },
         {
-          "decoded": "4号{03C2}的钥匙",
+          "decoded": "4号房的钥匙",
           "id": 283,
           "table": "items",
           "token_index": 1,
@@ -31739,7 +31314,7 @@
           ]
         },
         {
-          "decoded": "6号{03C2}的钥匙",
+          "decoded": "6号房的钥匙",
           "id": 284,
           "table": "items",
           "token_index": 1,
@@ -31943,7 +31518,7 @@
           ]
         },
         {
-          "decoded": "铁天很士",
+          "decoded": "乐天很士",
           "id": 297,
           "table": "species",
           "token_index": 2,
@@ -32062,7 +31637,7 @@
           ]
         },
         {
-          "decoded": "黑色铁{1035}",
+          "decoded": "黑色乐章",
           "id": 413,
           "table": "moves",
           "token_index": 0,
@@ -32661,7 +32236,7 @@
           ]
         },
         {
-          "decoded": "圆形护身{0407}",
+          "decoded": "圆形护身符",
           "id": 56,
           "table": "items",
           "token_index": 2,
@@ -32674,7 +32249,7 @@
           ]
         },
         {
-          "decoded": "闪光护身{0407}",
+          "decoded": "闪光护身符",
           "id": 57,
           "table": "items",
           "token_index": 2,
@@ -32855,7 +32430,7 @@
           ]
         },
         {
-          "decoded": "涡{0910}火花",
+          "decoded": "涡轮火花",
           "id": 137,
           "table": "abilities",
           "token_index": 3,
@@ -32939,6 +32514,23 @@
             "0538",
             "0CED",
             "047F"
+          ]
+        }
+      ]
+    },
+    {
+      "char": "滑",
+      "code": "0539",
+      "known": true,
+      "references": [
+        {
+          "decoded": "滑雪",
+          "id": 98,
+          "table": "abilities",
+          "token_index": 0,
+          "tokens": [
+            "0539",
+            "0E92"
           ]
         }
       ]
@@ -34168,7 +33760,7 @@
           ]
         },
         {
-          "decoded": "涡{0910}火花",
+          "decoded": "涡轮火花",
           "id": 137,
           "table": "abilities",
           "token_index": 2,
@@ -34212,6 +33804,23 @@
             "0378",
             "107F",
             "1075"
+          ]
+        }
+      ]
+    },
+    {
+      "char": "获",
+      "code": "057E",
+      "known": true,
+      "references": [
+        {
+          "decoded": "收获",
+          "id": 150,
+          "table": "abilities",
+          "token_index": 1,
+          "tokens": [
+            "0C1A",
+            "057E"
           ]
         }
       ]
@@ -34542,7 +34151,7 @@
           ]
         },
         {
-          "decoded": "{0781}击手",
+          "decoded": "狙击手",
           "id": 115,
           "table": "abilities",
           "token_index": 1,
@@ -35528,6 +35137,25 @@
       ]
     },
     {
+      "char": "肌",
+      "code": "058C",
+      "known": true,
+      "references": [
+        {
+          "decoded": "干燥肌肤",
+          "id": 103,
+          "table": "abilities",
+          "token_index": 2,
+          "tokens": [
+            "0433",
+            "1004",
+            "058C",
+            "04"
+          ]
+        }
+      ]
+    },
+    {
       "char": "迹",
       "code": "058E",
       "known": true,
@@ -35899,7 +35527,7 @@
           ]
         },
         {
-          "decoded": "{12A6}级电压",
+          "decoded": "垓级电压",
           "id": 138,
           "table": "abilities",
           "token_index": 1,
@@ -37290,7 +36918,7 @@
           ]
         },
         {
-          "decoded": "战斗{19E5}甲",
+          "decoded": "战斗铠甲",
           "id": 4,
           "table": "abilities",
           "token_index": 3,
@@ -37302,7 +36930,7 @@
           ]
         },
         {
-          "decoded": "熔岩{19E5}甲",
+          "decoded": "熔岩铠甲",
           "id": 40,
           "table": "abilities",
           "token_index": 3,
@@ -39006,6 +38634,25 @@
       ]
     },
     {
+      "char": "经",
+      "code": "075D",
+      "known": true,
+      "references": [
+        {
+          "decoded": "怒冲经穴",
+          "id": 116,
+          "table": "abilities",
+          "token_index": 2,
+          "tokens": [
+            "0A0A",
+            "0267",
+            "075D",
+            "0E91"
+          ]
+        }
+      ]
+    },
+    {
       "char": "静",
       "code": "0762",
       "known": true,
@@ -39106,7 +38753,7 @@
           ]
         },
         {
-          "decoded": "{01C4}闻眼镜",
+          "decoded": "博闻眼镜",
           "id": 119,
           "table": "items",
           "token_index": 3,
@@ -39236,6 +38883,24 @@
             "0779",
             "0E50",
             "108E"
+          ]
+        }
+      ]
+    },
+    {
+      "char": "狙",
+      "code": "0781",
+      "known": true,
+      "references": [
+        {
+          "decoded": "狙击手",
+          "id": 115,
+          "table": "abilities",
+          "token_index": 0,
+          "tokens": [
+            "0781",
+            "0584",
+            "0C1B"
           ]
         }
       ]
@@ -41402,7 +41067,7 @@
           ]
         },
         {
-          "decoded": "辣铁奇",
+          "decoded": "辣乐奇",
           "id": 163,
           "table": "items",
           "token_index": 0,
@@ -41832,12 +41497,12 @@
       ]
     },
     {
-      "char": "铁",
+      "char": "乐",
       "code": "084B",
       "known": true,
       "references": [
         {
-          "decoded": "铁天很士",
+          "decoded": "乐天很士",
           "id": 297,
           "table": "species",
           "token_index": 0,
@@ -41849,7 +41514,7 @@
           ]
         },
         {
-          "decoded": "黑色铁{1035}",
+          "decoded": "黑色乐章",
           "id": 413,
           "table": "moves",
           "token_index": 2,
@@ -41861,7 +41526,7 @@
           ]
         },
         {
-          "decoded": "绿铁芭",
+          "decoded": "绿乐芭",
           "id": 146,
           "table": "items",
           "token_index": 1,
@@ -41872,7 +41537,7 @@
           ]
         },
         {
-          "decoded": "辣铁奇",
+          "decoded": "辣乐奇",
           "id": 163,
           "table": "items",
           "token_index": 1,
@@ -42528,7 +42193,7 @@
           ]
         },
         {
-          "decoded": "锐利之{1455}",
+          "decoded": "锐利之喙",
           "id": 210,
           "table": "items",
           "token_index": 1,
@@ -42979,7 +42644,7 @@
           ]
         },
         {
-          "decoded": "{0C0F}{0F54}力",
+          "decoded": "适应力",
           "id": 121,
           "table": "abilities",
           "token_index": 2,
@@ -44026,7 +43691,7 @@
           ]
         },
         {
-          "decoded": "心灵感{0F54}",
+          "decoded": "心灵感应",
           "id": 148,
           "table": "abilities",
           "token_index": 1,
@@ -45047,7 +44712,7 @@
           ]
         },
         {
-          "decoded": "绿铁芭",
+          "decoded": "绿乐芭",
           "id": 146,
           "table": "items",
           "token_index": 0,
@@ -45058,7 +44723,7 @@
           ]
         },
         {
-          "decoded": "绿毛{02E2}",
+          "decoded": "绿毛丹",
           "id": 161,
           "table": "items",
           "token_index": 0,
@@ -45146,6 +44811,25 @@
             "107F",
             "090C",
             "0DAE"
+          ]
+        }
+      ]
+    },
+    {
+      "char": "轮",
+      "code": "0910",
+      "known": true,
+      "references": [
+        {
+          "decoded": "涡轮火花",
+          "id": 137,
+          "table": "abilities",
+          "token_index": 1,
+          "tokens": [
+            "0D96",
+            "0910",
+            "057D",
+            "0535"
           ]
         }
       ]
@@ -45705,7 +45389,7 @@
           ]
         },
         {
-          "decoded": "绿毛{02E2}",
+          "decoded": "绿毛丹",
           "id": 161,
           "table": "items",
           "token_index": 1,
@@ -45993,7 +45677,7 @@
           ]
         },
         {
-          "decoded": "梦{1E29}",
+          "decoded": "梦魇",
           "id": 90,
           "table": "abilities",
           "token_index": 0,
@@ -46646,7 +46330,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "穷名之{0407}",
+          "decoded": "穷名之符",
           "id": 190,
           "table": "items",
           "token_index": 1,
@@ -49053,7 +48737,7 @@
           ]
         },
         {
-          "decoded": "怒冲{075D}穴",
+          "decoded": "怒冲经穴",
           "id": 116,
           "table": "abilities",
           "token_index": 0,
@@ -50398,6 +50082,25 @@
       ]
     },
     {
+      "char": "频",
+      "code": "0A70",
+      "known": true,
+      "references": [
+        {
+          "decoded": "兆频虫噪",
+          "id": 419,
+          "table": "moves",
+          "token_index": 1,
+          "tokens": [
+            "104A",
+            "0A70",
+            "0268",
+            "10"
+          ]
+        }
+      ]
+    },
+    {
       "char": "苹",
       "code": "0A76",
       "known": true,
@@ -50830,7 +50533,7 @@
           ]
         },
         {
-          "decoded": "辣铁奇",
+          "decoded": "辣乐奇",
           "id": 163,
           "table": "items",
           "token_index": 2,
@@ -52564,7 +52267,7 @@
           ]
         },
         {
-          "decoded": "穷名之{0407}",
+          "decoded": "穷名之符",
           "id": 190,
           "table": "items",
           "token_index": 0,
@@ -52573,6 +52276,24 @@
             "0993",
             "107F",
             "0407"
+          ]
+        }
+      ]
+    },
+    {
+      "char": "擎",
+      "code": "0B08",
+      "known": true,
+      "references": [
+        {
+          "decoded": "电引擎",
+          "id": 91,
+          "table": "abilities",
+          "token_index": 2,
+          "tokens": [
+            "032E",
+            "0F4D",
+            "0B08"
           ]
         }
       ]
@@ -54062,7 +53783,7 @@
           ]
         },
         {
-          "decoded": "熔岩{19E5}甲",
+          "decoded": "熔岩铠甲",
           "id": 40,
           "table": "abilities",
           "token_index": 0,
@@ -54183,7 +53904,7 @@
           ]
         },
         {
-          "decoded": "锐利之{1455}",
+          "decoded": "锐利之喙",
           "id": 210,
           "table": "items",
           "token_index": 0,
@@ -54511,7 +54232,7 @@
           ]
         },
         {
-          "decoded": "黑色铁{1035}",
+          "decoded": "黑色乐章",
           "id": 413,
           "table": "moves",
           "token_index": 1,
@@ -55156,7 +54877,7 @@
           ]
         },
         {
-          "decoded": "闪光护身{0407}",
+          "decoded": "闪光护身符",
           "id": 57,
           "table": "items",
           "token_index": 0,
@@ -55848,7 +55569,7 @@
           ]
         },
         {
-          "decoded": "圆形护身{0407}",
+          "decoded": "圆形护身符",
           "id": 56,
           "table": "items",
           "token_index": 3,
@@ -55861,7 +55582,7 @@
           ]
         },
         {
-          "decoded": "闪光护身{0407}",
+          "decoded": "闪光护身符",
           "id": 57,
           "table": "items",
           "token_index": 3,
@@ -56484,6 +56205,35 @@
           "tokens": [
             "0947",
             "0BDE"
+          ]
+        }
+      ]
+    },
+    {
+      "char": "剩",
+      "code": "0BDF",
+      "known": true,
+      "references": [
+        {
+          "decoded": "自信过剩",
+          "id": 143,
+          "table": "abilities",
+          "token_index": 3,
+          "tokens": [
+            "110C",
+            "0E50",
+            "04C5",
+            "0BDF"
+          ]
+        },
+        {
+          "decoded": "剩饭",
+          "id": 200,
+          "table": "items",
+          "token_index": 0,
+          "tokens": [
+            "0BDF",
+            "03BC"
           ]
         }
       ]
@@ -57671,6 +57421,24 @@
       ]
     },
     {
+      "char": "适",
+      "code": "0C0F",
+      "known": true,
+      "references": [
+        {
+          "decoded": "适应力",
+          "id": 121,
+          "table": "abilities",
+          "token_index": 0,
+          "tokens": [
+            "0C0F",
+            "0F54",
+            "0879"
+          ]
+        }
+      ]
+    },
+    {
       "char": "释",
       "code": "0C12",
       "known": true,
@@ -57783,7 +57551,7 @@
           ]
         },
         {
-          "decoded": "收{057E}",
+          "decoded": "收获",
           "id": 150,
           "table": "abilities",
           "token_index": 0,
@@ -57879,7 +57647,7 @@
           ]
         },
         {
-          "decoded": "{0781}击手",
+          "decoded": "狙击手",
           "id": 115,
           "table": "abilities",
           "token_index": 2,
@@ -60237,6 +60005,23 @@
       ]
     },
     {
+      "char": "贪",
+      "code": "0CB1",
+      "known": true,
+      "references": [
+        {
+          "decoded": "贪吃",
+          "id": 92,
+          "table": "abilities",
+          "token_index": 0,
+          "tokens": [
+            "0CB1",
+            "0256"
+          ]
+        }
+      ]
+    },
+    {
       "char": "碳",
       "code": "0CBD",
       "known": true,
@@ -60812,7 +60597,7 @@
           ]
         },
         {
-          "decoded": "铁天很士",
+          "decoded": "乐天很士",
           "id": 297,
           "table": "species",
           "token_index": 1,
@@ -61400,7 +61185,7 @@
           ]
         },
         {
-          "decoded": "铁天很士",
+          "decoded": "乐天很士",
           "id": 297,
           "table": "species",
           "token_index": 3,
@@ -62889,6 +62674,25 @@
       ]
     },
     {
+      "char": "危",
+      "code": "0D69",
+      "known": true,
+      "references": [
+        {
+          "decoded": "危险预知",
+          "id": 123,
+          "table": "abilities",
+          "token_index": 0,
+          "tokens": [
+            "0D69",
+            "0E02",
+            "0FB0",
+            "107B"
+          ]
+        }
+      ]
+    },
+    {
       "char": "围",
       "code": "0D6D",
       "known": true,
@@ -63193,7 +62997,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "{01C4}闻眼镜",
+          "decoded": "博闻眼镜",
           "id": 119,
           "table": "items",
           "token_index": 1,
@@ -63312,7 +63116,7 @@
           ]
         },
         {
-          "decoded": "涡{0910}火花",
+          "decoded": "涡轮火花",
           "id": 137,
           "table": "abilities",
           "token_index": 0,
@@ -63742,6 +63546,23 @@
             "0DB5",
             "0318",
             "110B"
+          ]
+        }
+      ]
+    },
+    {
+      "char": "析",
+      "code": "0DBC",
+      "known": true,
+      "references": [
+        {
+          "decoded": "分析",
+          "id": 142,
+          "table": "abilities",
+          "token_index": 1,
+          "tokens": [
+            "03D9",
+            "0DBC"
           ]
         }
       ]
@@ -64254,12 +64075,12 @@
       ]
     },
     {
-      "char": "限",
+      "char": "险",
       "code": "0E02",
       "known": true,
       "references": [
         {
-          "decoded": "{0D69}限预知",
+          "decoded": "危险预知",
           "id": 123,
           "table": "abilities",
           "token_index": 1,
@@ -65006,7 +64827,7 @@
           ]
         },
         {
-          "decoded": "心灵感{0F54}",
+          "decoded": "心灵感应",
           "id": 148,
           "table": "abilities",
           "token_index": 0,
@@ -65097,7 +64918,7 @@
           ]
         },
         {
-          "decoded": "自信过{0BDF}",
+          "decoded": "自信过剩",
           "id": 143,
           "table": "abilities",
           "token_index": 1,
@@ -65423,7 +65244,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "圆形护身{0407}",
+          "decoded": "圆形护身符",
           "id": 56,
           "table": "items",
           "token_index": 1,
@@ -65993,7 +65814,7 @@
           ]
         },
         {
-          "decoded": "怒冲{075D}穴",
+          "decoded": "怒冲经穴",
           "id": 116,
           "table": "abilities",
           "token_index": 3,
@@ -66129,7 +65950,7 @@
           ]
         },
         {
-          "decoded": "{0539}雪",
+          "decoded": "滑雪",
           "id": 98,
           "table": "abilities",
           "token_index": 1,
@@ -66289,7 +66110,7 @@
           ]
         },
         {
-          "decoded": "{12A6}级电压",
+          "decoded": "垓级电压",
           "id": 138,
           "table": "abilities",
           "token_index": 3,
@@ -66955,7 +66776,7 @@
           ]
         },
         {
-          "decoded": "熔岩{19E5}甲",
+          "decoded": "熔岩铠甲",
           "id": 40,
           "table": "abilities",
           "token_index": 1,
@@ -67210,7 +67031,7 @@
           ]
         },
         {
-          "decoded": "{01C4}闻眼镜",
+          "decoded": "博闻眼镜",
           "id": 119,
           "table": "items",
           "token_index": 2,
@@ -69081,7 +68902,7 @@
           ]
         },
         {
-          "decoded": "电引{0B08}",
+          "decoded": "电引擎",
           "id": 91,
           "table": "abilities",
           "token_index": 1,
@@ -69257,6 +69078,36 @@
             "09AD",
             "07D9",
             "0F53"
+          ]
+        }
+      ]
+    },
+    {
+      "char": "应",
+      "code": "0F54",
+      "known": true,
+      "references": [
+        {
+          "decoded": "适应力",
+          "id": 121,
+          "table": "abilities",
+          "token_index": 1,
+          "tokens": [
+            "0C0F",
+            "0F54",
+            "0879"
+          ]
+        },
+        {
+          "decoded": "心灵感应",
+          "id": 148,
+          "table": "abilities",
+          "token_index": 3,
+          "tokens": [
+            "0E4F",
+            "08BC",
+            "043A",
+            "0F54"
           ]
         }
       ]
@@ -70268,7 +70119,7 @@
           ]
         },
         {
-          "decoded": "{0D69}限预知",
+          "decoded": "危险预知",
           "id": 123,
           "table": "abilities",
           "token_index": 2,
@@ -70402,7 +70253,7 @@
           ]
         },
         {
-          "decoded": "圆形护身{0407}",
+          "decoded": "圆形护身符",
           "id": 56,
           "table": "items",
           "token_index": 0,
@@ -70592,7 +70443,7 @@
           ]
         },
         {
-          "decoded": "1号{03C2}的钥匙",
+          "decoded": "1号房的钥匙",
           "id": 281,
           "table": "items",
           "token_index": 4,
@@ -70606,7 +70457,7 @@
           ]
         },
         {
-          "decoded": "2号{03C2}的钥匙",
+          "decoded": "2号房的钥匙",
           "id": 282,
           "table": "items",
           "token_index": 4,
@@ -70620,7 +70471,7 @@
           ]
         },
         {
-          "decoded": "4号{03C2}的钥匙",
+          "decoded": "4号房的钥匙",
           "id": 283,
           "table": "items",
           "token_index": 4,
@@ -70634,7 +70485,7 @@
           ]
         },
         {
-          "decoded": "6号{03C2}的钥匙",
+          "decoded": "6号房的钥匙",
           "id": 284,
           "table": "items",
           "token_index": 4,
@@ -71028,7 +70879,7 @@
           ]
         },
         {
-          "decoded": "{104A}{0A70}虫噪",
+          "decoded": "兆频虫噪",
           "id": 419,
           "table": "moves",
           "token_index": 3,
@@ -71117,6 +70968,25 @@
             "1001",
             "0BE0",
             "0870"
+          ]
+        }
+      ]
+    },
+    {
+      "char": "燥",
+      "code": "1004",
+      "known": true,
+      "references": [
+        {
+          "decoded": "干燥肌肤",
+          "id": 103,
+          "table": "abilities",
+          "token_index": 1,
+          "tokens": [
+            "0433",
+            "1004",
+            "058C",
+            "04"
           ]
         }
       ]
@@ -71455,7 +71325,7 @@
           ]
         },
         {
-          "decoded": "战斗{19E5}甲",
+          "decoded": "战斗铠甲",
           "id": 4,
           "table": "abilities",
           "token_index": 0,
@@ -71464,6 +71334,25 @@
             "035C",
             "19E5",
             "05C2"
+          ]
+        }
+      ]
+    },
+    {
+      "char": "章",
+      "code": "1035",
+      "known": true,
+      "references": [
+        {
+          "decoded": "黑色乐章",
+          "id": 413,
+          "table": "moves",
+          "token_index": 3,
+          "tokens": [
+            "0509",
+            "0B89",
+            "084B",
+            "1035"
           ]
         }
       ]
@@ -71605,6 +71494,25 @@
             "0531",
             "0EC4",
             "1049"
+          ]
+        }
+      ]
+    },
+    {
+      "char": "兆",
+      "code": "104A",
+      "known": true,
+      "references": [
+        {
+          "decoded": "兆频虫噪",
+          "id": 419,
+          "table": "moves",
+          "token_index": 0,
+          "tokens": [
+            "104A",
+            "0A70",
+            "0268",
+            "10"
           ]
         }
       ]
@@ -72037,7 +71945,7 @@
           ]
         },
         {
-          "decoded": "{0D69}限预知",
+          "decoded": "危险预知",
           "id": 123,
           "table": "abilities",
           "token_index": 3,
@@ -72918,7 +72826,7 @@
           ]
         },
         {
-          "decoded": "穷名之{0407}",
+          "decoded": "穷名之符",
           "id": 190,
           "table": "items",
           "token_index": 2,
@@ -72989,7 +72897,7 @@
           ]
         },
         {
-          "decoded": "锐利之{1455}",
+          "decoded": "锐利之喙",
           "id": 210,
           "table": "items",
           "token_index": 2,
@@ -73013,7 +72921,7 @@
           ]
         },
         {
-          "decoded": "魔影之{0407}",
+          "decoded": "魔影之符",
           "id": 213,
           "table": "items",
           "token_index": 2,
@@ -73886,7 +73794,7 @@
           ]
         },
         {
-          "decoded": "魔影之{0407}",
+          "decoded": "魔影之符",
           "id": 213,
           "table": "items",
           "token_index": 1,
@@ -75004,7 +74912,7 @@
           ]
         },
         {
-          "decoded": "自信过{0BDF}",
+          "decoded": "自信过剩",
           "id": 143,
           "table": "abilities",
           "token_index": 0,
@@ -75248,7 +75156,7 @@
           ]
         },
         {
-          "decoded": "魔影之{0407}",
+          "decoded": "魔影之符",
           "id": 213,
           "table": "items",
           "token_index": 0,
@@ -75537,6 +75445,25 @@
       ]
     },
     {
+      "char": "垓",
+      "code": "12A6",
+      "known": true,
+      "references": [
+        {
+          "decoded": "垓级电压",
+          "id": 138,
+          "table": "abilities",
+          "token_index": 0,
+          "tokens": [
+            "12A6",
+            "05A1",
+            "032E",
+            "0EA2"
+          ]
+        }
+      ]
+    },
+    {
       "char": "莓",
       "code": "1327",
       "known": true,
@@ -75716,6 +75643,25 @@
             "1435",
             "0D78",
             "012C"
+          ]
+        }
+      ]
+    },
+    {
+      "char": "喙",
+      "code": "1455",
+      "known": true,
+      "references": [
+        {
+          "decoded": "锐利之喙",
+          "id": 210,
+          "table": "items",
+          "token_index": 3,
+          "tokens": [
+            "0B71",
+            "0870",
+            "107F",
+            "1455"
           ]
         }
       ]
@@ -76229,6 +76175,37 @@
             "082B",
             "17DE",
             "04C3"
+          ]
+        }
+      ]
+    },
+    {
+      "char": "铠",
+      "code": "19E5",
+      "known": true,
+      "references": [
+        {
+          "decoded": "战斗铠甲",
+          "id": 4,
+          "table": "abilities",
+          "token_index": 2,
+          "tokens": [
+            "1030",
+            "035C",
+            "19E5",
+            "05C2"
+          ]
+        },
+        {
+          "decoded": "熔岩铠甲",
+          "id": 40,
+          "table": "abilities",
+          "token_index": 2,
+          "tokens": [
+            "0B5B",
+            "0EBB",
+            "19E5",
+            "05C2"
           ]
         }
       ]
@@ -76832,6 +76809,23 @@
       ]
     },
     {
+      "char": "魇",
+      "code": "1E29",
+      "known": true,
+      "references": [
+        {
+          "decoded": "梦魇",
+          "id": 90,
+          "table": "abilities",
+          "token_index": 1,
+          "tokens": [
+            "0966",
+            "1E29"
+          ]
+        }
+      ]
+    },
+    {
       "char": "麒",
       "code": "1E47",
       "known": true,
@@ -77249,7 +77243,7 @@
           ]
         },
         {
-          "decoded": "1号{03C2}的钥匙",
+          "decoded": "1号房的钥匙",
           "id": 281,
           "table": "items",
           "token_index": 0,
@@ -77525,7 +77519,7 @@
           ]
         },
         {
-          "decoded": "2号{03C2}的钥匙",
+          "decoded": "2号房的钥匙",
           "id": 282,
           "table": "items",
           "token_index": 0,
@@ -78004,7 +77998,7 @@
           ]
         },
         {
-          "decoded": "4号{03C2}的钥匙",
+          "decoded": "4号房的钥匙",
           "id": 283,
           "table": "items",
           "token_index": 0,
@@ -78392,7 +78386,7 @@
           ]
         },
         {
-          "decoded": "6号{03C2}的钥匙",
+          "decoded": "6号房的钥匙",
           "id": 284,
           "table": "items",
           "token_index": 0,
