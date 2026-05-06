@@ -1551,11 +1551,11 @@
     "01C1": "泼",
     "01C3": "波",
     "01C4": "博",
-    "01C5": "病",
+    "01C5": "勃",
     "01D1": "捕",
     "01D4": "补",
     "01D6": "不",
-    "01D7": "渤",
+    "01D7": "布",
     "01D8": "步",
     "01DE": "裁",
     "01E3": "踩",
@@ -1683,7 +1683,7 @@
     "037B": "吨",
     "037E": "顿",
     "0380": "钝",
-    "0381": "壁",
+    "0381": "盾",
     "0385": "多",
     "0386": "夺",
     "0389": "朵",
@@ -1697,7 +1697,7 @@
     "03A5": "发",
     "03A6": "罚",
     "03AB": "法",
-    "03B0": "心",
+    "03B0": "翻",
     "03B6": "烦",
     "03B7": "反",
     "03B8": "返",
@@ -1798,7 +1798,7 @@
     "04F5": "合",
     "04F6": "盒",
     "0501": "痕",
-    "0502": "很",
+    "0502": "河",
     "0503": "狠",
     "0504": "赫",
     "0505": "哼",
@@ -1828,7 +1828,7 @@
     "0531": "护",
     "0535": "花",
     "0537": "华",
-    "0538": "扇",
+    "0538": "猾",
     "0539": "滑",
     "053C": "化",
     "053D": "话",
@@ -1902,7 +1902,7 @@
     "070F": "浇",
     "0711": "娇",
     "0714": "铰",
-    "0718": "铁",
+    "0718": "狡",
     "0719": "角",
     "0721": "较",
     "0722": "叫",
@@ -1955,7 +1955,7 @@
     "07B6": "卡",
     "07BB": "凯",
     "07C7": "抗",
-    "07D0": "卡",
+    "07D0": "柯",
     "07D5": "壳",
     "07D7": "可",
     "07D9": "克",
@@ -2080,7 +2080,7 @@
     "08D2": "隆",
     "08DB": "隆",
     "08DC": "垄",
-    "08DE": "陇",
+    "08DE": "颅",
     "08E0": "娄",
     "08E3": "漏",
     "08E4": "鲁",
@@ -2251,7 +2251,7 @@
     "0B10": "趋",
     "0B12": "丘",
     "0B14": "球",
-    "0B17": "渠",
+    "0B17": "酋",
     "0B1C": "曲",
     "0B1D": "躯",
     "0B1E": "屈",
@@ -2416,8 +2416,8 @@
     "0D0D": "庭",
     "0D10": "通",
     "0D14": "同",
-    "0D15": "牙",
-    "0D17": "士",
+    "0D15": "铜",
+    "0D17": "童",
     "0D1C": "痛",
     "0D1D": "偷",
     "0D1E": "投",
@@ -2623,7 +2623,7 @@
     "0F9C": "宇",
     "0F9E": "羽",
     "0F9F": "板",
-    "0FA2": "向",
+    "0FA2": "郁",
     "0FA4": "遇",
     "0FA7": "御",
     "0FA8": "愈",
@@ -2699,7 +2699,7 @@
     "109A": "稚",
     "109F": "治",
     "10A1": "中",
-    "10A4": "鲨",
+    "10A4": "钟",
     "10A7": "种",
     "10A9": "重",
     "10B5": "影",
@@ -2714,7 +2714,7 @@
     "10D9": "转",
     "10DF": "法",
     "10E1": "撞",
-    "10E2": "转",
+    "10E2": "壮",
     "10E3": "撰",
     "10E6": "追",
     "10F3": "啄",
@@ -6899,9 +6899,9 @@
       ]
     },
     "76": {
-      "decoded": "防御壁",
+      "decoded": "防御盾",
       "id": 76,
-      "name": "防御壁",
+      "name": "防御盾",
       "tokens": [
         "03C3",
         "0FA7",
@@ -7359,9 +7359,9 @@
       ]
     },
     "115": {
-      "decoded": "反射壁",
+      "decoded": "反射盾",
       "id": 115,
-      "name": "反射壁",
+      "name": "反射盾",
       "tokens": [
         "03B7",
         "0BC2",
@@ -12301,9 +12301,9 @@
       ]
     },
     "133": {
-      "decoded": "伊渤",
+      "decoded": "伊布",
       "id": 133,
-      "name": "伊渤",
+      "name": "伊布",
       "tokens": [
         "0F11",
         "01D7"
@@ -12939,9 +12939,9 @@
       ]
     },
     "191": {
-      "decoded": "向香种子",
+      "decoded": "郁香种子",
       "id": 191,
-      "name": "向香种子",
+      "name": "郁香种子",
       "tokens": [
         "0FA2",
         "0E10",
@@ -13021,9 +13021,9 @@
       ]
     },
     "199": {
-      "decoded": "很马王",
+      "decoded": "河马王",
       "id": 199,
-      "name": "很马王",
+      "name": "河马王",
       "tokens": [
         "0502",
         "0927",
@@ -13468,9 +13468,9 @@
       ]
     },
     "237": {
-      "decoded": "卡波郎",
+      "decoded": "柯波郎",
       "id": 237,
-      "name": "卡波郎",
+      "name": "柯波郎",
       "tokens": [
         "07D0",
         "01C3",
@@ -13747,9 +13747,9 @@
       ]
     },
     "262": {
-      "decoded": "白色渠雷姆",
+      "decoded": "白色酋雷姆",
       "id": 262,
-      "name": "白色渠雷姆",
+      "name": "白色酋雷姆",
       "tokens": [
         "0136",
         "0B89",
@@ -13859,9 +13859,9 @@
       ]
     },
     "271": {
-      "decoded": "黑色渠雷姆",
+      "decoded": "黑色酋雷姆",
       "id": 271,
-      "name": "黑色渠雷姆",
+      "name": "黑色酋雷姆",
       "tokens": [
         "0509",
         "0B89",
@@ -13975,9 +13975,9 @@
       ]
     },
     "281": {
-      "decoded": "力转鸡",
+      "decoded": "力壮鸡",
       "id": 281,
-      "name": "力转鸡",
+      "name": "力壮鸡",
       "tokens": [
         "0879",
         "10E2",
@@ -14107,9 +14107,9 @@
       ]
     },
     "293": {
-      "decoded": "壁甲茧",
+      "decoded": "盾甲茧",
       "id": 293,
-      "name": "壁甲茧",
+      "name": "盾甲茧",
       "tokens": [
         "0381",
         "05C2",
@@ -14127,9 +14127,9 @@
       ]
     },
     "295": {
-      "decoded": "莲叶士子",
+      "decoded": "莲叶童子",
       "id": 295,
-      "name": "莲叶士子",
+      "name": "莲叶童子",
       "tokens": [
         "087E",
         "0F06",
@@ -14138,9 +14138,9 @@
       ]
     },
     "296": {
-      "decoded": "莲帽小士",
+      "decoded": "莲帽小童",
       "id": 296,
-      "name": "莲帽小士",
+      "name": "莲帽小童",
       "tokens": [
         "087E",
         "0949",
@@ -14149,9 +14149,9 @@
       ]
     },
     "297": {
-      "decoded": "乐天很士",
+      "decoded": "乐天河童",
       "id": 297,
-      "name": "乐天很士",
+      "name": "乐天河童",
       "tokens": [
         "084B",
         "0CED",
@@ -14200,9 +14200,9 @@
       ]
     },
     "300": {
-      "decoded": "铁扇天狗",
+      "decoded": "狡猾天狗",
       "id": 300,
-      "name": "铁扇天狗",
+      "name": "狡猾天狗",
       "tokens": [
         "0718",
         "0538",
@@ -14394,9 +14394,9 @@
       ]
     },
     "318": {
-      "decoded": "青牙镜",
+      "decoded": "青铜镜",
       "id": 318,
-      "name": "青牙镜",
+      "name": "青铜镜",
       "tokens": [
         "0B02",
         "0D15",
@@ -14404,9 +14404,9 @@
       ]
     },
     "319": {
-      "decoded": "青牙鲨",
+      "decoded": "青铜钟",
       "id": 319,
-      "name": "青牙鲨",
+      "name": "青铜钟",
       "tokens": [
         "0B02",
         "0D15",
@@ -14475,9 +14475,9 @@
       ]
     },
     "325": {
-      "decoded": "心车鱼",
+      "decoded": "翻车鱼",
       "id": 325,
-      "name": "心车鱼",
+      "name": "翻车鱼",
       "tokens": [
         "03B0",
         "0237",
@@ -14709,9 +14709,9 @@
       ]
     },
     "346": {
-      "decoded": "雪士子",
+      "decoded": "雪童子",
       "id": 346,
-      "name": "雪士子",
+      "name": "雪童子",
       "tokens": [
         "0E92",
         "0D17",
@@ -14881,9 +14881,9 @@
       ]
     },
     "361": {
-      "decoded": "夜骷陇",
+      "decoded": "夜骷颅",
       "id": 361,
-      "name": "夜骷陇",
+      "name": "夜骷颅",
       "tokens": [
         "0F09",
         "1E1B",
@@ -15044,9 +15044,9 @@
       ]
     },
     "376": {
-      "decoded": "阿病梭鲁",
+      "decoded": "阿勃梭鲁",
       "id": 376,
-      "name": "阿病梭鲁",
+      "name": "阿勃梭鲁",
       "tokens": [
         "0101",
         "01C5",
@@ -15886,9 +15886,9 @@
       ]
     },
     "80": {
-      "decoded": "呆很马",
+      "decoded": "呆河马",
       "id": 80,
-      "name": "呆很马",
+      "name": "呆河马",
       "tokens": [
         "02D4",
         "0502",
@@ -17806,7 +17806,7 @@
           ]
         },
         {
-          "decoded": "阿病梭鲁",
+          "decoded": "阿勃梭鲁",
           "id": 376,
           "table": "species",
           "token_index": 0,
@@ -18280,7 +18280,7 @@
           ]
         },
         {
-          "decoded": "白色渠雷姆",
+          "decoded": "白色酋雷姆",
           "id": 262,
           "table": "species",
           "token_index": 0,
@@ -20212,7 +20212,7 @@
           ]
         },
         {
-          "decoded": "卡波郎",
+          "decoded": "柯波郎",
           "id": 237,
           "table": "species",
           "token_index": 1,
@@ -20335,12 +20335,12 @@
       ]
     },
     {
-      "char": "病",
+      "char": "勃",
       "code": "01C5",
       "known": true,
       "references": [
         {
-          "decoded": "阿病梭鲁",
+          "decoded": "阿勃梭鲁",
           "id": 376,
           "table": "species",
           "token_index": 1,
@@ -20503,12 +20503,12 @@
       ]
     },
     {
-      "char": "渤",
+      "char": "布",
       "code": "01D7",
       "known": true,
       "references": [
         {
-          "decoded": "伊渤",
+          "decoded": "伊布",
           "id": 133,
           "table": "species",
           "token_index": 1,
@@ -21106,7 +21106,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "心车鱼",
+          "decoded": "翻车鱼",
           "id": 325,
           "table": "species",
           "token_index": 1,
@@ -23193,7 +23193,7 @@
           ]
         },
         {
-          "decoded": "呆很马",
+          "decoded": "呆河马",
           "id": 80,
           "table": "species",
           "token_index": 0,
@@ -26006,12 +26006,12 @@
       ]
     },
     {
-      "char": "壁",
+      "char": "盾",
       "code": "0381",
       "known": true,
       "references": [
         {
-          "decoded": "壁甲茧",
+          "decoded": "盾甲茧",
           "id": 293,
           "table": "species",
           "token_index": 0,
@@ -26022,7 +26022,7 @@
           ]
         },
         {
-          "decoded": "反射壁",
+          "decoded": "反射盾",
           "id": 115,
           "table": "moves",
           "token_index": 2,
@@ -26033,7 +26033,7 @@
           ]
         },
         {
-          "decoded": "防御壁",
+          "decoded": "防御盾",
           "id": 76,
           "table": "items",
           "token_index": 2,
@@ -26581,12 +26581,12 @@
       ]
     },
     {
-      "char": "心",
+      "char": "翻",
       "code": "03B0",
       "known": true,
       "references": [
         {
-          "decoded": "心车鱼",
+          "decoded": "翻车鱼",
           "id": 325,
           "table": "species",
           "token_index": 0,
@@ -26623,7 +26623,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "反射壁",
+          "decoded": "反射盾",
           "id": 115,
           "table": "moves",
           "token_index": 0,
@@ -26930,7 +26930,7 @@
           ]
         },
         {
-          "decoded": "防御壁",
+          "decoded": "防御盾",
           "id": 76,
           "table": "items",
           "token_index": 0,
@@ -29144,7 +29144,7 @@
           ]
         },
         {
-          "decoded": "铁扇天狗",
+          "decoded": "狡猾天狗",
           "id": 300,
           "table": "species",
           "token_index": 3,
@@ -31417,12 +31417,12 @@
       ]
     },
     {
-      "char": "很",
+      "char": "河",
       "code": "0502",
       "known": true,
       "references": [
         {
-          "decoded": "呆很马",
+          "decoded": "呆河马",
           "id": 80,
           "table": "species",
           "token_index": 1,
@@ -31433,7 +31433,7 @@
           ]
         },
         {
-          "decoded": "很马王",
+          "decoded": "河马王",
           "id": 199,
           "table": "species",
           "token_index": 0,
@@ -31444,7 +31444,7 @@
           ]
         },
         {
-          "decoded": "乐天很士",
+          "decoded": "乐天河童",
           "id": 297,
           "table": "species",
           "token_index": 2,
@@ -31494,7 +31494,7 @@
           ]
         },
         {
-          "decoded": "黑色渠雷姆",
+          "decoded": "黑色酋雷姆",
           "id": 271,
           "table": "species",
           "token_index": 0,
@@ -32426,12 +32426,12 @@
       ]
     },
     {
-      "char": "扇",
+      "char": "猾",
       "code": "0538",
       "known": true,
       "references": [
         {
-          "decoded": "铁扇天狗",
+          "decoded": "狡猾天狗",
           "id": 300,
           "table": "species",
           "token_index": 1,
@@ -35181,7 +35181,7 @@
           ]
         },
         {
-          "decoded": "力转鸡",
+          "decoded": "力壮鸡",
           "id": 281,
           "table": "species",
           "token_index": 2,
@@ -36810,7 +36810,7 @@
           ]
         },
         {
-          "decoded": "壁甲茧",
+          "decoded": "盾甲茧",
           "id": 293,
           "table": "species",
           "token_index": 1,
@@ -37075,7 +37075,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "壁甲茧",
+          "decoded": "盾甲茧",
           "id": 293,
           "table": "species",
           "token_index": 2,
@@ -37423,12 +37423,12 @@
       ]
     },
     {
-      "char": "铁",
+      "char": "狡",
       "code": "0718",
       "known": true,
       "references": [
         {
-          "decoded": "铁扇天狗",
+          "decoded": "狡猾天狗",
           "id": 300,
           "table": "species",
           "token_index": 0,
@@ -38620,7 +38620,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "青牙镜",
+          "decoded": "青铜镜",
           "id": 318,
           "table": "species",
           "token_index": 2,
@@ -39698,12 +39698,12 @@
       ]
     },
     {
-      "char": "卡",
+      "char": "柯",
       "code": "07D0",
       "known": true,
       "references": [
         {
-          "decoded": "卡波郎",
+          "decoded": "柯波郎",
           "id": 237,
           "table": "species",
           "token_index": 0,
@@ -41374,7 +41374,7 @@
           ]
         },
         {
-          "decoded": "卡波郎",
+          "decoded": "柯波郎",
           "id": 237,
           "table": "species",
           "token_index": 2,
@@ -41428,7 +41428,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "乐天很士",
+          "decoded": "乐天河童",
           "id": 297,
           "table": "species",
           "token_index": 0,
@@ -41523,7 +41523,7 @@
           ]
         },
         {
-          "decoded": "白色渠雷姆",
+          "decoded": "白色酋雷姆",
           "id": 262,
           "table": "species",
           "token_index": 3,
@@ -41549,7 +41549,7 @@
           ]
         },
         {
-          "decoded": "黑色渠雷姆",
+          "decoded": "黑色酋雷姆",
           "id": 271,
           "table": "species",
           "token_index": 3,
@@ -42214,7 +42214,7 @@
           ]
         },
         {
-          "decoded": "力转鸡",
+          "decoded": "力壮鸡",
           "id": 281,
           "table": "species",
           "token_index": 0,
@@ -42633,7 +42633,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "莲叶士子",
+          "decoded": "莲叶童子",
           "id": 295,
           "table": "species",
           "token_index": 0,
@@ -42645,7 +42645,7 @@
           ]
         },
         {
-          "decoded": "莲帽小士",
+          "decoded": "莲帽小童",
           "id": 296,
           "table": "species",
           "token_index": 0,
@@ -44293,12 +44293,12 @@
       ]
     },
     {
-      "char": "陇",
+      "char": "颅",
       "code": "08DE",
       "known": true,
       "references": [
         {
-          "decoded": "夜骷陇",
+          "decoded": "夜骷颅",
           "id": 361,
           "table": "species",
           "token_index": 2,
@@ -44362,7 +44362,7 @@
           ]
         },
         {
-          "decoded": "阿病梭鲁",
+          "decoded": "阿勃梭鲁",
           "id": 376,
           "table": "species",
           "token_index": 3,
@@ -45047,7 +45047,7 @@
           ]
         },
         {
-          "decoded": "呆很马",
+          "decoded": "呆河马",
           "id": 80,
           "table": "species",
           "token_index": 2,
@@ -45069,7 +45069,7 @@
           ]
         },
         {
-          "decoded": "很马王",
+          "decoded": "河马王",
           "id": 199,
           "table": "species",
           "token_index": 1,
@@ -45350,7 +45350,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "莲帽小士",
+          "decoded": "莲帽小童",
           "id": 296,
           "table": "species",
           "token_index": 1,
@@ -46769,7 +46769,7 @@
           ]
         },
         {
-          "decoded": "白色渠雷姆",
+          "decoded": "白色酋雷姆",
           "id": 262,
           "table": "species",
           "token_index": 4,
@@ -46806,7 +46806,7 @@
           ]
         },
         {
-          "decoded": "黑色渠雷姆",
+          "decoded": "黑色酋雷姆",
           "id": 271,
           "table": "species",
           "token_index": 4,
@@ -52060,7 +52060,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "青牙镜",
+          "decoded": "青铜镜",
           "id": 318,
           "table": "species",
           "token_index": 0,
@@ -52071,7 +52071,7 @@
           ]
         },
         {
-          "decoded": "青牙鲨",
+          "decoded": "青铜钟",
           "id": 319,
           "table": "species",
           "token_index": 0,
@@ -52649,12 +52649,12 @@
       ]
     },
     {
-      "char": "渠",
+      "char": "酋",
       "code": "0B17",
       "known": true,
       "references": [
         {
-          "decoded": "白色渠雷姆",
+          "decoded": "白色酋雷姆",
           "id": 262,
           "table": "species",
           "token_index": 2,
@@ -52667,7 +52667,7 @@
           ]
         },
         {
-          "decoded": "黑色渠雷姆",
+          "decoded": "黑色酋雷姆",
           "id": 271,
           "table": "species",
           "token_index": 2,
@@ -54103,7 +54103,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "白色渠雷姆",
+          "decoded": "白色酋雷姆",
           "id": 262,
           "table": "species",
           "token_index": 1,
@@ -54116,7 +54116,7 @@
           ]
         },
         {
-          "decoded": "黑色渠雷姆",
+          "decoded": "黑色酋雷姆",
           "id": 271,
           "table": "species",
           "token_index": 1,
@@ -55275,7 +55275,7 @@
           ]
         },
         {
-          "decoded": "反射壁",
+          "decoded": "反射盾",
           "id": 115,
           "table": "moves",
           "token_index": 1,
@@ -59598,7 +59598,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "阿病梭鲁",
+          "decoded": "阿勃梭鲁",
           "id": 376,
           "table": "species",
           "token_index": 2,
@@ -60558,7 +60558,7 @@
           ]
         },
         {
-          "decoded": "乐天很士",
+          "decoded": "乐天河童",
           "id": 297,
           "table": "species",
           "token_index": 1,
@@ -60570,7 +60570,7 @@
           ]
         },
         {
-          "decoded": "铁扇天狗",
+          "decoded": "狡猾天狗",
           "id": 300,
           "table": "species",
           "token_index": 2,
@@ -61088,12 +61088,12 @@
       ]
     },
     {
-      "char": "牙",
+      "char": "铜",
       "code": "0D15",
       "known": true,
       "references": [
         {
-          "decoded": "青牙镜",
+          "decoded": "青铜镜",
           "id": 318,
           "table": "species",
           "token_index": 1,
@@ -61104,7 +61104,7 @@
           ]
         },
         {
-          "decoded": "青牙鲨",
+          "decoded": "青铜钟",
           "id": 319,
           "table": "species",
           "token_index": 1,
@@ -61117,12 +61117,12 @@
       ]
     },
     {
-      "char": "士",
+      "char": "童",
       "code": "0D17",
       "known": true,
       "references": [
         {
-          "decoded": "莲叶士子",
+          "decoded": "莲叶童子",
           "id": 295,
           "table": "species",
           "token_index": 2,
@@ -61134,7 +61134,7 @@
           ]
         },
         {
-          "decoded": "莲帽小士",
+          "decoded": "莲帽小童",
           "id": 296,
           "table": "species",
           "token_index": 3,
@@ -61146,7 +61146,7 @@
           ]
         },
         {
-          "decoded": "乐天很士",
+          "decoded": "乐天河童",
           "id": 297,
           "table": "species",
           "token_index": 3,
@@ -61158,7 +61158,7 @@
           ]
         },
         {
-          "decoded": "雪士子",
+          "decoded": "雪童子",
           "id": 346,
           "table": "species",
           "token_index": 1,
@@ -62389,7 +62389,7 @@
           ]
         },
         {
-          "decoded": "很马王",
+          "decoded": "河马王",
           "id": 199,
           "table": "species",
           "token_index": 2,
@@ -64158,7 +64158,7 @@
           ]
         },
         {
-          "decoded": "向香种子",
+          "decoded": "郁香种子",
           "id": 191,
           "table": "species",
           "token_index": 1,
@@ -64520,7 +64520,7 @@
           ]
         },
         {
-          "decoded": "莲帽小士",
+          "decoded": "莲帽小童",
           "id": 296,
           "table": "species",
           "token_index": 2,
@@ -65849,7 +65849,7 @@
           ]
         },
         {
-          "decoded": "雪士子",
+          "decoded": "雪童子",
           "id": 346,
           "table": "species",
           "token_index": 0,
@@ -68023,7 +68023,7 @@
           ]
         },
         {
-          "decoded": "莲叶士子",
+          "decoded": "莲叶童子",
           "id": 295,
           "table": "species",
           "token_index": 1,
@@ -68156,7 +68156,7 @@
           ]
         },
         {
-          "decoded": "夜骷陇",
+          "decoded": "夜骷颅",
           "id": 361,
           "table": "species",
           "token_index": 0,
@@ -68326,7 +68326,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "伊渤",
+          "decoded": "伊布",
           "id": 133,
           "table": "species",
           "token_index": 0,
@@ -69692,7 +69692,7 @@
           ]
         },
         {
-          "decoded": "心车鱼",
+          "decoded": "翻车鱼",
           "id": 325,
           "table": "species",
           "token_index": 2,
@@ -69947,12 +69947,12 @@
       ]
     },
     {
-      "char": "向",
+      "char": "郁",
       "code": "0FA2",
       "known": true,
       "references": [
         {
-          "decoded": "向香种子",
+          "decoded": "郁香种子",
           "id": 191,
           "table": "species",
           "token_index": 0,
@@ -70006,7 +70006,7 @@
           ]
         },
         {
-          "decoded": "防御壁",
+          "decoded": "防御盾",
           "id": 76,
           "table": "items",
           "token_index": 1,
@@ -73546,12 +73546,12 @@
       ]
     },
     {
-      "char": "鲨",
+      "char": "钟",
       "code": "10A4",
       "known": true,
       "references": [
         {
-          "decoded": "青牙鲨",
+          "decoded": "青铜钟",
           "id": 319,
           "table": "species",
           "token_index": 2,
@@ -73581,7 +73581,7 @@
           ]
         },
         {
-          "decoded": "向香种子",
+          "decoded": "郁香种子",
           "id": 191,
           "table": "species",
           "token_index": 2,
@@ -74304,12 +74304,12 @@
       ]
     },
     {
-      "char": "转",
+      "char": "壮",
       "code": "10E2",
       "known": true,
       "references": [
         {
-          "decoded": "力转鸡",
+          "decoded": "力壮鸡",
           "id": 281,
           "table": "species",
           "token_index": 1,
@@ -74514,7 +74514,7 @@
           ]
         },
         {
-          "decoded": "向香种子",
+          "decoded": "郁香种子",
           "id": 191,
           "table": "species",
           "token_index": 3,
@@ -74550,7 +74550,7 @@
           ]
         },
         {
-          "decoded": "莲叶士子",
+          "decoded": "莲叶童子",
           "id": 295,
           "table": "species",
           "token_index": 3,
@@ -74562,7 +74562,7 @@
           ]
         },
         {
-          "decoded": "雪士子",
+          "decoded": "雪童子",
           "id": 346,
           "table": "species",
           "token_index": 2,
@@ -76753,7 +76753,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "夜骷陇",
+          "decoded": "夜骷颅",
           "id": 361,
           "table": "species",
           "token_index": 1,
