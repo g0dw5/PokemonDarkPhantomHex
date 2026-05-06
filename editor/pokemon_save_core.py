@@ -1276,24 +1276,20 @@ def adjust_personality(
     if nature_id is None and shiny is None and (not gender or target_gender == gender_for_species(species_id, personality)):
         return personality
     start_low = personality & 0xFFFF
+    shiny_values = range(8) if target_shiny else range(8, 16)
     for step in range(0x10000):
         low = (start_low + step) & 0xFFFF
-        if low % 25 != target_nature:
-            continue
-        high = (personality >> 16) & 0xFFFF
-        if target_shiny:
-            high = ((ot_id & 0xFFFF) ^ (ot_id >> 16) ^ low) & 0xFFFF
-        elif is_shiny((high << 16) | low, ot_id):
-            high = (high + 8) & 0xFFFF
-        candidate = ((high << 16) | low) & 0xFFFFFFFF
-        if candidate % 25 != target_nature:
-            continue
-        if is_shiny(candidate, ot_id) != target_shiny:
-            continue
-        actual_gender = gender_for_species(species_id, candidate)
-        if target_gender in ("雄", "雌") and actual_gender != target_gender:
-            continue
-        return candidate
+        for shiny_value in shiny_values:
+            high = ((ot_id & 0xFFFF) ^ (ot_id >> 16) ^ low ^ shiny_value) & 0xFFFF
+            candidate = ((high << 16) | low) & 0xFFFFFFFF
+            if candidate % 25 != target_nature:
+                continue
+            if is_shiny(candidate, ot_id) != target_shiny:
+                continue
+            actual_gender = gender_for_species(species_id, candidate)
+            if target_gender in ("雄", "雌") and actual_gender != target_gender:
+                continue
+            return candidate
     raise ValueError("无法找到满足性格/性别/闪光组合的 PID")
 
 
@@ -1309,10 +1305,10 @@ def validate_pokemon(pokemon: PokemonView, label: str = "宝可梦", check_level
         issues.append(f"{label} 等级异常：{pokemon.level}")
     if sum(pokemon.evs) > 510:
         issues.append(f"{label} 努力值总和超过 510：{sum(pokemon.evs)}")
-    for stat, value in zip(("HP", "攻击", "防御", "速度", "特攻", "特防"), pokemon.evs):
+    for stat, value in zip(("体力", "物攻", "物防", "速度", "特攻", "特防"), pokemon.evs):
         if value > 255:
             issues.append(f"{label} {stat} 努力值超过 255：{value}")
-    for stat, value in zip(("HP", "攻击", "防御", "速度", "特攻", "特防"), pokemon.ivs):
+    for stat, value in zip(("体力", "物攻", "物防", "速度", "特攻", "特防"), pokemon.ivs):
         if value > 31:
             issues.append(f"{label} {stat} 个体值超过 31：{value}")
     if pokemon.current_hp > pokemon.max_hp and pokemon.max_hp:

@@ -1823,7 +1823,7 @@
     "0526": "瑚",
     "0527": "壶",
     "0529": "胡",
-    "052A": "蝶",
+    "052A": "蝴",
     "0530": "唬",
     "0531": "护",
     "0535": "花",
@@ -12148,9 +12148,9 @@
       ]
     },
     "12": {
-      "decoded": "巴大蝶",
+      "decoded": "巴大蝴",
       "id": 12,
-      "name": "巴大蝶",
+      "name": "巴大蝴",
       "tokens": [
         "012C",
         "02D3",
@@ -18151,7 +18151,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "巴大蝶",
+          "decoded": "巴大蝴",
           "id": 12,
           "table": "species",
           "token_index": 0,
@@ -22785,7 +22785,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "巴大蝶",
+          "decoded": "巴大蝴",
           "id": 12,
           "table": "species",
           "token_index": 1,
@@ -32047,12 +32047,12 @@
       ]
     },
     {
-      "char": "蝶",
+      "char": "蝴",
       "code": "052A",
       "known": true,
       "references": [
         {
-          "decoded": "巴大蝶",
+          "decoded": "巴大蝴",
           "id": 12,
           "table": "species",
           "token_index": 2,

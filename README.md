@@ -102,7 +102,7 @@ chmod +x run_editor.command
 
 | 子结构 | 当前使用字段 |
 | --- | --- |
-| Growth | `+0 species u16`，`+2 held_item u16`，`+4 experience u32`，`+9 friendship u8` |
+| Growth | `+0 species u16`，`+2 held_item u16`，`+4 experience u32`，`+9 friendship_or_egg_cycles u8` |
 | Attacks | `+0..+7 moves[4] u16`，`+8..+11 pps[4] u8` |
 | EVs/Condition | `+0..+5 evs[HP, Atk, Def, Speed, SpAtk, SpDef] u8`；华丽大赛状态当前保留 |
 | Misc | `+2 origin_word u16` 中 `bit 11..14` 为捕获球；`+4 iv_word u32` 中 6 项 IV 每项 5 bits，`bit 30` 为蛋标记，`bit 31` 为 `ability_bit` |
@@ -114,6 +114,8 @@ chmod +x run_editor.command
 - 性格不是独立字段，使用 `personality % 25`。
 - 性别不是独立字段，由 ROM species 性别比例和 PID 低 8 位计算。
 - 闪光不是独立字段，由 `ot_id` 和 PID 计算。
+- `Growth +9` 是复用字段：普通宝可梦解释为亲密度；蛋标记为 1 时解释为剩余孵化周期 `egg_cycles`，孵化过程递减的是这个周期值，不是亲密度。UI 会根据蛋标记把同一个输入框显示为“亲密度”或“孵化周期”。
+- EV/IV 顺序按存档内部顺序展示和编辑：`体力/物攻/物防/速度/特攻/特防`。
 - 修改性格、性别或闪光时，需要搜索并改写 PID，同时保持目标约束。
 - 修改加密子结构后必须重建子结构顺序、重新加密、重算宝可梦 checksum，并重算所在 save section checksum。
 

@@ -33,6 +33,7 @@ from pokemon_save_core import (
     level_for_experience,
     gender_for_species,
     is_shiny,
+    adjust_personality,
 )
 from rom_data import OUTPUT as ROM_TEXT_OUTPUT, load_rom_text, save_charmap, save_rom_text, set_default_rom_path
 
@@ -95,6 +96,14 @@ def response(payload, status=200):
     return status, "application/json; charset=utf-8", data
 
 
+def query_int(query, name: str, default: int = 0) -> int:
+    value = query.get(name, [str(default)])[0]
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        raise ValueError(f"参数 {name} 不是有效整数：{value}")
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, _format, *args):
         return
@@ -124,11 +133,27 @@ class Handler(BaseHTTPRequestHandler):
             self.send(*response(api_experience_level(species, level, experience)))
             return
         if parsed.path == "/api/personality_preview":
-            query = parse_qs(parsed.query)
-            species = int(query.get("species", ["0"])[0])
-            personality = int(query.get("personality", ["0"])[0])
-            ot_id = int(query.get("ot_id", ["0"])[0])
-            self.send(*response(api_personality_preview(species, personality, ot_id)))
+            try:
+                query = parse_qs(parsed.query)
+                species = query_int(query, "species")
+                personality = query_int(query, "personality")
+                ot_id = query_int(query, "ot_id")
+                self.send(*response(api_personality_preview(species, personality, ot_id)))
+            except ValueError as error:
+                self.send(*response({"ok": False, "error": str(error)}, 400))
+            return
+        if parsed.path == "/api/personality_adjust":
+            try:
+                query = parse_qs(parsed.query)
+                species = query_int(query, "species")
+                personality = query_int(query, "personality")
+                ot_id = query_int(query, "ot_id")
+                nature_id = query_int(query, "nature_id")
+                gender = query.get("gender", [""])[0]
+                shiny = bool(query_int(query, "is_shiny"))
+                self.send(*response(api_personality_adjust(species, personality, ot_id, nature_id, gender, shiny)))
+            except ValueError as error:
+                self.send(*response({"ok": False, "error": str(error)}, 400))
             return
         if parsed.path == "/api/load":
             query = parse_qs(parsed.query)
@@ -242,6 +267,7 @@ def pokemon_payload(p, label: str):
         "species": p.species,
         "species_name": p.species_name,
         "personality": p.personality,
+        "ot_id": p.ot_id,
         "held_item": p.held_item,
         "held_item_name": format_item(p.held_item) if p.held_item else "空",
         "nature_id": p.nature_id,
@@ -338,8 +364,13 @@ def api_names():
         },
         "charmap": {
             "confirmed": int(raw.get("character_map_count", 0)),
+            "rom_used": int(raw.get("rom_used_character_key_count", 0)),
+            "rom_unknown": int(raw.get("rom_unknown_character_key_count", 0)),
+            "rom_unknown_codes": [item.get("code", "") for item in raw.get("used_character_keys", []) if not item.get("known")],
             "unresolved": len(raw.get("unresolved_character_codes", [])),
+            "unresolved_codes": raw.get("unresolved_character_codes", []),
             "candidate_unresolved": len(raw.get("candidate_unresolved_character_codes", [])),
+            "candidate_unresolved_codes": raw.get("candidate_unresolved_character_codes", []),
             "observed_keys": observed_key_count,
         },
     }
@@ -492,6 +523,11 @@ def api_personality_preview(species: int, personality: int, ot_id: int):
         "gender": gender_for_species(species, personality),
         "is_shiny": is_shiny(personality, ot_id),
     }
+
+
+def api_personality_adjust(species: int, personality: int, ot_id: int, nature_id: int, gender: str, shiny: bool):
+    target = adjust_personality(personality, ot_id, species, nature_id=nature_id, gender=gender, shiny=shiny)
+    return api_personality_preview(species, target, ot_id)
 
 
 def observed_from_save() -> dict[str, dict[int, list[str]]]:
@@ -685,6 +721,8 @@ HTML = r"""<!doctype html>
     .summary-controls select { padding: 4px 6px; }
     .metrics { display: grid; grid-template-columns: repeat(4, minmax(110px, 1fr)); gap: 6px; padding: 6px; border-bottom: 1px solid #ddd; background: #fafafa; }
     .metric { border: 1px solid #d0d0d0; background: white; padding: 5px 6px; border-radius: 6px; }
+    .metric.clickable { cursor: pointer; }
+    .metric.clickable:hover { border-color: #0969da; background: #f0f6ff; }
     .metric b { display: block; font-size: 16px; margin-bottom: 1px; }
     .filters { display: flex; gap: 6px; align-items: center; padding: 6px; border-bottom: 1px solid #ddd; background: #f7f7f7; flex-wrap: wrap; }
     .filters input { width: min(220px, 100%); }
@@ -713,6 +751,8 @@ HTML = r"""<!doctype html>
     .binary-toggle { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; margin-top: 3px; }
     .binary-toggle button { padding: 5px 0; min-width: 0; }
     .binary-toggle button.active { background: #111; color: white; }
+    .hint-mark { position: relative; display: inline-block; margin-left: 4px; color: #666; cursor: help; font-weight: 700; }
+    .hint-mark:hover::after { content: attr(data-tip); position: absolute; left: 0; top: 18px; z-index: 20; width: 210px; padding: 6px 7px; border: 1px solid #999; background: #111; color: white; border-radius: 4px; font-weight: 400; line-height: 1.35; white-space: normal; box-shadow: 0 2px 8px rgba(0,0,0,.18); }
     #detail { height: 120px; white-space: pre-wrap; overflow: auto; background: #fafafa; border: 1px solid #ccc; padding: 8px; }
     #status { margin-top: 10px; color: #333; white-space: pre-wrap; }
     .move-grid { display: grid; grid-template-columns: minmax(0, 1fr) 132px; gap: 6px; align-items: end; margin-top: 8px; }
@@ -768,6 +808,8 @@ let bagPocket = "all";
 let boxView = "all";
 let collectTable = "all";
 let collectSearch = "";
+let collectCodeFilter = [];
+let collectCodeLabel = "";
 let pokemonFormConstraints = null;
 
 async function request(url, options) {
@@ -984,11 +1026,10 @@ function renderPokemonForm(p, constraints, location) {
   const isBox = location === "box";
   document.getElementById("form").innerHTML = `
     <input type="hidden" id="location" value="${location}">
-    ${isBox ? `<label>盒子<input id="box" value="${p.box}" readonly></label><label>格位<input id="box_slot" value="${p.box_slot}" readonly></label>` : `<input type="hidden" id="slot" value="${p.slot}">`}
+    ${isBox ? `<input type="hidden" id="box" value="${p.box}"><input type="hidden" id="box_slot" value="${p.box_slot}">` : `<input type="hidden" id="slot" value="${p.slot}">`}
     <input type="hidden" id="ot_id" value="${p.ot_id}">
-    <input type="hidden" id="original_personality" value="${p.personality}">
     <div class="form-grid pid-grid">
-      ${field("personality","PID",p.personality,false,"", "refreshPersonalityDerivedFields()")}
+      ${field("personality","PID",p.personality,true)}
       ${binaryToggleField("is_shiny", "闪光", p.is_shiny)}
       ${binaryToggleField("is_egg", "蛋", p.is_egg)}
     </div>
@@ -999,12 +1040,12 @@ function renderPokemonForm(p, constraints, location) {
       ${genderField(p.gender, constraints)}
       ${abilityField(p.ability_bit, constraints, p.ability_id, p.ability_name)}
       ${ballField(p.caught_ball)}
-      ${field("friendship","亲密度",p.friendship)}
+      ${friendshipField(p.friendship, p.is_egg)}
       ${field("level","等级",p.level || 1,false,"", "handleLevelChanged()")}
     </div>
     <div id="move-controls">${moveFields(p.moves, p.pps, constraints)}</div>
-    ${field("ivs","个体值 HP/攻/防/速/特攻/特防",p.ivs.join(","))}
-    ${field("evs","努力值 HP/攻/防/速/特攻/特防",p.evs.join(","))}
+    ${field("ivs","个体值 体力/物攻/物防/速度/特攻/特防",p.ivs.join(","))}
+    ${field("evs","努力值 体力/物攻/物防/速度/特攻/特防",p.evs.join(","))}
     <p><button type="button" class="primary" onclick="updatePokemon()">写入宝可梦</button></p>`;
 }
 async function selectBox(i) {
@@ -1018,9 +1059,6 @@ async function updatePokemon() {
   const ids = ["location","species","held_item","nature_id","gender","is_shiny","caught_ball","friendship","evs","ivs","ability_bit","is_egg"];
   const body = {};
   ids.forEach(id => body[id] = val(id));
-  if (val("personality") !== val("original_personality")) {
-    body.personality = val("personality");
-  }
   if (location === "box") {
     body.box = val("box");
     body.box_slot = val("box_slot");
@@ -1060,6 +1098,22 @@ function ballField(current) {
   }).join("");
   return `<label>捕获球<select id="caught_ball">${options}</select></label>`;
 }
+function friendshipField(current, isEgg) {
+  return `<label><span id="friendship_label">${friendshipLabel(isEgg)}</span><span id="friendship_hint" class="hint-mark" data-tip="${escapeHtml(friendshipHint(isEgg))}">?</span><input id="friendship" value="${current}"></label>`;
+}
+function friendshipLabel(isEgg) {
+  return Number(isEgg) ? "孵化周期" : "亲密度";
+}
+function friendshipHint(isEgg) {
+  return Number(isEgg) ? "数值越小越接近孵化；0 表示可孵化。" : "普通宝可梦使用亲密度；蛋会把同一字节解释为孵化周期。";
+}
+function updateFriendshipLabel() {
+  const label = document.getElementById("friendship_label");
+  const hint = document.getElementById("friendship_hint");
+  const egg = document.getElementById("is_egg");
+  if (label && egg) label.textContent = friendshipLabel(Number(egg.value));
+  if (hint && egg) hint.dataset.tip = friendshipHint(Number(egg.value));
+}
 function binaryToggleField(id, label, current) {
   const value = current ? 1 : 0;
   return `<label class="toggle-field">${label}<input type="hidden" id="${id}" value="${value}"><span class="binary-toggle">${binaryToggleButtons(id, value)}</span></label>`;
@@ -1071,6 +1125,11 @@ function setBinaryToggleValue(id, value) {
   const input = document.getElementById(id);
   if (!input) return;
   input.value = String(value);
+  syncBinaryToggleButtons(id, value);
+  if (id === "is_egg") updateFriendshipLabel();
+  if (id === "is_shiny") refreshAdjustedPersonalityFields();
+}
+function syncBinaryToggleButtons(id, value) {
   document.querySelectorAll(`#${id} + .binary-toggle button`).forEach((button, i) => button.classList.toggle("active", i === Number(value)));
 }
 function moveFields(moves, pps, constraints=null) {
@@ -1289,12 +1348,40 @@ async function refreshPersonalityDerivedFields() {
   const species = idNum("species");
   const personality = num("personality");
   const otId = num("ot_id");
+  if (![species, personality, otId].every(Number.isFinite)) {
+    setStatus("无法预览 PID：缺少种族、PID 或 OT ID 数据");
+    return;
+  }
   try {
     const data = await request(`/api/personality_preview?species=${encodeURIComponent(species)}&personality=${encodeURIComponent(personality)}&ot_id=${encodeURIComponent(otId)}`);
     if (data.ok) {
       document.getElementById("nature_id").value = data.nature_id;
       document.getElementById("gender").value = data.gender;
       setBinaryToggleValue("is_shiny", data.is_shiny ? 1 : 0);
+    }
+  } catch (error) {
+    setStatus(error.message);
+  }
+}
+async function refreshAdjustedPersonalityFields() {
+  const species = idNum("species");
+  const personality = num("personality");
+  const otId = num("ot_id");
+  const natureId = num("nature_id");
+  const gender = val("gender");
+  const shiny = val("is_shiny");
+  if (![species, personality, otId, natureId].every(Number.isFinite)) {
+    setStatus("无法调整 PID：缺少种族、PID、OT ID 或性格数据");
+    return;
+  }
+  try {
+    const data = await request(`/api/personality_adjust?species=${encodeURIComponent(species)}&personality=${encodeURIComponent(personality)}&ot_id=${encodeURIComponent(otId)}&nature_id=${encodeURIComponent(natureId)}&gender=${encodeURIComponent(gender)}&is_shiny=${encodeURIComponent(shiny)}`);
+    if (data.ok) {
+      document.getElementById("personality").value = data.personality;
+      document.getElementById("nature_id").value = data.nature_id;
+      document.getElementById("gender").value = data.gender;
+      document.getElementById("is_shiny").value = data.is_shiny ? "1" : "0";
+      syncBinaryToggleButtons("is_shiny", data.is_shiny ? 1 : 0);
     }
   } catch (error) {
     setStatus(error.message);
@@ -1336,10 +1423,15 @@ function renderNames() {
       <div class="metric"><b>${stats.box_occupied}/${stats.box_slots}</b>盒子占用</div>
       <div class="metric"><b>${stats.bag_filled}/${stats.bag_slots}</b>背包占用</div>
       <div class="metric"><b>${stats.charmap.observed_keys}</b>存档引用字符码</div>
+      <div class="metric"><b>${stats.charmap.rom_used}</b>ROM 已检查字符</div>
+      <div class="metric"><b>${stats.charmap.confirmed}</b>已有字符翻译</div>
+      <div class="metric clickable" onclick="jumpToCharmapCodes('rom_unknown')"><b>${stats.charmap.rom_unknown}</b>ROM 未翻译字符</div>
+      <div class="metric clickable" onclick="jumpToCharmapCodes('candidate_unresolved')"><b>${stats.charmap.candidate_unresolved}</b>候选仍未解</div>
     </div>
     <div class="tabs subtabs dictionary-tabs">
       ${dictionaryTabButtons}
       <input value="${escapeHtml(collectSearch)}" onchange="setCollectSearch(this.value)" placeholder="按 ID、字码、当前值搜索">
+      ${collectCodeFilter.length ? `<span class="badge">${escapeHtml(collectCodeLabel)} ${collectCodeFilter.length} 个 <button type="button" onclick="clearCollectCodeFilter()">清除</button></span>` : ""}
       <span class="badge">当前 ${rows.length} 条</span>
     </div>
     <table><thead><tr><th>ID</th><th>字码</th><th>当前值</th><th>修改值</th><th>操作</th></tr></thead><tbody>`;
@@ -1359,11 +1451,33 @@ function filteredNameRows() {
   const rows = names.rows
     .map((r, idx) => ({r, idx}))
     .filter(({r}) => collectTable === "all" || r.table === collectTable)
+    .filter(({r}) => !collectCodeFilter.length || (r.tokens || []).some(token => collectCodeFilter.includes(String(token).toUpperCase())))
     .filter(({r}) => !q || String(r.id).includes(q) || String(r.decoded || r.name || "").toLowerCase().includes(q) || (r.tokens || []).join(" ").toLowerCase().includes(q));
   return rows.map(row => ({...row, location: ""}));
 }
 function setCollectTable(next) { collectTable = next; renderNames(); }
-function setCollectSearch(next) { collectSearch = next; renderNames(); }
+function setCollectSearch(next) { collectSearch = next; collectCodeFilter = []; collectCodeLabel = ""; renderNames(); }
+function clearCollectCodeFilter() { collectCodeFilter = []; collectCodeLabel = ""; renderNames(); }
+function jumpToCharmapCodes(kind) {
+  const charmap = names?.stats?.charmap || {};
+  const codes = kind === "rom_unknown" ? (charmap.rom_unknown_codes || []) : (charmap.candidate_unresolved_codes || []);
+  collectTable = "all";
+  collectSearch = "";
+  collectCodeFilter = codes.map(code => String(code).toUpperCase()).filter(Boolean);
+  collectCodeLabel = kind === "rom_unknown" ? "ROM 未翻译字符" : "候选仍未解";
+  renderNames();
+  const rows = filteredNameRows();
+  if (!rows.length) {
+    setStatus(`${collectCodeLabel} 没有匹配到当前字典行`);
+    return;
+  }
+  const first = rows[0];
+  selected = {table: first.r.table, id: first.r.id};
+  renderNames();
+  const target = document.getElementById(`rom-${first.r.table}-${first.r.id}`);
+  if (target) target.scrollIntoView({block: "center"});
+  selectNameIndex(first.idx);
+}
 async function reloadNames() {
   names = await request("/api/names");
   renderNames();
