@@ -251,13 +251,12 @@
       ]
     },
     "120": {
-      "decoded": "气牛{82}",
+      "decoded": "气魄",
       "id": 120,
-      "name": "气牛{82}",
+      "name": "气魄",
       "tokens": [
         "0AB3",
-        "0A",
-        "82"
+        "0A82"
       ]
     },
     "121": {
@@ -1494,8 +1493,7 @@
     "12A6",
     "19E5",
     "3D",
-    "71",
-    "82"
+    "71"
   ],
   "character_map": {
     "0101": "阿",
@@ -2205,6 +2203,7 @@
     "0A78": "平",
     "0A7A": "瓶",
     "0A81": "破",
+    "0A82": "魄",
     "0A8A": "葡",
     "0A90": "普",
     "0A94": "瀑",
@@ -2921,7 +2920,7 @@
     "ED": "y",
     "EE": "z"
   },
-  "character_map_count": 1422,
+  "character_map_count": 1423,
   "gb2312_row_bases": {
     "01": 162,
     "16": 256,
@@ -11868,7 +11867,7 @@
     }
   },
   "rom": "/Users/wang.song/Desktop/pokemon/漆黑的魅影 5.0EX BW.gba",
-  "rom_unknown_character_key_count": 36,
+  "rom_unknown_character_key_count": 35,
   "rom_used_character_key_count": 1195,
   "species": {
     "0": {
@@ -16146,8 +16145,7 @@
     "19E5",
     "1E29",
     "3D",
-    "71",
-    "82"
+    "71"
   ],
   "used_character_keys": [
     {
@@ -18477,24 +18475,6 @@
             "71",
             "07D5",
             "05BB"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "82",
-      "known": false,
-      "references": [
-        {
-          "decoded": "气牛{82}",
-          "id": 120,
-          "table": "abilities",
-          "token_index": 2,
-          "tokens": [
-            "0AB3",
-            "0A",
-            "82"
           ]
         }
       ]
@@ -48976,17 +48956,6 @@
           ]
         },
         {
-          "decoded": "气牛{82}",
-          "id": 120,
-          "table": "abilities",
-          "token_index": 1,
-          "tokens": [
-            "0AB3",
-            "0A",
-            "82"
-          ]
-        },
-        {
           "decoded": "毛毛牛奶",
           "id": 29,
           "table": "items",
@@ -50610,6 +50579,23 @@
       ]
     },
     {
+      "char": "魄",
+      "code": "0A82",
+      "known": true,
+      "references": [
+        {
+          "decoded": "气魄",
+          "id": 120,
+          "table": "abilities",
+          "token_index": 1,
+          "tokens": [
+            "0AB3",
+            "0A82"
+          ]
+        }
+      ]
+    },
+    {
       "char": "葡",
       "code": "0A8A",
       "known": true,
@@ -51981,14 +51967,13 @@
           ]
         },
         {
-          "decoded": "气牛{82}",
+          "decoded": "气魄",
           "id": 120,
           "table": "abilities",
           "token_index": 0,
           "tokens": [
             "0AB3",
-            "0A",
-            "82"
+            "0A82"
           ]
         },
         {

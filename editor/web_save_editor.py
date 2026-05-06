@@ -425,6 +425,8 @@ def api_update_charmap(body):
         raise ValueError("请填写游戏中看到的文字")
     chars = list(text)
     if len(chars) != len(tokens):
+        tokens = coalesce_tokens_for_text(tokens, len(chars))
+    if len(chars) != len(tokens):
         raise ValueError(f"填写文字长度 {len(chars)} 与字符码数量 {len(tokens)} 不一致：{' '.join(tokens)}")
     updates = dict(zip(tokens, chars))
     save_charmap(updates)
@@ -433,6 +435,38 @@ def api_update_charmap(body):
     if STATE.save:
         load_save(STATE.save.path)
     return {"ok": True, "message": f"已更新 {len(updates)} 个字符码", "updates": updates}
+
+
+def coalesce_tokens_for_text(tokens: list[str], target_count: int) -> list[str]:
+    """Merge adjacent one-byte tokens when old tokenization split a two-byte character."""
+    memo: dict[tuple[int, int], list[str] | None] = {}
+
+    def solve(index: int, remaining: int) -> list[str] | None:
+        key = (index, remaining)
+        if key in memo:
+            return memo[key]
+        if remaining < 0:
+            return None
+        if index == len(tokens):
+            return [] if remaining == 0 else None
+        keep = solve(index + 1, remaining - 1)
+        if keep is not None:
+            memo[key] = [tokens[index], *keep]
+            return memo[key]
+        if (
+            index + 1 < len(tokens)
+            and len(tokens[index]) == 2
+            and len(tokens[index + 1]) == 2
+        ):
+            merged = tokens[index] + tokens[index + 1]
+            use_merged = solve(index + 2, remaining - 1)
+            if use_merged is not None:
+                memo[key] = [merged, *use_merged]
+                return memo[key]
+        memo[key] = None
+        return None
+
+    return solve(0, target_count) or tokens
 
 
 def api_update_bag(body):
