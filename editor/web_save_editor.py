@@ -44,6 +44,10 @@ class State:
 STATE = State()
 
 
+def table_sort_rank(table: str) -> int:
+    return {"species": 0, "abilities": 1, "moves": 2, "items": 3, "natures": 4, "balls": 5}.get(table, 9)
+
+
 def load_save(path: Path | None = None) -> None:
     if path is not None:
         STATE.save_path = path
@@ -280,7 +284,7 @@ def api_names():
         "abilities": ability_rows,
         "items": item_rows,
         "stats": stats,
-        "rows": sorted(rows, key=lambda row: (not row["observed"], row["table"], row["id"])),
+        "rows": sorted(rows, key=lambda row: (table_sort_rank(row["table"]), row["id"])),
         "static_rows": static_rows,
     }
 
@@ -971,7 +975,6 @@ function renderNames() {
       <label>范围
         <select onchange="setCollectFilter(this.value)">
           <option value="observed" ${collectFilter==="observed"?"selected":""}>存档</option>
-          <option value="unknown" ${collectFilter==="unknown"?"selected":""}>未知</option>
           <option value="all" ${collectFilter==="all"?"selected":""}>全部</option>
         </select>
       </label>
@@ -979,7 +982,6 @@ function renderNames() {
         <select onchange="setCollectSort(this.value)">
           <option value="location" ${collectSort==="location"?"selected":""}>位置</option>
           <option value="rom" ${collectSort==="rom"?"selected":""}>ID</option>
-          <option value="unknown" ${collectSort==="unknown"?"selected":""}>未知</option>
         </select>
       </label>
       <input value="${escapeHtml(collectSearch)}" onchange="setCollectSearch(this.value)" placeholder="按 ID、解码、位置搜索">
@@ -1008,7 +1010,7 @@ function filteredNameRows() {
   const rows = names.rows
     .map((r, idx) => ({r, idx}))
     .filter(({r}) => collectTable === "all" || r.table === collectTable)
-    .filter(({r}) => collectFilter === "all" || (collectFilter === "observed" ? r.observed : r.unknown_count > 0))
+    .filter(({r}) => collectFilter === "all" || r.observed)
     .filter(({r}) => !q || String(r.id).includes(q) || String(r.decoded || r.name || "").toLowerCase().includes(q) || (r.locations || []).join(" / ").toLowerCase().includes(q));
   if (collectSort === "location") {
     return rows
@@ -1018,42 +1020,28 @@ function filteredNameRows() {
       })
       .sort(compareLocationRows);
   }
-  if (collectSort === "unknown") {
-    return rows
-      .map(row => ({...row, location: ""}))
-      .sort((a, b) => b.r.unknown_count - a.r.unknown_count || tableRank(a.r.table) - tableRank(b.r.table) || a.r.id - b.r.id);
-  }
-  return rows.map(row => ({...row, location: ""}));
+  return rows
+    .map(row => ({...row, location: ""}))
+    .sort(compareRomRows);
 }
 function filteredStaticNameRows() {
   if (!names?.static_rows || !["all", "natures", "balls"].includes(collectTable)) return [];
   const q = collectSearch.trim().toLowerCase();
   return names.static_rows
     .filter(r => collectTable === "all" || r.table === collectTable)
-    .filter(r => collectFilter === "all" || (collectFilter === "observed" ? r.observed : false))
+    .filter(r => collectFilter === "all" || r.observed)
     .filter(r => !q || String(r.id).includes(q) || String(r.name || "").toLowerCase().includes(q) || (r.locations || []).join(" / ").toLowerCase().includes(q))
     .sort((a, b) => tableRank(a.table) - tableRank(b.table) || a.id - b.id);
 }
-function setCollectFilter(next) { collectFilter = next; renderNames(); }
+function setCollectFilter(next) { collectFilter = next === "all" ? "all" : "observed"; renderNames(); }
 function setCollectTable(next) { collectTable = next; renderNames(); }
 function setCollectSearch(next) { collectSearch = next; renderNames(); }
-function setCollectSort(next) { collectSort = next; renderNames(); }
+function setCollectSort(next) { collectSort = next === "location" ? "location" : "rom"; renderNames(); }
 function compareLocationRows(a, b) {
-  const ak = locationKey(a.location);
-  const bk = locationKey(b.location);
-  for (let i = 0; i < ak.length; i++) {
-    if (ak[i] !== bk[i]) return ak[i] - bk[i];
-  }
   return tableRank(a.r.table) - tableRank(b.r.table) || a.r.id - b.r.id;
 }
-function locationKey(location) {
-  let m = String(location || "").match(/^队伍 #(\d+)/);
-  if (m) return [0, parseInt(m[1], 10), 0];
-  m = String(location || "").match(/^盒子 (\d+)-(\d+)/);
-  if (m) return [1, parseInt(m[1], 10), parseInt(m[2], 10)];
-  m = String(location || "").match(/#(\d+)/);
-  if (m) return [2, parseInt(m[1], 10), 0];
-  return [9, 9999, 9999];
+function compareRomRows(a, b) {
+  return a.r.id - b.r.id || tableRank(a.r.table) - tableRank(b.r.table);
 }
 function tableRank(table) {
   return {species: 0, abilities: 1, moves: 2, items: 3, natures: 4, balls: 5}[table] ?? 9;
