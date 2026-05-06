@@ -595,12 +595,11 @@ HTML = r"""<!doctype html>
   <main>
     <section class="panel">
       <div class="tabs">
-        <button id="tab-names" onclick="showTab('names')">ROM枚举</button>
         <button id="tab-overview" onclick="showTab('overview')">存档概览</button>
-        <button id="tab-bag" onclick="showTab('bag')">背包覆盖</button>
         <button id="tab-party" onclick="showTab('party')">队伍</button>
         <button id="tab-boxes" onclick="showTab('boxes')">盒子</button>
-        <button id="tab-validation" onclick="showTab('validation')">校验</button>
+        <button id="tab-bag" onclick="showTab('bag')">背包</button>
+        <button id="tab-names" onclick="showTab('names')">名字典表</button>
       </div>
       <div class="summary" id="summary">加载中</div>
       <div class="table-wrap" id="content"></div>
@@ -614,7 +613,7 @@ HTML = r"""<!doctype html>
 <script>
 let state = null;
 let names = null;
-let tab = "names";
+let tab = "overview";
 let selected = null;
 let bagSort = "slot";
 let bagPocket = "all";
@@ -658,7 +657,7 @@ function showTab(next) { tab = next; selected = null; render(); }
 function setStatus(text) { document.getElementById("status").textContent = text; }
 function render() {
   renderDatalists();
-  for (const id of ["overview","bag","party","boxes","names","validation"]) document.getElementById("tab-"+id).classList.toggle("active", tab === id);
+  for (const id of ["overview","party","boxes","bag","names"]) document.getElementById("tab-"+id).classList.toggle("active", tab === id);
   document.getElementById("form").innerHTML = "";
   document.getElementById("detail").textContent = "请选择左侧条目";
   if (!state || !state.ok) {
@@ -671,7 +670,6 @@ function render() {
   if (tab === "party") renderParty();
   if (tab === "boxes") renderBoxes();
   if (tab === "names") renderNames();
-  if (tab === "validation") renderValidation();
 }
 function renderDatalists() {
   if (!names) return;
@@ -869,10 +867,6 @@ async function updatePokemon() {
   setStatus(data.message + "\n尚未保存到文件");
   await refresh();
 }
-function renderValidation() {
-  document.getElementById("summary").textContent = "校验结果";
-  document.getElementById("content").innerHTML = "<table><tbody>" + state.validation.map(v => `<tr><td>${v}</td></tr>`).join("") + "</tbody></table>";
-}
 function natureField(current) {
   const names = ["勤奋","怕寂寞","勇敢","固执","顽皮","大胆","坦率","悠闲","淘气","乐天","胆小","急躁","认真","爽朗","天真","内敛","慢吞吞","冷静","害羞","马虎","温和","温顺","自大","慎重","浮躁"];
   return `<label>性格<select id="nature_id">${names.map((name, id) => `<option value="${id}" ${id===current?"selected":""}>${id} ${name}</option>`).join("")}</select></label>`;
@@ -957,7 +951,7 @@ function renderNames() {
   const stats = names.stats;
   const rows = filteredNameRows();
   document.getElementById("summary").innerHTML =
-    `<span>ROM枚举：存档出现 ${names.rows.filter(r => r.observed).length} 条 / ROM ${names.rows.length} 条</span>
+    `<span>名字典表：存档出现 ${names.rows.filter(r => r.observed).length} 条 / 全部 ${names.rows.length} 条</span>
      <span class="summary-controls"><button type="button" onclick="reloadNames()">刷新码表</button></span>`;
   let html = `
     <div class="metrics">
@@ -973,9 +967,9 @@ function renderNames() {
     <div class="filters">
       <label>范围
         <select onchange="setCollectFilter(this.value)">
-          <option value="observed" ${collectFilter==="observed"?"selected":""}>只看存档出现</option>
-          <option value="unknown" ${collectFilter==="unknown"?"selected":""}>只看有未知字码</option>
-          <option value="all" ${collectFilter==="all"?"selected":""}>全部 ROM 枚举</option>
+          <option value="observed" ${collectFilter==="observed"?"selected":""}>存档</option>
+          <option value="unknown" ${collectFilter==="unknown"?"selected":""}>未知</option>
+          <option value="all" ${collectFilter==="all"?"selected":""}>全部</option>
         </select>
       </label>
       <label>类型
@@ -989,9 +983,9 @@ function renderNames() {
       </label>
       <label>排序
         <select onchange="setCollectSort(this.value)">
-          <option value="location" ${collectSort==="location"?"selected":""}>队伍/盒子/背包顺序</option>
-          <option value="rom" ${collectSort==="rom"?"selected":""}>ROM 表顺序</option>
-          <option value="unknown" ${collectSort==="unknown"?"selected":""}>未知字码优先</option>
+          <option value="location" ${collectSort==="location"?"selected":""}>位置</option>
+          <option value="rom" ${collectSort==="rom"?"selected":""}>ID</option>
+          <option value="unknown" ${collectSort==="unknown"?"selected":""}>未知</option>
         </select>
       </label>
       <input value="${escapeHtml(collectSearch)}" onchange="setCollectSearch(this.value)" placeholder="按 ID、解码、位置搜索">
@@ -1015,7 +1009,7 @@ function renderNames() {
     html += "</tbody></table>";
   }
   document.getElementById("content").innerHTML = html;
-  document.getElementById("detail").textContent = "ROM 枚举来自 data/rom_text.json。字码是 ROM 文本编码单元，可能是 1 字节或 2 字节，不等同于半角/全角字符；填写完整显示名后会更新 character_map，并刷新其他 tab。";
+  document.getElementById("detail").textContent = "名字典表来自 data/rom_text.json。字码是 ROM 文本编码单元，可能是 1 字节或 2 字节，不等同于半角/全角字符；填写完整显示名后会更新 character_map，并刷新其他 tab。";
 }
 function filteredNameRows() {
   const q = collectSearch.trim().toLowerCase();
