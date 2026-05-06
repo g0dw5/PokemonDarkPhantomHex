@@ -397,9 +397,9 @@
       ]
     },
     "134": {
-      "decoded": "魔影身躯",
+      "decoded": "诅咒身躯",
       "id": 134,
-      "name": "魔影身躯",
+      "name": "诅咒身躯",
       "tokens": [
         "111F",
         "10B5",
@@ -572,9 +572,9 @@
       ]
     },
     "15": {
-      "decoded": "不眠",
+      "decoded": "失眠",
       "id": 15,
-      "name": "不眠",
+      "name": "失眠",
       "tokens": [
         "0BE3",
         "0977"
@@ -741,9 +741,9 @@
       ]
     },
     "30": {
-      "decoded": "自然回复",
+      "decoded": "自然恢复",
       "id": 30,
-      "name": "自然回复",
+      "name": "自然恢复",
       "tokens": [
         "110C",
         "0B3B",
@@ -1025,18 +1025,18 @@
       ]
     },
     "57": {
-      "decoded": "正电",
+      "decoded": "正极",
       "id": 57,
-      "name": "正电",
+      "name": "正极",
       "tokens": [
         "1070",
         "0596"
       ]
     },
     "58": {
-      "decoded": "负电",
+      "decoded": "负极",
       "id": 58,
-      "name": "负电",
+      "name": "负极",
       "tokens": [
         "0424",
         "0596"
@@ -1071,9 +1071,9 @@
       ]
     },
     "61": {
-      "decoded": "蜕皮",
+      "decoded": "褪皮",
       "id": 61,
-      "name": "蜕皮",
+      "name": "褪皮",
       "tokens": [
         "0D32",
         "0A5F"
@@ -1315,9 +1315,9 @@
       ]
     },
     "84": {
-      "decoded": "省润身躯",
+      "decoded": "湿润身躯",
       "id": 84,
-      "name": "省润身躯",
+      "name": "湿润身躯",
       "tokens": [
         "0BE6",
         "0B73",
@@ -1443,12 +1443,11 @@
       ]
     },
     "96": {
-      "decoded": "肤Z冰身躯",
+      "decoded": "寒冰身躯",
       "id": 96,
-      "name": "肤Z冰身躯",
+      "name": "寒冰身躯",
       "tokens": [
-        "04",
-        "D4",
+        "04D4",
         "01B6",
         "0BCB",
         "0B1D"
@@ -1630,7 +1629,7 @@
     "02DC": "袋",
     "02E2": "丹",
     "02E3": "单",
-    "02EC": "单",
+    "02EC": "诞",
     "02ED": "弹",
     "02EE": "蛋",
     "02EF": "胆",
@@ -1658,7 +1657,7 @@
     "0322": "帝",
     "0323": "弟",
     "032A": "点",
-    "032C": "海",
+    "032C": "靛",
     "032E": "电",
     "0338": "雕",
     "033C": "吊",
@@ -1666,7 +1665,7 @@
     "0342": "蝶",
     "0346": "丁",
     "034D": "定",
-    "034F": "投",
+    "034F": "丢",
     "0354": "动",
     "0358": "冻",
     "0359": "洞",
@@ -1743,7 +1742,7 @@
     "0430": "钙",
     "0431": "盖",
     "0433": "干",
-    "0434": "真",
+    "0434": "甘",
     "0437": "竿",
     "043A": "感",
     "0440": "钢",
@@ -1751,7 +1750,7 @@
     "0449": "高",
     "0451": "哥",
     "0452": "歌",
-    "0458": "刃",
+    "0458": "割",
     "045B": "格",
     "045E": "隔",
     "0460": "个",
@@ -1782,13 +1781,14 @@
     "04B2": "龟",
     "04B5": "鬼",
     "04B8": "桂",
-    "04BE": "翻",
+    "04BE": "滚",
     "04C3": "果",
     "04C4": "裹",
     "04C5": "过",
     "04C6": "哈",
     "04C9": "海",
     "04CC": "害",
+    "04D4": "寒",
     "04DB": "旱",
     "04E6": "豪",
     "04E9": "好",
@@ -1842,7 +1842,7 @@
     "055B": "晃",
     "055F": "灰",
     "0561": "辉",
-    "0563": "回",
+    "0563": "恢",
     "0565": "回",
     "056A": "惠",
     "056E": "会",
@@ -1861,7 +1861,7 @@
     "0590": "讥",
     "0591": "鸡",
     "0595": "吉",
-    "0596": "电",
+    "0596": "极",
     "0597": "棘",
     "0598": "辑",
     "059A": "集",
@@ -2111,7 +2111,7 @@
     "0933": "蛮",
     "0934": "慢",
     "0935": "蔓",
-    "093A": "之",
+    "093A": "芒",
     "093F": "莽",
     "0940": "猫",
     "0943": "毛",
@@ -2324,9 +2324,9 @@
     "0BE0": "胜",
     "0BE1": "圣",
     "0BE2": "师",
-    "0BE3": "不",
+    "0BE3": "失",
     "0BE4": "狮",
-    "0BE6": "省",
+    "0BE6": "湿",
     "0BEA": "十",
     "0BEB": "石",
     "0BEC": "失",
@@ -2350,7 +2350,7 @@
     "0C19": "试",
     "0C1A": "收",
     "0C1B": "手",
-    "0C1C": "头",
+    "0C1C": "首",
     "0C1D": "守",
     "0C21": "受",
     "0C23": "兽",
@@ -2376,11 +2376,11 @@
     "0C78": "苏",
     "0C7B": "素",
     "0C7C": "速",
-    "0C84": "解",
+    "0C84": "酸",
     "0C86": "算",
     "0C8C": "碎",
     "0C96": "梭",
-    "0C98": "变",
+    "0C98": "缩",
     "0C9A": "索",
     "0C9B": "锁",
     "0CA2": "獭",
@@ -2424,14 +2424,14 @@
     "0D1F": "头",
     "0D20": "透",
     "0D21": "凸",
-    "0D23": "尾",
+    "0D23": "突",
     "0D24": "图",
     "0D27": "涂",
     "0D29": "土",
     "0D2A": "吐",
     "0D2F": "颓",
     "0D31": "蜕",
-    "0D32": "蜕",
+    "0D32": "褪",
     "0D39": "脱",
     "0D3D": "驼",
     "0D42": "挖",
@@ -2466,7 +2466,7 @@
     "0DA0": "乌",
     "0DA4": "无",
     "0DA7": "吾",
-    "0DAA": "炎",
+    "0DAA": "武",
     "0DAE": "舞",
     "0DB3": "雾",
     "0DB5": "物",
@@ -2506,7 +2506,7 @@
     "0E20": "象",
     "0E22": "硝",
     "0E25": "哮",
-    "0E28": "解",
+    "0E28": "消",
     "0E2C": "小",
     "0E30": "啸",
     "0E32": "效",
@@ -2527,10 +2527,10 @@
     "0E5E": "芝",
     "0E5F": "性",
     "0E67": "熊",
-    "0E69": "宙",
+    "0E69": "修",
     "0E6C": "嗅",
     "0E74": "虚",
-    "0E78": "祈",
+    "0E78": "许",
     "0E79": "蓄",
     "0E83": "续",
     "0E88": "旋",
@@ -2567,7 +2567,7 @@
     "0EE8": "摇",
     "0EEE": "咬",
     "0EF0": "药",
-    "0EF1": "摇",
+    "0EF1": "要",
     "0EF2": "耀",
     "0EF3": "椰",
     "0F": "野",
@@ -2633,7 +2633,7 @@
     "0FB9": "原",
     "0FBE": "圆",
     "0FBF": "猿",
-    "0FC0": "量",
+    "0FC0": "源",
     "0FC4": "愿",
     "0FC5": "怨",
     "0FCA": "跃",
@@ -2702,7 +2702,7 @@
     "10A4": "钟",
     "10A7": "种",
     "10A9": "重",
-    "10B5": "影",
+    "10B5": "咒",
     "10B7": "宙",
     "10B8": "昼",
     "10BA": "珠",
@@ -2712,7 +2712,7 @@
     "10D4": "抓",
     "10D5": "爪",
     "10D9": "转",
-    "10DF": "法",
+    "10DF": "装",
     "10E1": "撞",
     "10E2": "壮",
     "10E3": "撰",
@@ -2731,7 +2731,7 @@
     "1114": "总",
     "1117": "走",
     "111B": "足",
-    "111F": "魔",
+    "111F": "诅",
     "1120": "阻",
     "1122": "钻",
     "1123": "纂",
@@ -2739,7 +2739,7 @@
     "1126": "最",
     "112F": "作",
     "1131": "座",
-    "113D": "恶",
+    "113D": "噩",
     "1193": "伽",
     "11F1": "冥",
     "12A6": "垓",
@@ -2772,12 +2772,12 @@
     "14EA": "狃",
     "14EE": "狒",
     "14F1": "狩",
-    "161C": "旋",
+    "161C": "漩",
     "16C1": "孢",
     "170F": "缙",
     "1733": "珀",
-    "1735": "伽",
-    "173F": "利",
+    "1735": "珈",
+    "173F": "琏",
     "1743": "琥",
     "174B": "瑜",
     "174E": "瑙",
@@ -2946,7 +2946,7 @@
     "ED": "y",
     "EE": "z"
   },
-  "character_map_count": 1456,
+  "character_map_count": 1457,
   "gb2312_row_bases": {
     "01": 162,
     "16": 256,
@@ -3060,9 +3060,9 @@
       ]
     },
     "102": {
-      "decoded": "省润岩石",
+      "decoded": "湿润岩石",
       "id": 102,
-      "name": "省润岩石",
+      "name": "湿润岩石",
       "tokens": [
         "0BE6",
         "0B73",
@@ -3478,9 +3478,9 @@
       ]
     },
     "137": {
-      "decoded": "解梨果",
+      "decoded": "酸梨果",
       "id": 137,
-      "name": "解梨果",
+      "name": "酸梨果",
       "tokens": [
         "0C84",
         "085B",
@@ -3508,9 +3508,9 @@
       ]
     },
     "14": {
-      "decoded": "解毒药",
+      "decoded": "消毒药",
       "id": 14,
-      "name": "解毒药",
+      "name": "消毒药",
       "tokens": [
         "0E28",
         "0363",
@@ -3569,9 +3569,9 @@
       ]
     },
     "145": {
-      "decoded": "真之果",
+      "decoded": "甘芒果",
       "id": 145,
-      "name": "真之果",
+      "name": "甘芒果",
       "tokens": [
         "0434",
         "093A",
@@ -3589,9 +3589,9 @@
       ]
     },
     "147": {
-      "decoded": "解木瓜",
+      "decoded": "酸木瓜",
       "id": 147,
-      "name": "解木瓜",
+      "name": "酸木瓜",
       "tokens": [
         "0C84",
         "09B4",
@@ -3761,9 +3761,9 @@
       ]
     },
     "162": {
-      "decoded": "解柠檬",
+      "decoded": "酸柠檬",
       "id": 162,
-      "name": "解柠檬",
+      "name": "酸柠檬",
       "tokens": [
         "0C84",
         "09F1",
@@ -3801,9 +3801,9 @@
       ]
     },
     "166": {
-      "decoded": "苦利果",
+      "decoded": "苦琏果",
       "id": 166,
-      "name": "苦利果",
+      "name": "苦琏果",
       "tokens": [
         "07EE",
         "173F",
@@ -3811,9 +3811,9 @@
       ]
     },
     "167": {
-      "decoded": "海莓果",
+      "decoded": "靛莓果",
       "id": 167,
-      "name": "海莓果",
+      "name": "靛莓果",
       "tokens": [
         "032C",
         "1327",
@@ -3986,9 +3986,9 @@
       ]
     },
     "182": {
-      "decoded": "学习法置",
+      "decoded": "学习装置",
       "id": 182,
-      "name": "学习法置",
+      "name": "学习装置",
       "tokens": [
         "0E90",
         "0DD4",
@@ -4348,9 +4348,9 @@
       ]
     },
     "213": {
-      "decoded": "魔影之符",
+      "decoded": "诅咒之符",
       "id": 213,
-      "name": "魔影之符",
+      "name": "诅咒之符",
       "tokens": [
         "111F",
         "10B5",
@@ -4430,9 +4430,9 @@
       ]
     },
     "220": {
-      "decoded": "潮省之香",
+      "decoded": "潮湿之香",
       "id": 220,
-      "name": "潮省之香",
+      "name": "潮湿之香",
       "tokens": [
         "0233",
         "0BE6",
@@ -5424,9 +5424,9 @@
       ]
     },
     "30": {
-      "decoded": "力量粉",
+      "decoded": "力源粉",
       "id": 30,
-      "name": "力量粉",
+      "name": "力源粉",
       "tokens": [
         "0879",
         "0FC0",
@@ -5554,9 +5554,9 @@
       ]
     },
     "31": {
-      "decoded": "力量根",
+      "decoded": "力源根",
       "id": 31,
-      "name": "力量根",
+      "name": "力源根",
       "tokens": [
         "0879",
         "0FC0",
@@ -6282,9 +6282,9 @@
       ]
     },
     "365": {
-      "decoded": "祈愿石",
+      "decoded": "许愿石",
       "id": 365,
-      "name": "祈愿石",
+      "name": "许愿石",
       "tokens": [
         "0E78",
         "0FC4",
@@ -6361,9 +6361,9 @@
       ]
     },
     "371": {
-      "decoded": "单生之岛船票",
+      "decoded": "诞生之岛船票",
       "id": 371,
-      "name": "单生之岛船票",
+      "name": "诞生之岛船票",
       "tokens": [
         "02EC",
         "0BD8",
@@ -7215,9 +7215,9 @@
       ]
     },
     "101": {
-      "decoded": "黑夜魔影",
+      "decoded": "黑夜诅咒",
       "id": 101,
-      "name": "黑夜魔影",
+      "name": "黑夜诅咒",
       "tokens": [
         "0509",
         "0F09",
@@ -7275,9 +7275,9 @@
       ]
     },
     "107": {
-      "decoded": "变小",
+      "decoded": "缩小",
       "id": 107,
-      "name": "变小",
+      "name": "缩小",
       "tokens": [
         "0C98",
         "0E2C"
@@ -7313,9 +7313,9 @@
       ]
     },
     "110": {
-      "decoded": "变壳",
+      "decoded": "缩壳",
       "id": 110,
-      "name": "变壳",
+      "name": "缩壳",
       "tokens": [
         "0C98",
         "07D5"
@@ -7643,9 +7643,9 @@
       ]
     },
     "140": {
-      "decoded": "投球",
+      "decoded": "丢球",
       "id": 140,
-      "name": "投球",
+      "name": "丢球",
       "tokens": [
         "034F",
         "0B14"
@@ -7981,9 +7981,9 @@
       ]
     },
     "171": {
-      "decoded": "恶梦",
+      "decoded": "噩梦",
       "id": 171,
-      "name": "恶梦",
+      "name": "噩梦",
       "tokens": [
         "113D",
         "0966"
@@ -8010,9 +8010,9 @@
       ]
     },
     "174": {
-      "decoded": "魔影",
+      "decoded": "诅咒",
       "id": 174,
-      "name": "魔影",
+      "name": "诅咒",
       "tokens": [
         "111F",
         "10B5"
@@ -8354,9 +8354,9 @@
       ]
     },
     "205": {
-      "decoded": "翻动",
+      "decoded": "滚动",
       "id": 205,
-      "name": "翻动",
+      "name": "滚动",
       "tokens": [
         "04BE",
         "0354"
@@ -8858,9 +8858,9 @@
       ]
     },
     "250": {
-      "decoded": "旋涡",
+      "decoded": "漩涡",
       "id": 250,
-      "name": "旋涡",
+      "name": "漩涡",
       "tokens": [
         "161C",
         "0D96"
@@ -9091,18 +9091,18 @@
       ]
     },
     "272": {
-      "decoded": "换法",
+      "decoded": "换装",
       "id": 272,
-      "name": "换法",
+      "name": "换装",
       "tokens": [
         "0548",
         "10DF"
       ]
     },
     "273": {
-      "decoded": "祈愿",
+      "decoded": "许愿",
       "id": 273,
-      "name": "祈愿",
+      "name": "许愿",
       "tokens": [
         "0E78",
         "0FC4"
@@ -9136,9 +9136,9 @@
       ]
     },
     "277": {
-      "decoded": "魔法反射",
+      "decoded": "魔装反射",
       "id": 277,
-      "name": "魔法反射",
+      "name": "魔装反射",
       "tokens": [
         "099D",
         "10DF",
@@ -9176,9 +9176,9 @@
       ]
     },
     "280": {
-      "decoded": "瓦刃",
+      "decoded": "瓦割",
       "id": 280,
-      "name": "瓦刃",
+      "name": "瓦割",
       "tokens": [
         "0D47",
         "0458"
@@ -9304,9 +9304,9 @@
       ]
     },
     "292": {
-      "decoded": "尾张",
+      "decoded": "突张",
       "id": 292,
-      "name": "尾张",
+      "name": "突张",
       "tokens": [
         "0D23",
         "1038"
@@ -9555,9 +9555,9 @@
       ]
     },
     "314": {
-      "decoded": "空气切刃",
+      "decoded": "空气切割",
       "id": 314,
-      "name": "空气切刃",
+      "name": "空气切割",
       "tokens": [
         "07E3",
         "0AB3",
@@ -9861,18 +9861,18 @@
       ]
     },
     "342": {
-      "decoded": "毒尾",
+      "decoded": "毒突",
       "id": 342,
-      "name": "毒尾",
+      "name": "毒突",
       "tokens": [
         "0363",
         "0D23"
       ]
     },
     "343": {
-      "decoded": "索摇",
+      "decoded": "索要",
       "id": 343,
-      "name": "索摇",
+      "name": "索要",
       "tokens": [
         "0C9A",
         "0EF1"
@@ -10305,9 +10305,9 @@
       ]
     },
     "382": {
-      "decoded": "精神切刃",
+      "decoded": "精神切割",
       "id": 382,
-      "name": "精神切刃",
+      "name": "精神切割",
       "tokens": [
         "075B",
         "0BCF",
@@ -10690,13 +10690,12 @@
       ]
     },
     "415": {
-      "decoded": "电肤Z冰刺",
+      "decoded": "极寒冰刺",
       "id": 415,
-      "name": "电肤Z冰刺",
+      "name": "极寒冰刺",
       "tokens": [
         "0596",
-        "04",
-        "D4",
+        "04D4",
         "01B6",
         "02AC"
       ]
@@ -11273,9 +11272,9 @@
       ]
     },
     "468": {
-      "decoded": "解性炸弹",
+      "decoded": "酸性炸弹",
       "id": 468,
-      "name": "解性炸弹",
+      "name": "酸性炸弹",
       "tokens": [
         "0C84",
         "0E5F",
@@ -11522,9 +11521,9 @@
       ]
     },
     "66": {
-      "decoded": "地狱翻动",
+      "decoded": "地狱滚动",
       "id": 66,
-      "name": "地狱翻动",
+      "name": "地狱滚动",
       "tokens": [
         "031F",
         "0FAA",
@@ -11714,9 +11713,9 @@
       ]
     },
     "83": {
-      "decoded": "火焰旋涡",
+      "decoded": "火焰漩涡",
       "id": 83,
-      "name": "火焰旋涡",
+      "name": "火焰漩涡",
       "tokens": [
         "057D",
         "0ECF",
@@ -11850,9 +11849,9 @@
       ]
     },
     "96": {
-      "decoded": "瑜伽姿势",
+      "decoded": "瑜珈姿势",
       "id": 96,
-      "name": "瑜伽姿势",
+      "name": "瑜珈姿势",
       "tokens": [
         "174B",
         "1735",
@@ -11894,7 +11893,7 @@
   },
   "rom": "/Users/wang.song/Desktop/pokemon/漆黑的魅影 5.0EX BW.gba",
   "rom_unknown_character_key_count": 2,
-  "rom_used_character_key_count": 1195,
+  "rom_used_character_key_count": 1196,
   "species": {
     "0": {
       "decoded": "==========",
@@ -13696,9 +13695,9 @@
       ]
     },
     "258": {
-      "decoded": "炎炎猪",
+      "decoded": "武炎猪",
       "id": 258,
-      "name": "炎炎猪",
+      "name": "武炎猪",
       "tokens": [
         "0DAA",
         "0EC0",
@@ -13890,9 +13889,9 @@
       ]
     },
     "274": {
-      "decoded": "阿尔宙斯",
+      "decoded": "阿尔修斯",
       "id": 274,
-      "name": "阿尔宙斯",
+      "name": "阿尔修斯",
       "tokens": [
         "0101",
         "03A0",
@@ -14557,9 +14556,9 @@
       ]
     },
     "332": {
-      "decoded": "单头龙",
+      "decoded": "单首龙",
       "id": 332,
-      "name": "单头龙",
+      "name": "单首龙",
       "tokens": [
         "02E3",
         "0C1C",
@@ -17794,7 +17793,7 @@
           ]
         },
         {
-          "decoded": "阿尔宙斯",
+          "decoded": "阿尔修斯",
           "id": 274,
           "table": "species",
           "token_index": 0,
@@ -20014,14 +20013,13 @@
           ]
         },
         {
-          "decoded": "电肤Z冰刺",
+          "decoded": "极寒冰刺",
           "id": 415,
           "table": "moves",
-          "token_index": 3,
+          "token_index": 2,
           "tokens": [
             "0596",
-            "04",
-            "D4",
+            "04D4",
             "01B6",
             "02AC"
           ]
@@ -20050,13 +20048,12 @@
           ]
         },
         {
-          "decoded": "肤Z冰身躯",
+          "decoded": "寒冰身躯",
           "id": 96,
           "table": "abilities",
-          "token_index": 2,
+          "token_index": 1,
           "tokens": [
-            "04",
-            "D4",
+            "04D4",
             "01B6",
             "0BCB",
             "0B1D"
@@ -21069,7 +21066,7 @@
           ]
         },
         {
-          "decoded": "潮省之香",
+          "decoded": "潮湿之香",
           "id": 220,
           "table": "items",
           "token_index": 0,
@@ -22137,7 +22134,7 @@
           ]
         },
         {
-          "decoded": "单生之岛船票",
+          "decoded": "诞生之岛船票",
           "id": 371,
           "table": "items",
           "token_index": 4,
@@ -22466,14 +22463,13 @@
           ]
         },
         {
-          "decoded": "电肤Z冰刺",
+          "decoded": "极寒冰刺",
           "id": 415,
           "table": "moves",
-          "token_index": 4,
+          "token_index": 3,
           "tokens": [
             "0596",
-            "04",
-            "D4",
+            "04D4",
             "01B6",
             "02AC"
           ]
@@ -23414,7 +23410,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "单头龙",
+          "decoded": "单首龙",
           "id": 332,
           "table": "species",
           "token_index": 0,
@@ -23465,12 +23461,12 @@
       ]
     },
     {
-      "char": "单",
+      "char": "诞",
       "code": "02EC",
       "known": true,
       "references": [
         {
-          "decoded": "单生之岛船票",
+          "decoded": "诞生之岛船票",
           "id": 371,
           "table": "items",
           "token_index": 0,
@@ -23592,7 +23588,7 @@
           ]
         },
         {
-          "decoded": "解性炸弹",
+          "decoded": "酸性炸弹",
           "id": 468,
           "table": "moves",
           "token_index": 3,
@@ -23844,7 +23840,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "单生之岛船票",
+          "decoded": "诞生之岛船票",
           "id": 371,
           "table": "items",
           "token_index": 3,
@@ -24384,7 +24380,7 @@
           ]
         },
         {
-          "decoded": "地狱翻动",
+          "decoded": "地狱滚动",
           "id": 66,
           "table": "moves",
           "token_index": 0,
@@ -24631,12 +24627,12 @@
       ]
     },
     {
-      "char": "海",
+      "char": "靛",
       "code": "032C",
       "known": true,
       "references": [
         {
-          "decoded": "海莓果",
+          "decoded": "靛莓果",
           "id": 167,
           "table": "items",
           "token_index": 0,
@@ -25164,12 +25160,12 @@
       ]
     },
     {
-      "char": "投",
+      "char": "丢",
       "code": "034F",
       "known": true,
       "references": [
         {
-          "decoded": "投球",
+          "decoded": "丢球",
           "id": 140,
           "table": "moves",
           "token_index": 0,
@@ -25209,7 +25205,7 @@
           ]
         },
         {
-          "decoded": "地狱翻动",
+          "decoded": "地狱滚动",
           "id": 66,
           "table": "moves",
           "token_index": 3,
@@ -25257,7 +25253,7 @@
           ]
         },
         {
-          "decoded": "翻动",
+          "decoded": "滚动",
           "id": 205,
           "table": "moves",
           "token_index": 1,
@@ -25613,7 +25609,7 @@
           ]
         },
         {
-          "decoded": "毒尾",
+          "decoded": "毒突",
           "id": 342,
           "table": "moves",
           "token_index": 0,
@@ -25686,7 +25682,7 @@
           ]
         },
         {
-          "decoded": "解毒药",
+          "decoded": "消毒药",
           "id": 14,
           "table": "items",
           "token_index": 1,
@@ -26433,7 +26429,7 @@
           ]
         },
         {
-          "decoded": "阿尔宙斯",
+          "decoded": "阿尔修斯",
           "id": 274,
           "table": "species",
           "token_index": 1,
@@ -26658,7 +26654,7 @@
           ]
         },
         {
-          "decoded": "魔法反射",
+          "decoded": "魔装反射",
           "id": 277,
           "table": "moves",
           "token_index": 2,
@@ -27326,7 +27322,7 @@
           ]
         },
         {
-          "decoded": "力量粉",
+          "decoded": "力源粉",
           "id": 30,
           "table": "items",
           "token_index": 2,
@@ -27763,32 +27759,6 @@
       "known": true,
       "references": [
         {
-          "decoded": "电肤Z冰刺",
-          "id": 415,
-          "table": "moves",
-          "token_index": 1,
-          "tokens": [
-            "0596",
-            "04",
-            "D4",
-            "01B6",
-            "02AC"
-          ]
-        },
-        {
-          "decoded": "肤Z冰身躯",
-          "id": 96,
-          "table": "abilities",
-          "token_index": 0,
-          "tokens": [
-            "04",
-            "D4",
-            "01B6",
-            "0BCB",
-            "0B1D"
-          ]
-        },
-        {
           "decoded": "干燥肌肤",
           "id": 103,
           "table": "abilities",
@@ -27870,7 +27840,7 @@
           ]
         },
         {
-          "decoded": "魔影之符",
+          "decoded": "诅咒之符",
           "id": 213,
           "table": "items",
           "token_index": 3,
@@ -28096,7 +28066,7 @@
           ]
         },
         {
-          "decoded": "自然回复",
+          "decoded": "自然恢复",
           "id": 30,
           "table": "abilities",
           "token_index": 3,
@@ -28216,7 +28186,7 @@
           ]
         },
         {
-          "decoded": "负电",
+          "decoded": "负极",
           "id": 58,
           "table": "abilities",
           "token_index": 0,
@@ -28366,12 +28336,12 @@
       ]
     },
     {
-      "char": "真",
+      "char": "甘",
       "code": "0434",
       "known": true,
       "references": [
         {
-          "decoded": "真之果",
+          "decoded": "甘芒果",
           "id": 145,
           "table": "items",
           "token_index": 0,
@@ -28722,12 +28692,12 @@
       ]
     },
     {
-      "char": "刃",
+      "char": "割",
       "code": "0458",
       "known": true,
       "references": [
         {
-          "decoded": "瓦刃",
+          "decoded": "瓦割",
           "id": 280,
           "table": "moves",
           "token_index": 1,
@@ -28737,7 +28707,7 @@
           ]
         },
         {
-          "decoded": "空气切刃",
+          "decoded": "空气切割",
           "id": 314,
           "table": "moves",
           "token_index": 3,
@@ -28749,7 +28719,7 @@
           ]
         },
         {
-          "decoded": "精神切刃",
+          "decoded": "精神切割",
           "id": 382,
           "table": "moves",
           "token_index": 3,
@@ -28862,7 +28832,7 @@
           ]
         },
         {
-          "decoded": "力量根",
+          "decoded": "力源根",
           "id": 31,
           "table": "items",
           "token_index": 2,
@@ -29423,7 +29393,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "解木瓜",
+          "decoded": "酸木瓜",
           "id": 147,
           "table": "items",
           "token_index": 2,
@@ -30164,12 +30134,12 @@
       ]
     },
     {
-      "char": "翻",
+      "char": "滚",
       "code": "04BE",
       "known": true,
       "references": [
         {
-          "decoded": "地狱翻动",
+          "decoded": "地狱滚动",
           "id": 66,
           "table": "moves",
           "token_index": 2,
@@ -30181,7 +30151,7 @@
           ]
         },
         {
-          "decoded": "翻动",
+          "decoded": "滚动",
           "id": 205,
           "table": "moves",
           "token_index": 0,
@@ -30323,7 +30293,7 @@
           ]
         },
         {
-          "decoded": "解梨果",
+          "decoded": "酸梨果",
           "id": 137,
           "table": "items",
           "token_index": 2,
@@ -30412,7 +30382,7 @@
           ]
         },
         {
-          "decoded": "真之果",
+          "decoded": "甘芒果",
           "id": 145,
           "table": "items",
           "token_index": 2,
@@ -30523,7 +30493,7 @@
           ]
         },
         {
-          "decoded": "苦利果",
+          "decoded": "苦琏果",
           "id": 166,
           "table": "items",
           "token_index": 2,
@@ -30534,7 +30504,7 @@
           ]
         },
         {
-          "decoded": "海莓果",
+          "decoded": "靛莓果",
           "id": 167,
           "table": "items",
           "token_index": 2,
@@ -31106,6 +31076,37 @@
       ]
     },
     {
+      "char": "寒",
+      "code": "04D4",
+      "known": true,
+      "references": [
+        {
+          "decoded": "极寒冰刺",
+          "id": 415,
+          "table": "moves",
+          "token_index": 1,
+          "tokens": [
+            "0596",
+            "04D4",
+            "01B6",
+            "02AC"
+          ]
+        },
+        {
+          "decoded": "寒冰身躯",
+          "id": 96,
+          "table": "abilities",
+          "token_index": 0,
+          "tokens": [
+            "04D4",
+            "01B6",
+            "0BCB",
+            "0B1D"
+          ]
+        }
+      ]
+    },
+    {
       "char": "旱",
       "code": "04DB",
       "known": true,
@@ -31519,7 +31520,7 @@
           ]
         },
         {
-          "decoded": "黑夜魔影",
+          "decoded": "黑夜诅咒",
           "id": 101,
           "table": "moves",
           "token_index": 0,
@@ -32748,7 +32749,7 @@
           ]
         },
         {
-          "decoded": "换法",
+          "decoded": "换装",
           "id": 272,
           "table": "moves",
           "token_index": 0,
@@ -33073,12 +33074,12 @@
       ]
     },
     {
-      "char": "回",
+      "char": "恢",
       "code": "0563",
       "known": true,
       "references": [
         {
-          "decoded": "自然回复",
+          "decoded": "自然恢复",
           "id": 30,
           "table": "abilities",
           "token_index": 2,
@@ -33529,7 +33530,7 @@
           ]
         },
         {
-          "decoded": "火焰旋涡",
+          "decoded": "火焰漩涡",
           "id": 83,
           "table": "moves",
           "token_index": 0,
@@ -35295,25 +35296,24 @@
       ]
     },
     {
-      "char": "电",
+      "char": "极",
       "code": "0596",
       "known": true,
       "references": [
         {
-          "decoded": "电肤Z冰刺",
+          "decoded": "极寒冰刺",
           "id": 415,
           "table": "moves",
           "token_index": 0,
           "tokens": [
             "0596",
-            "04",
-            "D4",
+            "04D4",
             "01B6",
             "02AC"
           ]
         },
         {
-          "decoded": "正电",
+          "decoded": "正极",
           "id": 57,
           "table": "abilities",
           "token_index": 1,
@@ -35323,7 +35323,7 @@
           ]
         },
         {
-          "decoded": "负电",
+          "decoded": "负极",
           "id": 58,
           "table": "abilities",
           "token_index": 1,
@@ -38476,7 +38476,7 @@
           ]
         },
         {
-          "decoded": "精神切刃",
+          "decoded": "精神切割",
           "id": 382,
           "table": "moves",
           "token_index": 0,
@@ -39766,7 +39766,7 @@
           ]
         },
         {
-          "decoded": "变壳",
+          "decoded": "缩壳",
           "id": 110,
           "table": "moves",
           "token_index": 1,
@@ -40204,7 +40204,7 @@
           ]
         },
         {
-          "decoded": "空气切刃",
+          "decoded": "空气切割",
           "id": 314,
           "table": "moves",
           "token_index": 0,
@@ -40379,7 +40379,7 @@
           ]
         },
         {
-          "decoded": "苦利果",
+          "decoded": "苦琏果",
           "id": 166,
           "table": "items",
           "token_index": 0,
@@ -41745,7 +41745,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "解梨果",
+          "decoded": "酸梨果",
           "id": 137,
           "table": "items",
           "token_index": 1,
@@ -42581,7 +42581,7 @@
           ]
         },
         {
-          "decoded": "力量粉",
+          "decoded": "力源粉",
           "id": 30,
           "table": "items",
           "token_index": 0,
@@ -42592,7 +42592,7 @@
           ]
         },
         {
-          "decoded": "力量根",
+          "decoded": "力源根",
           "id": 31,
           "table": "items",
           "token_index": 0,
@@ -43977,7 +43977,7 @@
           ]
         },
         {
-          "decoded": "单头龙",
+          "decoded": "单首龙",
           "id": 332,
           "table": "species",
           "token_index": 2,
@@ -45157,12 +45157,12 @@
       ]
     },
     {
-      "char": "之",
+      "char": "芒",
       "code": "093A",
       "known": true,
       "references": [
         {
-          "decoded": "真之果",
+          "decoded": "甘芒果",
           "id": 145,
           "table": "items",
           "token_index": 1,
@@ -45454,7 +45454,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "解柠檬",
+          "decoded": "酸柠檬",
           "id": 162,
           "table": "items",
           "token_index": 2,
@@ -45583,7 +45583,7 @@
           ]
         },
         {
-          "decoded": "恶梦",
+          "decoded": "噩梦",
           "id": 171,
           "table": "moves",
           "token_index": 1,
@@ -46035,7 +46035,7 @@
           ]
         },
         {
-          "decoded": "不眠",
+          "decoded": "失眠",
           "id": 15,
           "table": "abilities",
           "token_index": 1,
@@ -46514,7 +46514,7 @@
           ]
         },
         {
-          "decoded": "魔法反射",
+          "decoded": "魔装反射",
           "id": 277,
           "table": "moves",
           "token_index": 0,
@@ -46966,7 +46966,7 @@
           ]
         },
         {
-          "decoded": "解木瓜",
+          "decoded": "酸木瓜",
           "id": 147,
           "table": "items",
           "token_index": 1,
@@ -48525,7 +48525,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "解柠檬",
+          "decoded": "酸柠檬",
           "id": 162,
           "table": "items",
           "token_index": 1,
@@ -49589,7 +49589,7 @@
           ]
         },
         {
-          "decoded": "蜕皮",
+          "decoded": "褪皮",
           "id": 61,
           "table": "abilities",
           "token_index": 1,
@@ -50009,7 +50009,7 @@
           ]
         },
         {
-          "decoded": "单生之岛船票",
+          "decoded": "诞生之岛船票",
           "id": 371,
           "table": "items",
           "token_index": 5,
@@ -51535,7 +51535,7 @@
           ]
         },
         {
-          "decoded": "空气切刃",
+          "decoded": "空气切割",
           "id": 314,
           "table": "moves",
           "token_index": 1,
@@ -51989,7 +51989,7 @@
           ]
         },
         {
-          "decoded": "空气切刃",
+          "decoded": "空气切割",
           "id": 314,
           "table": "moves",
           "token_index": 2,
@@ -52011,7 +52011,7 @@
           ]
         },
         {
-          "decoded": "精神切刃",
+          "decoded": "精神切割",
           "id": 382,
           "table": "moves",
           "token_index": 2,
@@ -52416,7 +52416,7 @@
           ]
         },
         {
-          "decoded": "投球",
+          "decoded": "丢球",
           "id": 140,
           "table": "moves",
           "token_index": 1,
@@ -52742,7 +52742,7 @@
           ]
         },
         {
-          "decoded": "省润身躯",
+          "decoded": "湿润身躯",
           "id": 84,
           "table": "abilities",
           "token_index": 3,
@@ -52754,20 +52754,19 @@
           ]
         },
         {
-          "decoded": "肤Z冰身躯",
+          "decoded": "寒冰身躯",
           "id": 96,
           "table": "abilities",
-          "token_index": 4,
+          "token_index": 3,
           "tokens": [
-            "04",
-            "D4",
+            "04D4",
             "01B6",
             "0BCB",
             "0B1D"
           ]
         },
         {
-          "decoded": "魔影身躯",
+          "decoded": "诅咒身躯",
           "id": 134,
           "table": "abilities",
           "token_index": 3,
@@ -53333,7 +53332,7 @@
           ]
         },
         {
-          "decoded": "自然回复",
+          "decoded": "自然恢复",
           "id": 30,
           "table": "abilities",
           "token_index": 1,
@@ -53866,7 +53865,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "省润身躯",
+          "decoded": "湿润身躯",
           "id": 84,
           "table": "abilities",
           "token_index": 1,
@@ -53878,7 +53877,7 @@
           ]
         },
         {
-          "decoded": "省润岩石",
+          "decoded": "湿润岩石",
           "id": 102,
           "table": "items",
           "token_index": 1,
@@ -55298,7 +55297,7 @@
           ]
         },
         {
-          "decoded": "魔法反射",
+          "decoded": "魔装反射",
           "id": 277,
           "table": "moves",
           "token_index": 3,
@@ -55455,7 +55454,7 @@
           ]
         },
         {
-          "decoded": "省润身躯",
+          "decoded": "湿润身躯",
           "id": 84,
           "table": "abilities",
           "token_index": 2,
@@ -55467,13 +55466,12 @@
           ]
         },
         {
-          "decoded": "肤Z冰身躯",
+          "decoded": "寒冰身躯",
           "id": 96,
           "table": "abilities",
-          "token_index": 3,
+          "token_index": 2,
           "tokens": [
-            "04",
-            "D4",
+            "04D4",
             "01B6",
             "0BCB",
             "0B1D"
@@ -55500,7 +55498,7 @@
           ]
         },
         {
-          "decoded": "魔影身躯",
+          "decoded": "诅咒身躯",
           "id": 134,
           "table": "abilities",
           "token_index": 2,
@@ -55721,7 +55719,7 @@
           ]
         },
         {
-          "decoded": "精神切刃",
+          "decoded": "精神切割",
           "id": 382,
           "table": "moves",
           "token_index": 1,
@@ -56036,7 +56034,7 @@
           ]
         },
         {
-          "decoded": "单生之岛船票",
+          "decoded": "诞生之岛船票",
           "id": 371,
           "table": "items",
           "token_index": 1,
@@ -56270,12 +56268,12 @@
       ]
     },
     {
-      "char": "不",
+      "char": "失",
       "code": "0BE3",
       "known": true,
       "references": [
         {
-          "decoded": "不眠",
+          "decoded": "失眠",
           "id": 15,
           "table": "abilities",
           "token_index": 0,
@@ -56372,12 +56370,12 @@
       ]
     },
     {
-      "char": "省",
+      "char": "湿",
       "code": "0BE6",
       "known": true,
       "references": [
         {
-          "decoded": "省润身躯",
+          "decoded": "湿润身躯",
           "id": 84,
           "table": "abilities",
           "token_index": 0,
@@ -56389,7 +56387,7 @@
           ]
         },
         {
-          "decoded": "省润岩石",
+          "decoded": "湿润岩石",
           "id": 102,
           "table": "items",
           "token_index": 0,
@@ -56401,7 +56399,7 @@
           ]
         },
         {
-          "decoded": "潮省之香",
+          "decoded": "潮湿之香",
           "id": 220,
           "table": "items",
           "token_index": 1,
@@ -56792,7 +56790,7 @@
           ]
         },
         {
-          "decoded": "省润岩石",
+          "decoded": "湿润岩石",
           "id": 102,
           "table": "items",
           "token_index": 3,
@@ -56962,7 +56960,7 @@
           ]
         },
         {
-          "decoded": "祈愿石",
+          "decoded": "许愿石",
           "id": 365,
           "table": "items",
           "token_index": 2,
@@ -57319,7 +57317,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "瑜伽姿势",
+          "decoded": "瑜珈姿势",
           "id": 96,
           "table": "moves",
           "token_index": 3,
@@ -57673,12 +57671,12 @@
       ]
     },
     {
-      "char": "头",
+      "char": "首",
       "code": "0C1C",
       "known": true,
       "references": [
         {
-          "decoded": "单头龙",
+          "decoded": "单首龙",
           "id": 332,
           "table": "species",
           "token_index": 1,
@@ -58948,7 +58946,7 @@
           ]
         },
         {
-          "decoded": "阿尔宙斯",
+          "decoded": "阿尔修斯",
           "id": 274,
           "table": "species",
           "token_index": 3,
@@ -59358,12 +59356,12 @@
       ]
     },
     {
-      "char": "解",
+      "char": "酸",
       "code": "0C84",
       "known": true,
       "references": [
         {
-          "decoded": "解性炸弹",
+          "decoded": "酸性炸弹",
           "id": 468,
           "table": "moves",
           "token_index": 0,
@@ -59375,7 +59373,7 @@
           ]
         },
         {
-          "decoded": "解梨果",
+          "decoded": "酸梨果",
           "id": 137,
           "table": "items",
           "token_index": 0,
@@ -59386,7 +59384,7 @@
           ]
         },
         {
-          "decoded": "解木瓜",
+          "decoded": "酸木瓜",
           "id": 147,
           "table": "items",
           "token_index": 0,
@@ -59397,7 +59395,7 @@
           ]
         },
         {
-          "decoded": "解柠檬",
+          "decoded": "酸柠檬",
           "id": 162,
           "table": "items",
           "token_index": 0,
@@ -59612,12 +59610,12 @@
       ]
     },
     {
-      "char": "变",
+      "char": "缩",
       "code": "0C98",
       "known": true,
       "references": [
         {
-          "decoded": "变小",
+          "decoded": "缩小",
           "id": 107,
           "table": "moves",
           "token_index": 0,
@@ -59627,7 +59625,7 @@
           ]
         },
         {
-          "decoded": "变壳",
+          "decoded": "缩壳",
           "id": 110,
           "table": "moves",
           "token_index": 0,
@@ -59667,7 +59665,7 @@
           ]
         },
         {
-          "decoded": "索摇",
+          "decoded": "索要",
           "id": 343,
           "table": "moves",
           "token_index": 0,
@@ -61550,12 +61548,12 @@
       ]
     },
     {
-      "char": "尾",
+      "char": "突",
       "code": "0D23",
       "known": true,
       "references": [
         {
-          "decoded": "尾张",
+          "decoded": "突张",
           "id": 292,
           "table": "moves",
           "token_index": 0,
@@ -61565,7 +61563,7 @@
           ]
         },
         {
-          "decoded": "毒尾",
+          "decoded": "毒突",
           "id": 342,
           "table": "moves",
           "token_index": 1,
@@ -61768,12 +61766,12 @@
       ]
     },
     {
-      "char": "蜕",
+      "char": "褪",
       "code": "0D32",
       "known": true,
       "references": [
         {
-          "decoded": "蜕皮",
+          "decoded": "褪皮",
           "id": 61,
           "table": "abilities",
           "token_index": 0,
@@ -62095,7 +62093,7 @@
           ]
         },
         {
-          "decoded": "瓦刃",
+          "decoded": "瓦割",
           "id": 280,
           "table": "moves",
           "token_index": 0,
@@ -63055,7 +63053,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "火焰旋涡",
+          "decoded": "火焰漩涡",
           "id": 83,
           "table": "moves",
           "token_index": 3,
@@ -63067,7 +63065,7 @@
           ]
         },
         {
-          "decoded": "旋涡",
+          "decoded": "漩涡",
           "id": 250,
           "table": "moves",
           "token_index": 1,
@@ -63211,12 +63209,12 @@
       ]
     },
     {
-      "char": "炎",
+      "char": "武",
       "code": "0DAA",
       "known": true,
       "references": [
         {
-          "decoded": "炎炎猪",
+          "decoded": "武炎猪",
           "id": 258,
           "table": "species",
           "token_index": 0,
@@ -63821,7 +63819,7 @@
           ]
         },
         {
-          "decoded": "学习法置",
+          "decoded": "学习装置",
           "id": 182,
           "table": "items",
           "token_index": 1,
@@ -64205,7 +64203,7 @@
           ]
         },
         {
-          "decoded": "潮省之香",
+          "decoded": "潮湿之香",
           "id": 220,
           "table": "items",
           "token_index": 3,
@@ -64397,12 +64395,12 @@
       ]
     },
     {
-      "char": "解",
+      "char": "消",
       "code": "0E28",
       "known": true,
       "references": [
         {
-          "decoded": "解毒药",
+          "decoded": "消毒药",
           "id": 14,
           "table": "items",
           "token_index": 0,
@@ -64554,7 +64552,7 @@
           ]
         },
         {
-          "decoded": "变小",
+          "decoded": "缩小",
           "id": 107,
           "table": "moves",
           "token_index": 1,
@@ -65460,7 +65458,7 @@
           ]
         },
         {
-          "decoded": "解性炸弹",
+          "decoded": "酸性炸弹",
           "id": 468,
           "table": "moves",
           "token_index": 1,
@@ -65559,12 +65557,12 @@
       ]
     },
     {
-      "char": "宙",
+      "char": "修",
       "code": "0E69",
       "known": true,
       "references": [
         {
-          "decoded": "阿尔宙斯",
+          "decoded": "阿尔修斯",
           "id": 274,
           "table": "species",
           "token_index": 2,
@@ -65614,12 +65612,12 @@
       ]
     },
     {
-      "char": "祈",
+      "char": "许",
       "code": "0E78",
       "known": true,
       "references": [
         {
-          "decoded": "祈愿",
+          "decoded": "许愿",
           "id": 273,
           "table": "moves",
           "token_index": 0,
@@ -65629,7 +65627,7 @@
           ]
         },
         {
-          "decoded": "祈愿石",
+          "decoded": "许愿石",
           "id": 365,
           "table": "items",
           "token_index": 0,
@@ -65746,7 +65744,7 @@
           ]
         },
         {
-          "decoded": "学习法置",
+          "decoded": "学习装置",
           "id": 182,
           "table": "items",
           "token_index": 0,
@@ -66795,7 +66793,7 @@
           ]
         },
         {
-          "decoded": "省润岩石",
+          "decoded": "湿润岩石",
           "id": 102,
           "table": "items",
           "token_index": 2,
@@ -66866,7 +66864,7 @@
           ]
         },
         {
-          "decoded": "炎炎猪",
+          "decoded": "武炎猪",
           "id": 258,
           "table": "species",
           "token_index": 1,
@@ -67158,7 +67156,7 @@
           ]
         },
         {
-          "decoded": "火焰旋涡",
+          "decoded": "火焰漩涡",
           "id": 83,
           "table": "moves",
           "token_index": 1,
@@ -67633,7 +67631,7 @@
           ]
         },
         {
-          "decoded": "解毒药",
+          "decoded": "消毒药",
           "id": 14,
           "table": "items",
           "token_index": 2,
@@ -67854,12 +67852,12 @@
       ]
     },
     {
-      "char": "摇",
+      "char": "要",
       "code": "0EF1",
       "known": true,
       "references": [
         {
-          "decoded": "索摇",
+          "decoded": "索要",
           "id": 343,
           "table": "moves",
           "token_index": 1,
@@ -68179,7 +68177,7 @@
           ]
         },
         {
-          "decoded": "黑夜魔影",
+          "decoded": "黑夜诅咒",
           "id": 101,
           "table": "moves",
           "token_index": 1,
@@ -70043,7 +70041,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "地狱翻动",
+          "decoded": "地狱滚动",
           "id": 66,
           "table": "moves",
           "token_index": 1,
@@ -70285,12 +70283,12 @@
       ]
     },
     {
-      "char": "量",
+      "char": "源",
       "code": "0FC0",
       "known": true,
       "references": [
         {
-          "decoded": "力量粉",
+          "decoded": "力源粉",
           "id": 30,
           "table": "items",
           "token_index": 1,
@@ -70301,7 +70299,7 @@
           ]
         },
         {
-          "decoded": "力量根",
+          "decoded": "力源根",
           "id": 31,
           "table": "items",
           "token_index": 1,
@@ -70319,7 +70317,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "祈愿",
+          "decoded": "许愿",
           "id": 273,
           "table": "moves",
           "token_index": 1,
@@ -70341,7 +70339,7 @@
           ]
         },
         {
-          "decoded": "祈愿石",
+          "decoded": "许愿石",
           "id": 365,
           "table": "items",
           "token_index": 1,
@@ -71163,7 +71161,7 @@
           ]
         },
         {
-          "decoded": "解性炸弹",
+          "decoded": "酸性炸弹",
           "id": 468,
           "table": "moves",
           "token_index": 2,
@@ -71374,7 +71372,7 @@
           ]
         },
         {
-          "decoded": "尾张",
+          "decoded": "突张",
           "id": 292,
           "table": "moves",
           "token_index": 1,
@@ -71845,7 +71843,7 @@
           ]
         },
         {
-          "decoded": "正电",
+          "decoded": "正极",
           "id": 57,
           "table": "abilities",
           "token_index": 0,
@@ -72920,7 +72918,7 @@
           ]
         },
         {
-          "decoded": "魔影之符",
+          "decoded": "诅咒之符",
           "id": 213,
           "table": "items",
           "token_index": 2,
@@ -72967,7 +72965,7 @@
           ]
         },
         {
-          "decoded": "潮省之香",
+          "decoded": "潮湿之香",
           "id": 220,
           "table": "items",
           "token_index": 2,
@@ -73112,7 +73110,7 @@
           ]
         },
         {
-          "decoded": "单生之岛船票",
+          "decoded": "诞生之岛船票",
           "id": 371,
           "table": "items",
           "token_index": 2,
@@ -73388,7 +73386,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "学习法置",
+          "decoded": "学习装置",
           "id": 182,
           "table": "items",
           "token_index": 3,
@@ -73754,12 +73752,12 @@
       ]
     },
     {
-      "char": "影",
+      "char": "咒",
       "code": "10B5",
       "known": true,
       "references": [
         {
-          "decoded": "黑夜魔影",
+          "decoded": "黑夜诅咒",
           "id": 101,
           "table": "moves",
           "token_index": 3,
@@ -73771,7 +73769,7 @@
           ]
         },
         {
-          "decoded": "魔影",
+          "decoded": "诅咒",
           "id": 174,
           "table": "moves",
           "token_index": 1,
@@ -73781,7 +73779,7 @@
           ]
         },
         {
-          "decoded": "魔影身躯",
+          "decoded": "诅咒身躯",
           "id": 134,
           "table": "abilities",
           "token_index": 1,
@@ -73793,7 +73791,7 @@
           ]
         },
         {
-          "decoded": "魔影之符",
+          "decoded": "诅咒之符",
           "id": 213,
           "table": "items",
           "token_index": 1,
@@ -73986,7 +73984,7 @@
           ]
         },
         {
-          "decoded": "炎炎猪",
+          "decoded": "武炎猪",
           "id": 258,
           "table": "species",
           "token_index": 2,
@@ -74216,12 +74214,12 @@
       ]
     },
     {
-      "char": "法",
+      "char": "装",
       "code": "10DF",
       "known": true,
       "references": [
         {
-          "decoded": "换法",
+          "decoded": "换装",
           "id": 272,
           "table": "moves",
           "token_index": 1,
@@ -74231,7 +74229,7 @@
           ]
         },
         {
-          "decoded": "魔法反射",
+          "decoded": "魔装反射",
           "id": 277,
           "table": "moves",
           "token_index": 1,
@@ -74243,7 +74241,7 @@
           ]
         },
         {
-          "decoded": "学习法置",
+          "decoded": "学习装置",
           "id": 182,
           "table": "items",
           "token_index": 2,
@@ -74454,7 +74452,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "瑜伽姿势",
+          "decoded": "瑜珈姿势",
           "id": 96,
           "table": "moves",
           "token_index": 2,
@@ -74899,7 +74897,7 @@
           ]
         },
         {
-          "decoded": "自然回复",
+          "decoded": "自然恢复",
           "id": 30,
           "table": "abilities",
           "token_index": 0,
@@ -75116,12 +75114,12 @@
       ]
     },
     {
-      "char": "魔",
+      "char": "诅",
       "code": "111F",
       "known": true,
       "references": [
         {
-          "decoded": "黑夜魔影",
+          "decoded": "黑夜诅咒",
           "id": 101,
           "table": "moves",
           "token_index": 2,
@@ -75133,7 +75131,7 @@
           ]
         },
         {
-          "decoded": "魔影",
+          "decoded": "诅咒",
           "id": 174,
           "table": "moves",
           "token_index": 0,
@@ -75143,7 +75141,7 @@
           ]
         },
         {
-          "decoded": "魔影身躯",
+          "decoded": "诅咒身躯",
           "id": 134,
           "table": "abilities",
           "token_index": 0,
@@ -75155,7 +75153,7 @@
           ]
         },
         {
-          "decoded": "魔影之符",
+          "decoded": "诅咒之符",
           "id": 213,
           "table": "items",
           "token_index": 0,
@@ -75367,12 +75365,12 @@
       ]
     },
     {
-      "char": "恶",
+      "char": "噩",
       "code": "113D",
       "known": true,
       "references": [
         {
-          "decoded": "恶梦",
+          "decoded": "噩梦",
           "id": 171,
           "table": "moves",
           "token_index": 0,
@@ -75501,7 +75499,7 @@
           ]
         },
         {
-          "decoded": "海莓果",
+          "decoded": "靛莓果",
           "id": 167,
           "table": "items",
           "token_index": 1,
@@ -75847,12 +75845,12 @@
       ]
     },
     {
-      "char": "旋",
+      "char": "漩",
       "code": "161C",
       "known": true,
       "references": [
         {
-          "decoded": "火焰旋涡",
+          "decoded": "火焰漩涡",
           "id": 83,
           "table": "moves",
           "token_index": 2,
@@ -75864,7 +75862,7 @@
           ]
         },
         {
-          "decoded": "旋涡",
+          "decoded": "漩涡",
           "id": 250,
           "table": "moves",
           "token_index": 0,
@@ -75936,12 +75934,12 @@
       ]
     },
     {
-      "char": "伽",
+      "char": "珈",
       "code": "1735",
       "known": true,
       "references": [
         {
-          "decoded": "瑜伽姿势",
+          "decoded": "瑜珈姿势",
           "id": 96,
           "table": "moves",
           "token_index": 1,
@@ -75955,12 +75953,12 @@
       ]
     },
     {
-      "char": "利",
+      "char": "琏",
       "code": "173F",
       "known": true,
       "references": [
         {
-          "decoded": "苦利果",
+          "decoded": "苦琏果",
           "id": 166,
           "table": "items",
           "token_index": 1,
@@ -75998,7 +75996,7 @@
       "known": true,
       "references": [
         {
-          "decoded": "瑜伽姿势",
+          "decoded": "瑜珈姿势",
           "id": 96,
           "table": "moves",
           "token_index": 0,
@@ -79005,32 +79003,6 @@
             "BE",
             "08CD",
             "D4"
-          ]
-        },
-        {
-          "decoded": "电肤Z冰刺",
-          "id": 415,
-          "table": "moves",
-          "token_index": 2,
-          "tokens": [
-            "0596",
-            "04",
-            "D4",
-            "01B6",
-            "02AC"
-          ]
-        },
-        {
-          "decoded": "肤Z冰身躯",
-          "id": 96,
-          "table": "abilities",
-          "token_index": 1,
-          "tokens": [
-            "04",
-            "D4",
-            "01B6",
-            "0BCB",
-            "0B1D"
           ]
         }
       ]
