@@ -75,6 +75,9 @@ TMHM_COMPATIBILITY_OFFSET = 0x31E898
 TMHM_COMPATIBILITY_SIZE = 8
 TMHM_MOVES_OFFSET = 0x1CA0000
 TMHM_COUNT = 58
+TUTOR_MOVES_OFFSET = 0x61500C
+TUTOR_COMPATIBILITY_OFFSET = 0x615048
+TUTOR_COMPATIBILITY_SIZE = 4
 TMHM_FIRST_ITEM_ID = 0x121
 TMHM_LAST_ITEM_ID = TMHM_FIRST_ITEM_ID + TMHM_COUNT - 1
 GBA_ROM_POINTER_BASE = 0x08000000
@@ -450,6 +453,7 @@ class SpeciesConstraints:
     egg_moves: set[int]
     pre_evolution_egg_moves: dict[int, set[int]]
     tmhm_moves: dict[int, int]
+    tutor_moves: dict[int, int]
 
 
 @dataclass(frozen=True)
@@ -1024,6 +1028,7 @@ def constraints_for_species(species_id: int) -> SpeciesConstraints | None:
         egg_moves=_egg_moves_by_species(rom).get(species_id, set()),
         pre_evolution_egg_moves=_pre_evolution_egg_moves(rom, species_id),
         tmhm_moves=_tmhm_moves_for_species(rom, species_id),
+        tutor_moves=_tutor_moves_for_species(rom, species_id),
     )
 
 
@@ -1054,6 +1059,8 @@ def move_legality_for_species(species_id: int, level: int, move_id: int) -> Move
         future_levels.extend(pre_future)
     if move_id in constraints.tmhm_moves:
         sources.append(f"TM/HM{constraints.tmhm_moves[move_id]:02d}")
+    if move_id in constraints.tutor_moves:
+        sources.append(f"定点教学{constraints.tutor_moves[move_id]:02d}")
     if move_id in constraints.egg_moves:
         sources.append("遗传")
     for pre_species_id in sorted(constraints.pre_evolution_egg_moves.get(move_id, set())):
@@ -1208,6 +1215,37 @@ def _tmhm_moves_for_species(rom: bytes, species_id: int) -> dict[int, int]:
     tmhm_moves = _tmhm_move_ids(rom)
     result: dict[int, int] = {}
     for index, move_id in enumerate(tmhm_moves):
+        if bitmap[index // 8] & (1 << (index % 8)):
+            result[move_id] = index + 1
+    return result
+
+
+def _tutor_move_ids(rom: bytes) -> list[int]:
+    result: list[int] = []
+    offset = TUTOR_MOVES_OFFSET
+    while offset + 2 <= len(rom):
+        move_id = struct.unpack_from("<H", rom, offset)[0]
+        offset += 2
+        if move_id == 0:
+            break
+        if not (1 <= move_id <= ROM_MOVE_COUNT):
+            return []
+        result.append(move_id)
+        if len(result) >= TUTOR_COMPATIBILITY_SIZE * 8:
+            break
+    return result
+
+
+def _tutor_moves_for_species(rom: bytes, species_id: int) -> dict[int, int]:
+    if not (0 <= species_id <= ROM_SPECIES_COUNT):
+        return {}
+    bitmap_offset = TUTOR_COMPATIBILITY_OFFSET + species_id * TUTOR_COMPATIBILITY_SIZE
+    if bitmap_offset + TUTOR_COMPATIBILITY_SIZE > len(rom):
+        return {}
+    bitmap = rom[bitmap_offset : bitmap_offset + TUTOR_COMPATIBILITY_SIZE]
+    tutor_moves = _tutor_move_ids(rom)
+    result: dict[int, int] = {}
+    for index, move_id in enumerate(tutor_moves):
         if bitmap[index // 8] & (1 << (index % 8)):
             result[move_id] = index + 1
     return result

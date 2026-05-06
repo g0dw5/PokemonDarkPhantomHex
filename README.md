@@ -298,12 +298,117 @@ class SpeciesConstraints:
     egg_moves: set[int]
     pre_evolution_egg_moves: dict[int, set[int]]  # move_id -> pre_species_ids
     tmhm_moves: dict[int, int]              # move_id -> tmhm index, 1-based
+    tutor_moves: dict[int, int]             # move_id -> tutor index, 1-based
 ```
+
+#### 一个 species 的可学招式在 ROM 里的表达
+
+当前编辑器没有在 ROM 中读取“一张已经合并好的可学招式表”。一个 species 能学哪些招式，是从多张原始表分别展开后再聚合得到的。
+
+1. 升级招式
+
+- 指针表 offset：`0x329378`
+- 当前 hack 的 species 下标需要 `species_id + 1` 后再查指针表。
+- 指针表项是 GBA ROM 指针，减去 `0x08000000` 后得到实际 learnset offset。
+- learnset 由一串 `u16` 组成，以 `0xFFFF` 结束。
+- 每个 `u16` 的低 9 位是 `move_id`，高 7 位是学习等级。
+- 编辑器展开为：`level_up_moves: move_id -> [level, ...]`。
+
+2. 进化前升级招式
+
+- ROM 中没有单独的“进化链可继承升级招式表”。
+- 编辑器先从进化表反查当前 species 的所有前置 species。
+- 进化表 offset：`0x32531C`
+- 每个 species 有 5 条进化记录，每条记录 8 bytes。
+- 只要记录里 `method != 0` 且 `target_species` 指向当前链路，就认为是前置 species。
+- 然后读取这些前置 species 各自的升级招式表。
+- 编辑器展开为：`pre_evolution_level_up_moves: move_id -> pre_species_id -> [level, ...]`。
+
+3. 遗传招式
+
+- egg move 表 offset：`0x32ADD8`
+- 表由一串 `u16` 组成，以 `0xFFFF` 结束。
+- 大于 `0x4E20` 的值是 species marker：`species_id = value - 0x4E20`。
+- marker 后面连续的普通 move id 都属于这个 species 的遗传招式，直到遇到下一个 marker。
+- 编辑器展开为：`egg_moves: set[move_id]`。
+
+4. 进化前遗传招式
+
+- ROM 中没有单独的“进化链继承遗传招式表”。
+- 编辑器复用上面的前置 species 列表，再读取每个前置 species 的 `egg_moves`。
+- 编辑器展开为：`pre_evolution_egg_moves: move_id -> set[pre_species_id]`。
+
+5. TM/HM 招式
+
+- species TM/HM 可学位图 offset：`0x31E898`
+- 每个 species 8 bytes，低位优先，覆盖 58 个 TM/HM 位。
+- TM/HM 对应 move 表 offset：`0x1CA0000`
+- move 表有 58 个 `u16 move_id`。
+- 如果 species 位图第 `index` 位为 1，则该 species 可学 `tmhm_move_table[index]`。
+- 编辑器展开为：`tmhm_moves: move_id -> tmhm index`，其中 index 是 1-based，用于显示 `TM/HM01` 这类编号。
+
+6. 定点教学招式
+
+- tutor move 表 offset：`0x61500C`
+- 表由一串 `u16 move_id` 组成，以 `0x0000` 结束。
+- 当前 ROM 解析出 30 个 tutor 招式，结束标记在 `0x615048`。
+- 这里不存招式名称文本，只引用 `move_id`；名称仍从全局 move name 表读取，因此不需要新增字符映射表条目。
+- tutor species 兼容位图 offset：`0x615048`
+- 每个 species 4 bytes，低位优先，覆盖 30 个 tutor 招式位。
+- species N 的 tutor 位图：`0x615048 + N * 4`
+- 如果位图第 `index` 位为 1，则该 species 可学 `tutor_move_table[index]`。
+- 编辑器展开为：`tutor_moves: move_id -> tutor index`，其中 index 是 1-based。
+- 例：species 151 梦幻在 `0x615048 + 151 * 4` 的位图为 `0xFFFFFFFF`，对应全部 30 个 tutor 招式，符合预期。
+
+当前 ROM 的 tutor move 表：
+
+| index | move_id | 名称 |
+| --- | ---: | --- |
+| 0 | 5 | 百万吨拳击 |
+| 1 | 14 | 剑舞 |
+| 2 | 25 | 百万吨飞踢 |
+| 3 | 34 | 按压 |
+| 4 | 38 | 舍身一击 |
+| 5 | 68 | 返拳 |
+| 6 | 69 | 地球上投 |
+| 7 | 102 | 模仿 |
+| 8 | 118 | 摇手指 |
+| 9 | 135 | 生蛋 |
+| 10 | 138 | 食梦 |
+| 11 | 86 | 电磁波 |
+| 12 | 153 | 大爆炸 |
+| 13 | 157 | 岩崩 |
+| 14 | 164 | 替身 |
+| 15 | 223 | 近身战 |
+| 16 | 205 | 翻动 |
+| 17 | 244 | 自我暗示 |
+| 18 | 173 | 打鼾 |
+| 19 | 196 | 碎冰飞击 |
+| 20 | 203 | 忍耐 |
+| 21 | 189 | 泥汤 |
+| 22 | 8 | 急冻拳 |
+| 23 | 207 | 虚张声势 |
+| 24 | 214 | 梦话 |
+| 25 | 129 | 高速星星 |
+| 26 | 111 | 变圆 |
+| 27 | 9 | 闪电拳 |
+| 28 | 7 | 火焰拳 |
+| 29 | 210 | 连续切 |
+
+7. 进化时学会
+
+- 本 ROM 暂未发现独立的“进化时学会招式表”。
+- 扫描全部 species 升级 learnset，没有发现 level 0 记录。
+- 当前证据显示，常见“进化时学会”的招式是写在目标 species 的升级招式表里，等级等于进化等级。
+- 例：species 306 蘑蘑菇 Lv23 进化到 species 307 斗笠菇；斗笠菇升级表中有 Lv23 `move 183 音速拳`，因此会表现为进化时可学。
+- 因此实现层面不需要新增独立 ROM 表；需要在判定进化型合法招式时，把目标 species 自身升级表中 `learn_level == evolution_level` 或 `learn_level <= 当前等级` 的招式纳入。
+
+因此，同一个 move 可能同时出现在多种来源里。例如某招式既是遗传招式，又能通过 TM/HM 学会。UI 是否去重、按哪个来源优先展示，是编辑器层的展示策略，不是 ROM 原始数据本身已经决定好的顺序。
 
 当前校验策略：
 
 - species：当前名称表和 base stats 主要覆盖 `1..412`，UI 层优先限制到这个范围。
 - ability：只允许当前 species base stats `+22/+23` 推导出的有效 `ability_bit`。
 - gender：按 ratio 限定可选项；固定性别或无性别 species 会被校验出来。
-- moves：非 0 move 必须在 `1..472`；来源集合为 `level_up_now | pre_evolution_level_up_now | tmhm | egg | pre_evolution_egg` 时判定为已知合法。
-- move 宽松模式：`level_up_future`、`pre_evolution_level_up_future`、定点教学、剧情赠送或 hack 特殊技能可能无法由上述三张表覆盖，当前先输出“可疑”校验信息，不阻止保存。
+- moves：非 0 move 必须在 `1..472`；来源集合为 `level_up_now | pre_evolution_level_up_now | tmhm | tutor | egg | pre_evolution_egg` 时判定为已知合法。
+- move 宽松模式：`level_up_future`、`pre_evolution_level_up_future`、剧情赠送或 hack 特殊技能可能无法由上述来源覆盖，当前先输出“可疑”校验信息，不阻止保存。

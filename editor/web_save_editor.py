@@ -395,6 +395,8 @@ def api_pokemon_constraints(species: int, level: int):
                 )
     for move_id, tmhm_index in constraints.tmhm_moves.items():
         move_sources.setdefault(move_id, set()).add(f"TM/HM{tmhm_index:02d}")
+    for move_id, tutor_index in constraints.tutor_moves.items():
+        move_sources.setdefault(move_id, set()).add(f"定点教学{tutor_index:02d}")
     for move_id in constraints.egg_moves:
         move_sources.setdefault(move_id, set()).add("遗传")
     for move_id, pre_species_ids in constraints.pre_evolution_egg_moves.items():
@@ -409,10 +411,12 @@ def api_pokemon_constraints(species: int, level: int):
             rank = (0, first_level)
         elif any(source.startswith("TM/HM") for source in sources):
             rank = (1, constraints.tmhm_moves.get(move_id, 999))
+        elif any(source.startswith("定点教学") for source in sources):
+            rank = (2, constraints.tutor_moves.get(move_id, 999))
         elif "遗传" in sources:
-            rank = (2, move_id)
-        elif any(source.endswith("遗传") for source in sources):
             rank = (3, move_id)
+        elif any(source.endswith("遗传") for source in sources):
+            rank = (4, move_id)
         else:
             rank = (9, move_id)
         return (*rank, move_id)
@@ -593,7 +597,6 @@ def api_update_pokemon(body):
     save = require_save()
     updates = {
         "species": parse_id(body["species"]),
-        "personality": int(body["personality"]),
         "held_item": parse_id(body["held_item"]),
         "friendship": int(body["friendship"]),
         "nature_id": int(body["nature_id"]),
@@ -607,6 +610,8 @@ def api_update_pokemon(body):
         "ability_bit": int(body["ability_bit"]),
         "is_egg": bool(int(body["is_egg"])),
     }
+    if "personality" in body:
+        updates["personality"] = int(body["personality"])
     if "level" in body:
         species = updates["species"]
         level = int(body["level"])
@@ -699,6 +704,15 @@ HTML = r"""<!doctype html>
     aside { padding: 8px; overflow: auto; }
     aside label { display: block; margin-top: 8px; font-size: 13px; color: #333; }
     aside input, aside select, aside textarea { width: 100%; margin-top: 3px; }
+    .form-grid { display: grid; gap: 6px; align-items: end; margin-top: 8px; }
+    .form-grid label { margin-top: 0; min-width: 0; }
+    .form-grid input, .form-grid select { min-width: 0; }
+    .form-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .pid-grid { grid-template-columns: minmax(0, 1fr) 68px 68px; }
+    .toggle-field input { display: none; }
+    .binary-toggle { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; margin-top: 3px; }
+    .binary-toggle button { padding: 5px 0; min-width: 0; }
+    .binary-toggle button.active { background: #111; color: white; }
     #detail { height: 120px; white-space: pre-wrap; overflow: auto; background: #fafafa; border: 1px solid #ccc; padding: 8px; }
     #status { margin-top: 10px; color: #333; white-space: pre-wrap; }
     .move-grid { display: grid; grid-template-columns: minmax(0, 1fr) 132px; gap: 6px; align-items: end; margin-top: 8px; }
@@ -925,11 +939,11 @@ async function updateBag() {
 function clearBag() { document.getElementById("item_id").value = 0; document.getElementById("quantity").value = 0; updateBag(); }
 function renderParty() {
   document.getElementById("summary").textContent = `队伍：${state.party.length} 只，当前槽 ${state.active}`;
-  let html = "<table><thead><tr><th>位置</th><th>种族</th><th>等级</th><th>性格</th><th>性别</th><th>特性</th><th>球</th><th>闪光</th><th>携带</th><th>HP</th><th>招式</th><th>合法性</th></tr></thead><tbody>";
+  let html = "<table><thead><tr><th>位置</th><th>种族</th><th>等级</th><th>性格</th><th>性别</th><th>特性</th><th>球</th><th>携带</th><th>招式</th><th>合法性</th></tr></thead><tbody>";
   state.party.forEach((p, i) => {
     const moves = p.moves.map((id, idx) => romLink("moves", id, p.move_names[idx])).join(" / ");
     const held = p.held_item ? displayName("items", p.held_item, p.held_item_name) : "空";
-    html += `<tr onclick="selectParty(${i})"><td>队伍 ${p.slot}</td><td>${displayName("species", p.species, p.species_name)} ${shinyBadge(p)}</td><td>${p.level}</td><td>${p.nature_name}</td><td>${p.gender}</td><td>${displayName("abilities", p.ability_id, p.ability_name)}</td><td>${p.caught_ball_name}</td><td>${p.is_shiny?"是":"否"}</td><td>${held}</td><td>${p.current_hp}/${p.max_hp}</td><td>${moves}</td><td>${legalityBadge(p)}</td></tr>`;
+    html += `<tr onclick="selectParty(${i})"><td>队伍 ${p.slot}</td><td>${displayName("species", p.species, p.species_name)} ${shinyBadge(p)}</td><td>${p.level}</td><td>${p.nature_name}</td><td>${p.gender}</td><td>${displayName("abilities", p.ability_id, p.ability_name)}</td><td>${p.caught_ball_name}</td><td>${held}</td><td>${moves}</td><td>${legalityBadge(p)}</td></tr>`;
   });
   document.getElementById("content").innerHTML = html + "</tbody></table>";
 }
@@ -941,12 +955,12 @@ function renderBoxes() {
   })];
   const rows = state.boxes.filter(p => boxView === "all" || String(p.box) === boxView);
   document.getElementById("summary").textContent = `盒子：${state.boxes.length} 只非空宝可梦`;
-  let html = "<table><thead><tr><th>位置</th><th>种族</th><th>等级</th><th>性格</th><th>性别</th><th>特性</th><th>球</th><th>闪光</th><th>携带</th><th>HP</th><th>招式</th><th>合法性</th></tr></thead><tbody>";
+  let html = "<table><thead><tr><th>位置</th><th>种族</th><th>等级</th><th>性格</th><th>性别</th><th>特性</th><th>球</th><th>携带</th><th>招式</th><th>合法性</th></tr></thead><tbody>";
   rows.forEach((p) => {
     const i = state.boxes.indexOf(p);
     const held = p.held_item ? displayName("items", p.held_item, p.held_item_name) : "空";
     const moves = p.moves.map((id, idx) => romLink("moves", id, p.move_names[idx])).join(" / ");
-    html += `<tr onclick="selectBox(${i})"><td>盒子 ${p.box}-${p.box_slot}</td><td>${displayName("species", p.species, p.species_name)} ${shinyBadge(p)}</td><td>${p.level || "未知"}</td><td>${p.nature_name}</td><td>${p.gender}</td><td>${displayName("abilities", p.ability_id, p.ability_name)}</td><td>${p.caught_ball_name}</td><td>${p.is_shiny?"是":"否"}</td><td>${held}</td><td>-</td><td>${moves}</td><td>${legalityBadge(p)}</td></tr>`;
+    html += `<tr onclick="selectBox(${i})"><td>盒子 ${p.box}-${p.box_slot}</td><td>${displayName("species", p.species, p.species_name)} ${shinyBadge(p)}</td><td>${p.level || "未知"}</td><td>${p.nature_name}</td><td>${p.gender}</td><td>${displayName("abilities", p.ability_id, p.ability_name)}</td><td>${p.caught_ball_name}</td><td>${held}</td><td>${moves}</td><td>${legalityBadge(p)}</td></tr>`;
   });
   document.getElementById("content").innerHTML = renderSubtabs(tabs, boxView, "setBoxView") + html + "</tbody></table>";
 }
@@ -972,20 +986,25 @@ function renderPokemonForm(p, constraints, location) {
     <input type="hidden" id="location" value="${location}">
     ${isBox ? `<label>盒子<input id="box" value="${p.box}" readonly></label><label>格位<input id="box_slot" value="${p.box_slot}" readonly></label>` : `<input type="hidden" id="slot" value="${p.slot}">`}
     <input type="hidden" id="ot_id" value="${p.ot_id}">
-    ${field("personality","PID",p.personality,false,"", "refreshPersonalityDerivedFields()")}
-    ${field("species","种族",idName(p.species, p.species_name),false,"species-list", "syncExperienceFromLevel().then(refreshPokemonConstraintsFromForm)")}
+    <input type="hidden" id="original_personality" value="${p.personality}">
+    <div class="form-grid pid-grid">
+      ${field("personality","PID",p.personality,false,"", "refreshPersonalityDerivedFields()")}
+      ${binaryToggleField("is_shiny", "闪光", p.is_shiny)}
+      ${binaryToggleField("is_egg", "蛋", p.is_egg)}
+    </div>
+    ${field("species","种族",idName(p.species, p.species_name),false,"species-list", "handleSpeciesChanged()")}
     ${field("held_item","携带道具",idName(p.held_item, p.held_item_name),false,"item-list")}
-    ${natureField(p.nature_id)}
-    ${genderField(p.gender, constraints)}
-    ${abilityField(p.ability_bit, constraints, p.ability_id, p.ability_name)}
-    ${ballField(p.caught_ball)}
-    ${shinyField(p.is_shiny)}
-    ${field("friendship","亲密度",p.friendship)}
-    ${field("level","等级",p.level || 1,false,"", "syncExperienceFromLevel().then(refreshPokemonConstraintsFromForm)")}
+    <div class="form-grid form-grid-2">
+      ${natureField(p.nature_id)}
+      ${genderField(p.gender, constraints)}
+      ${abilityField(p.ability_bit, constraints, p.ability_id, p.ability_name)}
+      ${ballField(p.caught_ball)}
+      ${field("friendship","亲密度",p.friendship)}
+      ${field("level","等级",p.level || 1,false,"", "handleLevelChanged()")}
+    </div>
     <div id="move-controls">${moveFields(p.moves, p.pps, constraints)}</div>
     ${field("ivs","个体值 HP/攻/防/速/特攻/特防",p.ivs.join(","))}
     ${field("evs","努力值 HP/攻/防/速/特攻/特防",p.evs.join(","))}
-    ${field("is_egg","蛋 0/1",p.is_egg ? 1 : 0)}
     <p><button type="button" class="primary" onclick="updatePokemon()">写入宝可梦</button></p>`;
 }
 async function selectBox(i) {
@@ -996,9 +1015,12 @@ async function selectBox(i) {
 }
 async function updatePokemon() {
   const location = val("location");
-  const ids = ["location","personality","species","held_item","nature_id","gender","is_shiny","caught_ball","friendship","evs","ivs","ability_bit","is_egg"];
+  const ids = ["location","species","held_item","nature_id","gender","is_shiny","caught_ball","friendship","evs","ivs","ability_bit","is_egg"];
   const body = {};
   ids.forEach(id => body[id] = val(id));
+  if (val("personality") !== val("original_personality")) {
+    body.personality = val("personality");
+  }
   if (location === "box") {
     body.box = val("box");
     body.box_slot = val("box_slot");
@@ -1038,15 +1060,29 @@ function ballField(current) {
   }).join("");
   return `<label>捕获球<select id="caught_ball">${options}</select></label>`;
 }
+function binaryToggleField(id, label, current) {
+  const value = current ? 1 : 0;
+  return `<label class="toggle-field">${label}<input type="hidden" id="${id}" value="${value}"><span class="binary-toggle">${binaryToggleButtons(id, value)}</span></label>`;
+}
+function binaryToggleButtons(id, current) {
+  return [0,1].map(value => `<button type="button" class="${Number(value)===Number(current)?"active":""}" onclick="setBinaryToggleValue('${id}', ${value})">${value}</button>`).join("");
+}
+function setBinaryToggleValue(id, value) {
+  const input = document.getElementById(id);
+  if (!input) return;
+  input.value = String(value);
+  document.querySelectorAll(`#${id} + .binary-toggle button`).forEach((button, i) => button.classList.toggle("active", i === Number(value)));
+}
 function moveFields(moves, pps, constraints=null) {
-  const options = buildMoveOptions(moves, constraints);
+  const groups = buildMoveOptionGroups(moves, constraints);
+  const options = flattenMoveGroups(groups);
   const validMoveIds = new Set((constraints?.moves || []).map(m => Number(m.id)));
   const constraintsAvailable = constraints?.available !== false && Boolean(constraints?.moves);
   return [0,1,2,3].map(i => `
     <div class="move-grid">
       <label>招式 ${i + 1}
-        <select id="move_${i}" class="${isInvalidMove(moves[i], validMoveIds, constraintsAvailable) ? "invalid-move" : ""}" onchange="syncMovePp(${i})">
-          ${options.map(o => `<option value="${o.id}" data-pp="${o.pp || 0}" ${o.disabled?"disabled":""} ${Number(o.id)===Number(moves[i])?"selected":""}>${escapeHtml(o.label)}</option>`).join("")}
+        <select id="move_${i}" class="${isInvalidMove(moves[i], validMoveIds, constraintsAvailable) ? "invalid-move" : ""}" onfocus="setMoveSelectDetailed(this, true)" onmousedown="setMoveSelectDetailed(this, true)" onblur="setMoveSelectDetailed(this, false)" onchange="syncMovePp(${i}); setMoveSelectDetailed(this, false)">
+          ${renderMoveOptionGroups(groups, moves[i])}
         </select>
       </label>
       <label>PP提升
@@ -1060,25 +1096,104 @@ function isInvalidMove(moveId, validMoveIds, constraintsAvailable) {
   if (!id || !constraintsAvailable) return false;
   return !validMoveIds.has(id);
 }
-function buildMoveOptions(currentMoves, constraints=null) {
+function buildMoveOptionGroups(currentMoves, constraints=null) {
   const seen = new Set();
-  const rows = [{id:0, pp:0, label:"0 空", disabled:false}];
+  const groups = [
+    {label: "空", rows: [{id:0, pp:0, label:"0 空", disabled:false}]},
+    {label: "升级招式", rows: []},
+    {label: "遗传招式", rows: []},
+    {label: "定点教学", rows: []},
+    {label: "TM/HM", rows: []},
+    {label: "不合法招式", rows: []},
+  ];
   seen.add(0);
-  function add(id, name, pp, sources, disabled=false) {
+  function add(groupLabel, id, name, pp, sources, disabled=false) {
     if (seen.has(Number(id))) return;
     seen.add(Number(id));
     const suffix = sources && sources.length ? ` [${sources.join("/")}]` : "";
-    rows.push({id, pp, label:`#${id} · ${name}${suffix}`, disabled});
+    const shortLabel = `#${id} · ${name}`;
+    const group = groups.find(g => g.label === groupLabel) || groups[groups.length - 1];
+    group.rows.push({id, pp, shortLabel, label:`${shortLabel}${suffix}`, disabled});
   }
-  (constraints?.moves || []).forEach(m => add(m.id, m.name, m.pp, m.sources, false));
-  (constraints?.future_moves || []).forEach(m => add(m.id, m.name, m.pp, m.sources, true));
+  [...(constraints?.moves || []), ...(constraints?.future_moves || [])]
+    .filter(m => hasLevelSource(m))
+    .sort((a, b) => earliestLearnLevel(a) - earliestLearnLevel(b) || Number(a.id) - Number(b.id))
+    .forEach(m => add("升级招式", m.id, m.name, m.pp, m.sources, isFutureOnlyMove(m)));
+  (constraints?.moves || [])
+    .filter(m => hasEggSource(m))
+    .sort((a, b) => Number(a.id) - Number(b.id))
+    .forEach(m => add("遗传招式", m.id, m.name, m.pp, m.sources, false));
+  (constraints?.moves || [])
+    .filter(m => hasTutorSource(m))
+    .sort((a, b) => tutorSort(a) - tutorSort(b) || Number(a.id) - Number(b.id))
+    .forEach(m => add("定点教学", m.id, m.name, m.pp, m.sources, false));
+  (constraints?.moves || [])
+    .filter(m => hasSourcePrefix(m, "TM/HM"))
+    .sort((a, b) => tmhmSort(a) - tmhmSort(b) || Number(a.id) - Number(b.id))
+    .forEach(m => add("TM/HM", m.id, m.name, m.pp, m.sources, false));
   currentMoves.forEach(id => {
     if (!seen.has(Number(id))) {
       const row = (names?.moves || []).find(m => Number(m.id) === Number(id));
-      add(id, row?.name || `招式 ${id}`, row?.pp || 0, ["当前"], false);
+      add("不合法招式", id, row?.name || `招式 ${id}`, row?.pp || 0, ["不合法"], false);
     }
   });
-  return rows;
+  return groups.filter(g => g.rows.length);
+}
+function renderMoveOptionGroups(groups, currentMove) {
+  return groups.map(group => {
+    if (group.label === "空") {
+      return group.rows.map(o => moveOptionHtml(o, currentMove)).join("");
+    }
+    return `<optgroup label="${escapeHtml(group.label)}">${group.rows.map(o => moveOptionHtml(o, currentMove)).join("")}</optgroup>`;
+  }).join("");
+}
+function moveOptionHtml(option, currentMove) {
+  const shortLabel = option.shortLabel || option.label;
+  return `<option value="${option.id}" data-pp="${option.pp || 0}" data-short="${escapeHtml(shortLabel)}" data-detail="${escapeHtml(option.label)}" ${option.disabled?"disabled":""} ${Number(option.id)===Number(currentMove)?"selected":""}>${escapeHtml(shortLabel)}</option>`;
+}
+function flattenMoveGroups(groups) {
+  return groups.flatMap(group => group.rows);
+}
+function setMoveSelectDetailed(select, detailed) {
+  Array.from(select.options).forEach(option => {
+    option.textContent = detailed ? (option.dataset.detail || option.textContent) : (option.dataset.short || option.textContent);
+  });
+}
+function hasSourcePrefix(move, prefix) {
+  return (move.sources || []).some(source => String(source).startsWith(prefix));
+}
+function hasEggSource(move) {
+  return (move.sources || []).some(source => String(source).endsWith("遗传"));
+}
+function hasLevelSource(move) {
+  return (move.sources || []).some(source => /Lv\d+/.test(String(source)));
+}
+function hasTutorSource(move) {
+  return hasSourcePrefix(move, "定点教学");
+}
+function isFutureOnlyMove(move) {
+  return !(move.current_levels || []).length && (move.future_levels || []).length > 0;
+}
+function earliestLearnLevel(move) {
+  const levels = [
+    ...(move.current_levels || []),
+    ...(move.future_levels || []),
+    ...levelNumbersFromSources(move.sources || []),
+  ].map(Number);
+  return levels.length ? Math.min(...levels) : 999;
+}
+function levelNumbersFromSources(sources) {
+  return sources.flatMap(source => Array.from(String(source).matchAll(/Lv(\d+)/g), match => Number(match[1])));
+}
+function tmhmSort(move) {
+  const source = (move.sources || []).find(source => String(source).startsWith("TM/HM")) || "";
+  const match = String(source).match(/\d+/);
+  return match ? Number(match[0]) : 999;
+}
+function tutorSort(move) {
+  const source = (move.sources || []).find(source => String(source).startsWith("定点教学")) || "";
+  const match = String(source).match(/\d+/);
+  return match ? Number(match[0]) : 999;
 }
 function syncMovePp(index) {
   const move = document.getElementById(`move_${index}`);
@@ -1131,19 +1246,44 @@ async function loadPokemonConstraints(species, level) {
     return null;
   }
 }
-async function refreshPokemonConstraintsFromForm() {
+async function handleSpeciesChanged() {
+  await syncExperienceFromLevel();
+  await refreshPokemonConstraintsFromForm({resetMoves: true, resetAbility: true});
+  await refreshPersonalityDerivedFields();
+}
+async function handleLevelChanged() {
+  await syncExperienceFromLevel();
+  await refreshPokemonConstraintsFromForm();
+}
+async function refreshPokemonConstraintsFromForm(options={}) {
   const species = idNum("species");
   const level = num("level");
   pokemonFormConstraints = await loadPokemonConstraints(species, level);
-  const moves = [0,1,2,3].map(i => num(`move_${i}`));
-  const pps = [0,1,2,3].map(i => ppFromMoveSlot(i));
+  const moves = options.resetMoves ? defaultMovesForConstraints(pokemonFormConstraints) : [0,1,2,3].map(i => num(`move_${i}`));
+  const pps = options.resetMoves ? moves.map(id => defaultMovePp(id)) : [0,1,2,3].map(i => ppFromMoveSlot(i));
   const currentGender = val("gender");
   const currentAbility = val("ability_bit");
+  const nextAbility = options.resetAbility ? defaultAbilityBit(pokemonFormConstraints, currentAbility) : currentAbility;
   const genderWrapper = document.getElementById("gender").parentElement;
   const abilityWrapper = document.getElementById("ability_bit").parentElement;
   genderWrapper.outerHTML = genderField(currentGender, pokemonFormConstraints);
-  abilityWrapper.outerHTML = abilityField(currentAbility, pokemonFormConstraints);
+  abilityWrapper.outerHTML = abilityField(nextAbility, pokemonFormConstraints);
   document.getElementById("move-controls").innerHTML = moveFields(moves, pps, pokemonFormConstraints);
+}
+function defaultAbilityBit(constraints, current) {
+  const options = constraints?.ability_options || [];
+  if (!options.length) return current;
+  if (options.some(a => Number(a.bit) === Number(current))) return current;
+  return options[0].bit;
+}
+function defaultMovesForConstraints(constraints) {
+  const levelMoves = (constraints?.moves || [])
+    .filter(m => m.current_levels?.length)
+    .map(m => ({...m, learnLevel: Math.max(...m.current_levels.map(Number))}))
+    .sort((a, b) => a.learnLevel - b.learnLevel || Number(a.id) - Number(b.id));
+  const moves = levelMoves.slice(-4).map(m => Number(m.id));
+  while (moves.length < 4) moves.push(0);
+  return moves;
 }
 async function refreshPersonalityDerivedFields() {
   const species = idNum("species");
@@ -1154,7 +1294,7 @@ async function refreshPersonalityDerivedFields() {
     if (data.ok) {
       document.getElementById("nature_id").value = data.nature_id;
       document.getElementById("gender").value = data.gender;
-      document.getElementById("is_shiny").value = data.is_shiny ? "1" : "0";
+      setBinaryToggleValue("is_shiny", data.is_shiny ? 1 : 0);
     }
   } catch (error) {
     setStatus(error.message);
@@ -1175,9 +1315,6 @@ async function loadExperienceLevel(species, level, experience) {
     setStatus(error.message);
     return null;
   }
-}
-function shinyField(current) {
-  return `<label>闪光<select id="is_shiny"><option value="0" ${current?"":"selected"}>否</option><option value="1" ${current?"selected":""}>是</option></select></label>`;
 }
 function renderNames() {
   if (!names) return;
@@ -1280,7 +1417,7 @@ async function saveNameCollected(table, id, inputId) {
 function field(id, label, value, readonly=false, list="", onchange="") { return `<label>${label}<input id="${id}" value="${value}" ${list?`list="${list}"`:""} ${readonly?"readonly":""} ${onchange?`onchange="${onchange}"`:""}></label>`; }
 function val(id) { return document.getElementById(id).value; }
 function num(id) { return parseInt(val(id), 10); }
-function idNum(id) { return parseInt(String(val(id)).trim().split(/\s+/)[0], 10); }
+function idNum(id) { return parseInt(String(val(id)).trim().replace(/^#/, "").split(/\s+/)[0], 10); }
 refresh().catch(err => setStatus(err.message));
 </script>
 </body>
