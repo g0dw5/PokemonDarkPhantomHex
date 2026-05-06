@@ -114,9 +114,9 @@
       ]
     },
     "108": {
-      "decoded": "{0F7E}色眼镜",
+      "decoded": "有色眼镜",
       "id": 108,
-      "name": "{0F7E}色眼镜",
+      "name": "有色眼镜",
       "tokens": [
         "0F7E",
         "0B89",
@@ -519,9 +519,9 @@
       ]
     },
     "145": {
-      "decoded": "不{040A}{0C29}",
+      "decoded": "不服输",
       "id": 145,
-      "name": "不{040A}{0C29}",
+      "name": "不服输",
       "tokens": [
         "01D6",
         "040A",
@@ -1412,9 +1412,9 @@
       ]
     },
     "93": {
-      "decoded": "正{0F35}之心",
+      "decoded": "正义之心",
       "id": 93,
-      "name": "正{0F35}之心",
+      "name": "正义之心",
       "tokens": [
         "1070",
         "0F35",
@@ -1485,7 +1485,6 @@
     }
   },
   "candidate_unresolved_character_codes": [
-    "040A",
     "3D",
     "71"
   ],
@@ -1728,6 +1727,7 @@
     "0401": "服",
     "0407": "符",
     "0408": "伏",
+    "040A": "服",
     "040B": "浮",
     "040C": "涪",
     "040D": "福",
@@ -2185,6 +2185,7 @@
     "0A1E": "帕",
     "0A1F": "怕",
     "0A21": "拍",
+    "0A23": "牌",
     "0A26": "派",
     "0A27": "攀",
     "0A29": "盘",
@@ -2353,6 +2354,7 @@
     "0C1D": "守",
     "0C21": "受",
     "0C23": "兽",
+    "0C29": "输",
     "0C37": "黍",
     "0C38": "鼠",
     "0C39": "属",
@@ -2587,6 +2589,7 @@
     "0F2A": "亿",
     "0F2F": "疫",
     "0F32": "意",
+    "0F35": "义",
     "0F3C": "异",
     "0F3D": "翼",
     "0F42": "因",
@@ -2612,6 +2615,7 @@
     "0F73": "优",
     "0F77": "由",
     "0F7C": "游",
+    "0F7E": "有",
     "0F85": "幼",
     "0F87": "淤",
     "0F91": "鱼",
@@ -2942,7 +2946,7 @@
     "ED": "y",
     "EE": "z"
   },
-  "character_map_count": 1451,
+  "character_map_count": 1456,
   "gb2312_row_bases": {
     "01": 162,
     "16": 256,
@@ -10911,9 +10915,9 @@
       ]
     },
     "434": {
-      "decoded": "王{0A23}",
+      "decoded": "王牌",
       "id": 434,
-      "name": "王{0A23}",
+      "name": "王牌",
       "tokens": [
         "0D5D",
         "0A23"
@@ -11889,7 +11893,7 @@
     }
   },
   "rom": "/Users/wang.song/Desktop/pokemon/漆黑的魅影 5.0EX BW.gba",
-  "rom_unknown_character_key_count": 7,
+  "rom_unknown_character_key_count": 2,
   "rom_used_character_key_count": 1195,
   "species": {
     "0": {
@@ -16133,106 +16137,10 @@
     "token_policy": "main decode uses data/rom_text.json character_map; gb2312 row inference is exported as candidates only"
   },
   "unresolved_character_codes": [
-    "040A",
-    "0A23",
-    "0C29",
-    "0F35",
-    "0F7E",
     "3D",
     "71"
   ],
   "used_character_keys": [
-    {
-      "char": "",
-      "code": "040A",
-      "known": false,
-      "references": [
-        {
-          "decoded": "不{040A}{0C29}",
-          "id": 145,
-          "table": "abilities",
-          "token_index": 1,
-          "tokens": [
-            "01D6",
-            "040A",
-            "0C29"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "0A23",
-      "known": false,
-      "references": [
-        {
-          "decoded": "王{0A23}",
-          "id": 434,
-          "table": "moves",
-          "token_index": 1,
-          "tokens": [
-            "0D5D",
-            "0A23"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "0C29",
-      "known": false,
-      "references": [
-        {
-          "decoded": "不{040A}{0C29}",
-          "id": 145,
-          "table": "abilities",
-          "token_index": 2,
-          "tokens": [
-            "01D6",
-            "040A",
-            "0C29"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "0F35",
-      "known": false,
-      "references": [
-        {
-          "decoded": "正{0F35}之心",
-          "id": 93,
-          "table": "abilities",
-          "token_index": 1,
-          "tokens": [
-            "1070",
-            "0F35",
-            "107F",
-            "0E4F"
-          ]
-        }
-      ]
-    },
-    {
-      "char": "",
-      "code": "0F7E",
-      "known": false,
-      "references": [
-        {
-          "decoded": "{0F7E}色眼镜",
-          "id": 108,
-          "table": "abilities",
-          "token_index": 0,
-          "tokens": [
-            "0F7E",
-            "0B89",
-            "0EC4",
-            "0765"
-          ]
-        }
-      ]
-    },
     {
       "char": "",
       "code": "3D",
@@ -20558,7 +20466,7 @@
           ]
         },
         {
-          "decoded": "不{040A}{0C29}",
+          "decoded": "不服输",
           "id": 145,
           "table": "abilities",
           "token_index": 0,
@@ -27990,6 +27898,24 @@
             "0D5A",
             "0408",
             "0CD9"
+          ]
+        }
+      ]
+    },
+    {
+      "char": "服",
+      "code": "040A",
+      "known": true,
+      "references": [
+        {
+          "decoded": "不服输",
+          "id": 145,
+          "table": "abilities",
+          "token_index": 1,
+          "tokens": [
+            "01D6",
+            "040A",
+            "0C29"
           ]
         }
       ]
@@ -38717,7 +38643,7 @@
           ]
         },
         {
-          "decoded": "{0F7E}色眼镜",
+          "decoded": "有色眼镜",
           "id": 108,
           "table": "abilities",
           "token_index": 3,
@@ -49040,6 +48966,23 @@
       ]
     },
     {
+      "char": "牌",
+      "code": "0A23",
+      "known": true,
+      "references": [
+        {
+          "decoded": "王牌",
+          "id": 434,
+          "table": "moves",
+          "token_index": 1,
+          "tokens": [
+            "0D5D",
+            "0A23"
+          ]
+        }
+      ]
+    },
+    {
       "char": "派",
       "code": "0A26",
       "known": true,
@@ -54254,7 +54197,7 @@
           ]
         },
         {
-          "decoded": "{0F7E}色眼镜",
+          "decoded": "有色眼镜",
           "id": 108,
           "table": "abilities",
           "token_index": 1,
@@ -57873,6 +57816,24 @@
             "057D",
             "0169",
             "0C23"
+          ]
+        }
+      ]
+    },
+    {
+      "char": "输",
+      "code": "0C29",
+      "known": true,
+      "references": [
+        {
+          "decoded": "不服输",
+          "id": 145,
+          "table": "abilities",
+          "token_index": 2,
+          "tokens": [
+            "01D6",
+            "040A",
+            "0C29"
           ]
         }
       ]
@@ -62548,7 +62509,7 @@
           ]
         },
         {
-          "decoded": "王{0A23}",
+          "decoded": "王牌",
           "id": 434,
           "table": "moves",
           "token_index": 0,
@@ -64780,7 +64741,7 @@
           ]
         },
         {
-          "decoded": "正{0F35}之心",
+          "decoded": "正义之心",
           "id": 93,
           "table": "abilities",
           "token_index": 3,
@@ -67019,7 +66980,7 @@
           ]
         },
         {
-          "decoded": "{0F7E}色眼镜",
+          "decoded": "有色眼镜",
           "id": 108,
           "table": "abilities",
           "token_index": 2,
@@ -68559,6 +68520,25 @@
       ]
     },
     {
+      "char": "义",
+      "code": "0F35",
+      "known": true,
+      "references": [
+        {
+          "decoded": "正义之心",
+          "id": 93,
+          "table": "abilities",
+          "token_index": 1,
+          "tokens": [
+            "1070",
+            "0F35",
+            "107F",
+            "0E4F"
+          ]
+        }
+      ]
+    },
+    {
       "char": "异",
       "code": "0F3C",
       "known": true,
@@ -69523,6 +69503,25 @@
           "tokens": [
             "040B",
             "0F7C"
+          ]
+        }
+      ]
+    },
+    {
+      "char": "有",
+      "code": "0F7E",
+      "known": true,
+      "references": [
+        {
+          "decoded": "有色眼镜",
+          "id": 108,
+          "table": "abilities",
+          "token_index": 0,
+          "tokens": [
+            "0F7E",
+            "0B89",
+            "0EC4",
+            "0765"
           ]
         }
       ]
@@ -71856,7 +71855,7 @@
           ]
         },
         {
-          "decoded": "正{0F35}之心",
+          "decoded": "正义之心",
           "id": 93,
           "table": "abilities",
           "token_index": 0,
@@ -72538,7 +72537,7 @@
           ]
         },
         {
-          "decoded": "正{0F35}之心",
+          "decoded": "正义之心",
           "id": 93,
           "table": "abilities",
           "token_index": 2,
