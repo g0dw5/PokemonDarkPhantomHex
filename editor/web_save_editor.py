@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import socket
 import subprocess
@@ -41,6 +42,15 @@ from rom_data import OUTPUT as ROM_TEXT_OUTPUT, load_rom_text, save_charmap, sav
 DEFAULT_SAVE = None
 HOST = "127.0.0.1"
 PORT = 8765
+GBA_ROM_POINTER_BASE = 0x08000000
+FRONT_SPRITE_TABLE_OFFSET = 0x30A18C
+NORMAL_PALETTE_TABLE_OFFSET = 0x303678
+SHINY_PALETTE_TABLE_OFFSET = 0x304438
+SPRITE_TABLE_ENTRY_SIZE = 8
+SPRITE_TABLE_COUNT = 440
+SPRITE_WIDTH = 64
+SPRITE_HEIGHT = 64
+SPRITE_PIXEL_COUNT = SPRITE_WIDTH * SPRITE_HEIGHT
 
 
 class State:
@@ -152,6 +162,15 @@ class Handler(BaseHTTPRequestHandler):
                 gender = query.get("gender", [""])[0]
                 shiny = bool(query_int(query, "is_shiny"))
                 self.send(*response(api_personality_adjust(species, personality, ot_id, nature_id, gender, shiny)))
+            except ValueError as error:
+                self.send(*response({"ok": False, "error": str(error)}, 400))
+            return
+        if parsed.path == "/api/pokemon_sprite":
+            try:
+                query = parse_qs(parsed.query)
+                species = query_int(query, "species")
+                shiny = bool(query_int(query, "shiny", 0))
+                self.send(*response(api_pokemon_sprite(species, shiny)))
             except ValueError as error:
                 self.send(*response({"ok": False, "error": str(error)}, 400))
             return
@@ -530,6 +549,145 @@ def api_personality_adjust(species: int, personality: int, ot_id: int, nature_id
     return api_personality_preview(species, target, ot_id)
 
 
+def api_pokemon_sprite(species: int, shiny: bool):
+    if not (0 <= species < SPRITE_TABLE_COUNT):
+        return {
+            "ok": True,
+            "available": False,
+            "species": species,
+            "shiny": shiny,
+            "message": f"种族 {species} 不在图像槽范围 0..{SPRITE_TABLE_COUNT - 1}",
+        }
+    if STATE.rom_path is None or not STATE.rom_path.exists():
+        return {"ok": True, "available": False, "species": species, "shiny": shiny, "message": "未加载同名 ROM，无法读取图像"}
+    try:
+        rom = STATE.rom_path.read_bytes()
+    except OSError as exc:
+        return {"ok": True, "available": False, "species": species, "shiny": shiny, "message": f"读取 ROM 失败：{exc}"}
+    try:
+        sprite_offset = _sprite_resource_offset(rom, FRONT_SPRITE_TABLE_OFFSET, species)
+        palette_table_offset = SHINY_PALETTE_TABLE_OFFSET if shiny else NORMAL_PALETTE_TABLE_OFFSET
+        palette_offset = _sprite_resource_offset(rom, palette_table_offset, species)
+        sprite_data = _gba_lz77_decompress(rom, sprite_offset)
+        palette_data = _gba_lz77_decompress(rom, palette_offset)
+        pixels = _decode_4bpp_64x64(sprite_data)
+        palette = _decode_gba_palette_16(palette_data)
+        rgba = _pixels_to_rgba(pixels, palette)
+    except ValueError as exc:
+        return {"ok": True, "available": False, "species": species, "shiny": shiny, "message": str(exc)}
+    return {
+        "ok": True,
+        "available": True,
+        "species": species,
+        "shiny": shiny,
+        "width": SPRITE_WIDTH,
+        "height": SPRITE_HEIGHT,
+        "rgba_base64": base64.b64encode(rgba).decode("ascii"),
+    }
+
+
+def _sprite_resource_offset(rom: bytes, table_offset: int, species: int) -> int:
+    entry_offset = table_offset + species * SPRITE_TABLE_ENTRY_SIZE
+    if entry_offset + SPRITE_TABLE_ENTRY_SIZE > len(rom):
+        raise ValueError(f"ROM 太小，无法读取种族 {species} 图像索引")
+    pointer = int.from_bytes(rom[entry_offset : entry_offset + 4], "little")
+    offset = pointer - GBA_ROM_POINTER_BASE
+    if not (0 <= offset < len(rom)):
+        raise ValueError(f"ROM 图像指针非法：species {species}, ptr=0x{pointer:08X}")
+    return offset
+
+
+def _gba_lz77_decompress(rom: bytes, offset: int) -> bytes:
+    if offset + 4 > len(rom):
+        raise ValueError(f"LZ77 头超出范围：0x{offset:08X}")
+    if rom[offset] != 0x10:
+        raise ValueError(f"LZ77 头标记错误：0x{offset:08X}")
+    output_size = rom[offset + 1] | (rom[offset + 2] << 8) | (rom[offset + 3] << 16)
+    src = offset + 4
+    out = bytearray()
+    while len(out) < output_size:
+        if src >= len(rom):
+            raise ValueError(f"LZ77 数据截断：0x{offset:08X}")
+        flags = rom[src]
+        src += 1
+        for _ in range(8):
+            if len(out) >= output_size:
+                break
+            if flags & 0x80:
+                if src + 1 >= len(rom):
+                    raise ValueError(f"LZ77 回溯块截断：0x{offset:08X}")
+                first = rom[src]
+                second = rom[src + 1]
+                src += 2
+                length = (first >> 4) + 3
+                displacement = ((first & 0x0F) << 8) | second
+                copy_from = len(out) - displacement - 1
+                if copy_from < 0:
+                    raise ValueError(f"LZ77 回溯位移无效：0x{offset:08X}")
+                for _ in range(length):
+                    out.append(out[copy_from])
+                    copy_from += 1
+                    if len(out) >= output_size:
+                        break
+            else:
+                if src >= len(rom):
+                    raise ValueError(f"LZ77 原样块截断：0x{offset:08X}")
+                out.append(rom[src])
+                src += 1
+            flags = (flags << 1) & 0xFF
+    return bytes(out)
+
+
+def _decode_4bpp_64x64(data: bytes) -> bytes:
+    tile_bytes = 32
+    tiles_per_row = SPRITE_WIDTH // 8
+    max_tiles = (SPRITE_WIDTH // 8) * (SPRITE_HEIGHT // 8)
+    tiles = min(len(data) // tile_bytes, max_tiles)
+    pixels = bytearray(SPRITE_PIXEL_COUNT)
+    for tile_index in range(tiles):
+        tile_base = tile_index * tile_bytes
+        tile_x = tile_index % tiles_per_row
+        tile_y = tile_index // tiles_per_row
+        for row in range(8):
+            row_base = tile_base + row * 4
+            y = tile_y * 8 + row
+            pixel_base = y * SPRITE_WIDTH + tile_x * 8
+            for col_pair in range(4):
+                value = data[row_base + col_pair]
+                pixels[pixel_base + col_pair * 2] = value & 0x0F
+                pixels[pixel_base + col_pair * 2 + 1] = (value >> 4) & 0x0F
+    return bytes(pixels)
+
+
+def _decode_gba_palette_16(data: bytes) -> list[tuple[int, int, int]]:
+    if len(data) < 0x20:
+        raise ValueError("调色板解压长度不足 0x20")
+    palette: list[tuple[int, int, int]] = []
+    for index in range(16):
+        color = int.from_bytes(data[index * 2 : index * 2 + 2], "little")
+        r5 = color & 0x1F
+        g5 = (color >> 5) & 0x1F
+        b5 = (color >> 10) & 0x1F
+        r = (r5 * 255) // 31
+        g = (g5 * 255) // 31
+        b = (b5 * 255) // 31
+        palette.append((r, g, b))
+    return palette
+
+
+def _pixels_to_rgba(pixels: bytes, palette: list[tuple[int, int, int]]) -> bytes:
+    rgba = bytearray(len(pixels) * 4)
+    for idx, color_index in enumerate(pixels):
+        r, g, b = palette[color_index]
+        alpha = 0 if color_index == 0 else 255
+        out = idx * 4
+        rgba[out] = r
+        rgba[out + 1] = g
+        rgba[out + 2] = b
+        rgba[out + 3] = alpha
+    return bytes(rgba)
+
+
 def observed_from_save() -> dict[str, dict[int, list[str]]]:
     observed: dict[str, dict[int, list[str]]] = {"species": {}, "items": {}, "moves": {}, "abilities": {}, "natures": {}, "balls": {}}
     save = STATE.save
@@ -746,11 +904,9 @@ HTML = r"""<!doctype html>
     .form-grid label { margin-top: 0; min-width: 0; }
     .form-grid input, .form-grid select { min-width: 0; }
     .form-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .pid-grid { grid-template-columns: minmax(0, 1fr) 68px 68px; }
+    .pid-grid { grid-template-columns: minmax(0, 1fr) 68px; }
+    .toggle-field { display: flex; flex-direction: column; justify-content: flex-end; }
     .toggle-field input { display: none; }
-    .binary-toggle { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; margin-top: 3px; }
-    .binary-toggle button { padding: 5px 0; min-width: 0; }
-    .binary-toggle button.active { background: #111; color: white; }
     .hint-mark { position: relative; display: inline-block; margin-left: 4px; color: #666; cursor: help; font-weight: 700; }
     .hint-mark:hover::after { content: attr(data-tip); position: absolute; left: 0; top: 18px; z-index: 20; width: 210px; padding: 6px 7px; border: 1px solid #999; background: #111; color: white; border-radius: 4px; font-weight: 400; line-height: 1.35; white-space: normal; box-shadow: 0 2px 8px rgba(0,0,0,.18); }
     #detail { height: 120px; white-space: pre-wrap; overflow: auto; background: #fafafa; border: 1px solid #ccc; padding: 8px; }
@@ -759,6 +915,26 @@ HTML = r"""<!doctype html>
     .move-grid label { margin-top: 0; }
     .move-grid select, .move-grid input { width: 100%; }
     .move-grid select { min-width: 0; }
+    .pokemon-table th.sprite-col, .pokemon-table td.sprite-col { width: 42px; min-width: 42px; padding: 3px; text-align: center; }
+    .pokemon-sprite { width: 32px; height: 32px; border: 1px solid #cfcfcf; background: #f3f3f3; image-rendering: pixelated; image-rendering: crisp-edges; }
+    .pokemon-form-top { display: flex; gap: 8px; align-items: stretch; }
+    .pokemon-form-left { flex: 0 0 calc((100% - 6px) / 2); width: calc((100% - 6px) / 2); min-width: 0; max-width: calc((100% - 6px) / 2); }
+    .pokemon-form-sprite-wrap { flex: none; align-self: stretch; aspect-ratio: 1 / 1; border: 1px solid #bfbfbf; background: #f3f3f3; display: flex; align-items: center; justify-content: center; }
+    .pokemon-form-sprite { width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
+    .single-toggle { width: 100%; height: 31px; margin-top: 3px; border: 0; background: transparent; color: #111; padding: 0; display: flex; align-items: center; justify-content: center; }
+    .single-toggle .track { width: 42px; height: 22px; border-radius: 999px; background: #d0d0d0; position: relative; flex: 0 0 auto; }
+    .single-toggle .thumb { width: 18px; height: 18px; border-radius: 999px; background: #fff; border: 1px solid #888; position: absolute; left: 2px; top: 2px; transition: left .12s ease; }
+    .single-toggle.active .track { background: #3b82f6; }
+    .single-toggle.active .thumb { left: 22px; border-color: #2a63b7; }
+    .trait-row { display: grid; grid-template-columns: calc((100% - 12px) / 2) minmax(0, 1fr) minmax(0, 1fr); gap: 6px; align-items: end; margin-top: 8px; }
+    .status-row { display: grid; grid-template-columns: calc((100% - 12px) / 2) minmax(0, 1fr) minmax(0, 1fr); gap: 6px; align-items: end; margin-top: 8px; }
+    .status-pack { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 4px; align-items: end; }
+    .stats-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; align-items: end; margin-top: 8px; }
+    .trait-row label, .status-row label, .status-pack label, .stats-row label { margin-top: 0; min-width: 0; }
+    .trait-row input, .trait-row select, .trait-row button,
+    .status-row input, .status-row select, .status-row button,
+    .status-pack input, .status-pack select, .status-pack button,
+    .stats-row input, .stats-row select, .stats-row button { width: 100%; min-width: 0; }
     .pp-up-control { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; margin-top: 3px; }
     .pp-up-control button { padding: 5px 0; min-width: 0; }
     .pp-up-control button.active { background: #111; color: white; }
@@ -981,13 +1157,14 @@ async function updateBag() {
 function clearBag() { document.getElementById("item_id").value = 0; document.getElementById("quantity").value = 0; updateBag(); }
 function renderParty() {
   document.getElementById("summary").textContent = `队伍：${state.party.length} 只，当前槽 ${state.active}`;
-  let html = "<table><thead><tr><th>位置</th><th>种族</th><th>等级</th><th>性格</th><th>性别</th><th>特性</th><th>球</th><th>携带</th><th>招式</th><th>合法性</th></tr></thead><tbody>";
+  let html = "<table class='pokemon-table'><thead><tr><th class='sprite-col'>图</th><th>位置</th><th>种族</th><th>等级</th><th>性格</th><th>性别</th><th>特性</th><th>球</th><th>携带</th><th>招式</th><th>合法性</th></tr></thead><tbody>";
   state.party.forEach((p, i) => {
     const moves = p.moves.map((id, idx) => romLink("moves", id, p.move_names[idx])).join(" / ");
     const held = p.held_item ? displayName("items", p.held_item, p.held_item_name) : "空";
-    html += `<tr onclick="selectParty(${i})"><td>队伍 ${p.slot}</td><td>${displayName("species", p.species, p.species_name)} ${shinyBadge(p)}</td><td>${p.level}</td><td>${p.nature_name}</td><td>${p.gender}</td><td>${displayName("abilities", p.ability_id, p.ability_name)}</td><td>${p.caught_ball_name}</td><td>${held}</td><td>${moves}</td><td>${legalityBadge(p)}</td></tr>`;
+    html += `<tr onclick="selectParty(${i})"><td class="sprite-col">${spriteCanvasTag(`party-${i}`, p.species, p.is_shiny, "pokemon-sprite")}</td><td>队伍 ${p.slot}</td><td>${displayName("species", p.species, p.species_name)} ${shinyBadge(p)}</td><td>${p.level}</td><td>${p.nature_name}</td><td>${p.gender}</td><td>${displayName("abilities", p.ability_id, p.ability_name)}</td><td>${p.caught_ball_name}</td><td>${held}</td><td>${moves}</td><td>${legalityBadge(p)}</td></tr>`;
   });
   document.getElementById("content").innerHTML = html + "</tbody></table>";
+  renderSpritesIn(document.getElementById("content"));
 }
 function renderBoxes() {
   const tabs = [["all", `全部 ${state.boxes.length}`], ...Array.from({length: 14}, (_, i) => {
@@ -997,14 +1174,15 @@ function renderBoxes() {
   })];
   const rows = state.boxes.filter(p => boxView === "all" || String(p.box) === boxView);
   document.getElementById("summary").textContent = `盒子：${state.boxes.length} 只非空宝可梦`;
-  let html = "<table><thead><tr><th>位置</th><th>种族</th><th>等级</th><th>性格</th><th>性别</th><th>特性</th><th>球</th><th>携带</th><th>招式</th><th>合法性</th></tr></thead><tbody>";
+  let html = "<table class='pokemon-table'><thead><tr><th class='sprite-col'>图</th><th>位置</th><th>种族</th><th>等级</th><th>性格</th><th>性别</th><th>特性</th><th>球</th><th>携带</th><th>招式</th><th>合法性</th></tr></thead><tbody>";
   rows.forEach((p) => {
     const i = state.boxes.indexOf(p);
     const held = p.held_item ? displayName("items", p.held_item, p.held_item_name) : "空";
     const moves = p.moves.map((id, idx) => romLink("moves", id, p.move_names[idx])).join(" / ");
-    html += `<tr onclick="selectBox(${i})"><td>盒子 ${p.box}-${p.box_slot}</td><td>${displayName("species", p.species, p.species_name)} ${shinyBadge(p)}</td><td>${p.level || "未知"}</td><td>${p.nature_name}</td><td>${p.gender}</td><td>${displayName("abilities", p.ability_id, p.ability_name)}</td><td>${p.caught_ball_name}</td><td>${held}</td><td>${moves}</td><td>${legalityBadge(p)}</td></tr>`;
+    html += `<tr onclick="selectBox(${i})"><td class="sprite-col">${spriteCanvasTag(`box-${i}`, p.species, p.is_shiny, "pokemon-sprite")}</td><td>盒子 ${p.box}-${p.box_slot}</td><td>${displayName("species", p.species, p.species_name)} ${shinyBadge(p)}</td><td>${p.level || "未知"}</td><td>${p.nature_name}</td><td>${p.gender}</td><td>${displayName("abilities", p.ability_id, p.ability_name)}</td><td>${p.caught_ball_name}</td><td>${held}</td><td>${moves}</td><td>${legalityBadge(p)}</td></tr>`;
   });
   document.getElementById("content").innerHTML = renderSubtabs(tabs, boxView, "setBoxView") + html + "</tbody></table>";
+  renderSpritesIn(document.getElementById("content"));
 }
 function setBoxView(next) { boxView = next; selected = null; renderBoxes(); }
 function legalityBadge(p) {
@@ -1015,6 +1193,63 @@ function legalityBadge(p) {
 }
 function shinyBadge(p) {
   return p.is_shiny ? `<span class="shiny-badge">闪</span>` : "";
+}
+function spriteCanvasTag(id, species, shiny, className) {
+  return `<canvas id="sprite-${escapeHtml(id)}" class="${className}" width="64" height="64" data-species="${Number(species) || 0}" data-shiny="${shiny ? 1 : 0}"></canvas>`;
+}
+function renderSpritesIn(root) {
+  if (!root) return;
+  root.querySelectorAll("canvas[data-species]").forEach(canvas => {
+    void renderSpriteCanvas(canvas);
+  });
+}
+async function renderSpriteCanvas(canvas) {
+  const species = Number(canvas.dataset.species || 0);
+  const shiny = Number(canvas.dataset.shiny || 0);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  if (!species || species < 0) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    return;
+  }
+  try {
+    const data = await request(`/api/pokemon_sprite?species=${encodeURIComponent(species)}&shiny=${encodeURIComponent(shiny)}`);
+    if (!data.available || !data.rgba_base64) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      return;
+    }
+    const raw = atob(data.rgba_base64);
+    const rgba = new Uint8ClampedArray(raw.length);
+    for (let i = 0; i < raw.length; i++) rgba[i] = raw.charCodeAt(i);
+    const image = new ImageData(rgba, Number(data.width) || 64, Number(data.height) || 64);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.putImageData(image, 0, 0);
+  } catch (_error) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+}
+function refreshFormSprite() {
+  const canvas = document.getElementById("sprite-form");
+  if (!canvas) return;
+  syncPokemonFormTopSquare();
+  canvas.dataset.species = String(idNum("species") || 0);
+  canvas.dataset.shiny = String(Number(val("is_shiny") || 0));
+  void renderSpriteCanvas(canvas);
+}
+function syncPokemonFormTopSquare() {
+  const top = document.querySelector(".pokemon-form-top");
+  if (!top) return;
+  const left = top.querySelector(".pokemon-form-left");
+  const spriteWrap = top.querySelector(".pokemon-form-sprite-wrap");
+  if (!left || !spriteWrap) return;
+  const size = Math.max(0, Math.round(left.getBoundingClientRect().height));
+  if (!size) return;
+  spriteWrap.style.width = `${size}px`;
+  spriteWrap.style.height = `${size}px`;
+  spriteWrap.style.minWidth = `${size}px`;
+  spriteWrap.style.maxWidth = `${size}px`;
+  spriteWrap.style.minHeight = `${size}px`;
+  spriteWrap.style.maxHeight = `${size}px`;
 }
 async function selectParty(i) {
   const p = state.party[i];
@@ -1028,25 +1263,41 @@ function renderPokemonForm(p, constraints, location) {
     <input type="hidden" id="location" value="${location}">
     ${isBox ? `<input type="hidden" id="box" value="${p.box}"><input type="hidden" id="box_slot" value="${p.box_slot}">` : `<input type="hidden" id="slot" value="${p.slot}">`}
     <input type="hidden" id="ot_id" value="${p.ot_id}">
-    <div class="form-grid pid-grid">
-      ${field("personality","PID",p.personality,true)}
-      ${binaryToggleField("is_shiny", "闪光", p.is_shiny)}
-      ${binaryToggleField("is_egg", "蛋", p.is_egg)}
+    <div class="pokemon-form-top">
+      <div class="pokemon-form-left">
+        <div class="form-grid pid-grid">
+          ${field("personality","PID",p.personality,true)}
+          ${binaryToggleField("is_shiny", "闪光", p.is_shiny)}
+        </div>
+        ${field("species","种族",idName(p.species, p.species_name),false,"species-list", "handleSpeciesChanged()")}
+        ${field("held_item","携带道具",idName(p.held_item, p.held_item_name),false,"item-list")}
+      </div>
+      <div class="pokemon-form-sprite-wrap">
+        ${spriteCanvasTag("form", p.species, p.is_shiny, "pokemon-form-sprite")}
+      </div>
     </div>
-    ${field("species","种族",idName(p.species, p.species_name),false,"species-list", "handleSpeciesChanged()")}
-    ${field("held_item","携带道具",idName(p.held_item, p.held_item_name),false,"item-list")}
-    <div class="form-grid form-grid-2">
-      ${natureField(p.nature_id)}
-      ${genderField(p.gender, constraints)}
+    <div class="trait-row">
       ${abilityField(p.ability_bit, constraints, p.ability_id, p.ability_name)}
+      ${natureField(p.nature_id)}
       ${ballField(p.caught_ball)}
-      ${friendshipField(p.friendship, p.is_egg)}
+    </div>
+    <div class="status-row">
+      <div class="status-pack">
+        ${binaryToggleField("is_egg", "蛋", p.is_egg)}
+        ${friendshipField(p.friendship, p.is_egg)}
+      </div>
       ${field("level","等级",p.level || 1,false,"", "handleLevelChanged()")}
+      ${genderField(p.gender, constraints)}
+    </div>
+    <div class="stats-row">
+      ${statSpreadField("ivs","个体值",p.ivs.join(","))}
+      ${statSpreadField("evs","努力值",p.evs.join(","))}
     </div>
     <div id="move-controls">${moveFields(p.moves, p.pps, constraints)}</div>
-    ${field("ivs","个体值 体力/物攻/物防/速度/特攻/特防",p.ivs.join(","))}
-    ${field("evs","努力值 体力/物攻/物防/速度/特攻/特防",p.evs.join(","))}
     <p><button type="button" class="primary" onclick="updatePokemon()">写入宝可梦</button></p>`;
+  renderSpritesIn(document.getElementById("form"));
+  syncPokemonFormTopSquare();
+  requestAnimationFrame(syncPokemonFormTopSquare);
 }
 async function selectBox(i) {
   const p = state.boxes[i];
@@ -1101,6 +1352,9 @@ function ballField(current) {
 function friendshipField(current, isEgg) {
   return `<label><span id="friendship_label">${friendshipLabel(isEgg)}</span><span id="friendship_hint" class="hint-mark" data-tip="${escapeHtml(friendshipHint(isEgg))}">?</span><input id="friendship" value="${current}"></label>`;
 }
+function statSpreadField(id, label, value) {
+  return `<label>${label}<span class="hint-mark" data-tip="顺序：体力/物攻/物防/速度/特攻/特防">?</span><input id="${id}" value="${value}"></label>`;
+}
 function friendshipLabel(isEgg) {
   return Number(isEgg) ? "孵化周期" : "亲密度";
 }
@@ -1116,21 +1370,27 @@ function updateFriendshipLabel() {
 }
 function binaryToggleField(id, label, current) {
   const value = current ? 1 : 0;
-  return `<label class="toggle-field">${label}<input type="hidden" id="${id}" value="${value}"><span class="binary-toggle">${binaryToggleButtons(id, value)}</span></label>`;
+  return `<label class="toggle-field">${label}<input type="hidden" id="${id}" value="${value}"><button type="button" class="single-toggle ${value ? "active" : ""}" onclick="toggleBinaryValue('${id}')"><span class="track"><span class="thumb"></span></span></button></label>`;
 }
-function binaryToggleButtons(id, current) {
-  return [0,1].map(value => `<button type="button" class="${Number(value)===Number(current)?"active":""}" onclick="setBinaryToggleValue('${id}', ${value})">${value}</button>`).join("");
+function toggleBinaryValue(id) {
+  const current = Number(val(id) || 0);
+  setBinaryToggleValue(id, current ? 0 : 1);
 }
 function setBinaryToggleValue(id, value) {
   const input = document.getElementById(id);
   if (!input) return;
   input.value = String(value);
-  syncBinaryToggleButtons(id, value);
+  syncBinaryToggleDisplay(id, value);
   if (id === "is_egg") updateFriendshipLabel();
-  if (id === "is_shiny") refreshAdjustedPersonalityFields();
+  if (id === "is_shiny") {
+    refreshFormSprite();
+    refreshAdjustedPersonalityFields();
+  }
 }
-function syncBinaryToggleButtons(id, value) {
-  document.querySelectorAll(`#${id} + .binary-toggle button`).forEach((button, i) => button.classList.toggle("active", i === Number(value)));
+function syncBinaryToggleDisplay(id, value) {
+  const button = document.querySelector(`#${id} + .single-toggle`);
+  if (!button) return;
+  button.classList.toggle("active", Number(value) === 1);
 }
 function moveFields(moves, pps, constraints=null) {
   const groups = buildMoveOptionGroups(moves, constraints);
@@ -1308,6 +1568,7 @@ async function loadPokemonConstraints(species, level) {
 async function handleSpeciesChanged() {
   await syncExperienceFromLevel();
   await refreshPokemonConstraintsFromForm({resetMoves: true, resetAbility: true});
+  refreshFormSprite();
   await refreshPersonalityDerivedFields();
 }
 async function handleLevelChanged() {
@@ -1381,7 +1642,8 @@ async function refreshAdjustedPersonalityFields() {
       document.getElementById("nature_id").value = data.nature_id;
       document.getElementById("gender").value = data.gender;
       document.getElementById("is_shiny").value = data.is_shiny ? "1" : "0";
-      syncBinaryToggleButtons("is_shiny", data.is_shiny ? 1 : 0);
+      syncBinaryToggleDisplay("is_shiny", data.is_shiny ? 1 : 0);
+      refreshFormSprite();
     }
   } catch (error) {
     setStatus(error.message);
@@ -1532,6 +1794,7 @@ function field(id, label, value, readonly=false, list="", onchange="") { return 
 function val(id) { return document.getElementById(id).value; }
 function num(id) { return parseInt(val(id), 10); }
 function idNum(id) { return parseInt(String(val(id)).trim().replace(/^#/, "").split(/\s+/)[0], 10); }
+window.addEventListener("resize", () => syncPokemonFormTopSquare());
 refresh().catch(err => setStatus(err.message));
 </script>
 </body>
