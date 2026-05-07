@@ -188,7 +188,7 @@ class WebEditorBrowserTest(unittest.TestCase):
             expect(self.page.locator("#inspector-title")).to_have_text("未选择字典项")
 
             for tab_name in ("宝可梦", "特性", "招式", "道具"):
-                self.page.get_by_role("button", name=tab_name).click()
+                self.page.locator(".dictionary-tabs").get_by_role("button", name=tab_name).click()
                 expect(self.page.locator(".dictionary-table thead")).not_to_contain_text("字码")
                 expect(self.page.locator(".dictionary-table thead")).not_to_contain_text("描述来源")
 
@@ -273,7 +273,7 @@ class WebEditorBrowserTest(unittest.TestCase):
                 names = {...names, rows: [species], species: [species]};
                 renderDatalists();
             }""")
-            self.page.get_by_role("button", name="队伍").click()
+            self.page.locator("#tab-pokemon").click()
             self.page.locator("#content tbody tr").first.click()
             expect(self.page.locator("#inspector-title")).to_contain_text("皮卡丘")
             expect(self.page.locator("#form")).to_contain_text("写入宝可梦")
@@ -331,7 +331,7 @@ class WebEditorBrowserTest(unittest.TestCase):
 
             self.assertGreaterEqual(case_count, 100)
 
-            self.page.get_by_role("button", name="队伍").click()
+            self.page.locator("#tab-pokemon").click()
             self.page.locator("#content tbody tr").first.click()
             expect(self.page.locator("#form")).to_contain_text("写入宝可梦")
             expect(self.page.locator("#form-encounters")).to_contain_text("地图 1-2 草丛 Lv3-6")
@@ -370,13 +370,14 @@ class WebEditorBrowserTest(unittest.TestCase):
             write_save_fixture(save_path)
             self.goto_loaded_save(save_path)
 
-            self.page.get_by_role("button", name="盒子").click()
-            expect(self.page.locator("#summary")).to_contain_text("盒子：1 只非空宝可梦")
-            expect(self.page.locator(".box-card")).to_have_count(14)
-            expect(self.page.locator(".box-slot.occupied").first).to_have_attribute("data-name", re.compile("鲤鱼王"))
+            self.page.locator("#tab-pokemon").click()
+            expect(self.page.locator("#summary")).to_contain_text("宝可梦：队伍 1/6，盒子 1/420")
+            expect(self.page.locator(".storage-card")).to_have_count(15)
+            expect(self.page.locator(".party-storage")).to_have_count(1)
+            expect(self.page.locator(".storage-card:not(.party-storage) .box-slot.occupied").first).to_have_attribute("data-name", re.compile("鲤鱼王"))
             expect(self.page.locator("#content .subtabs")).to_have_count(0)
-            self.page.locator(".box-card").first.click()
-            expect(self.page.locator("#summary")).to_contain_text("1号盒：1/30")
+            self.page.locator(".storage-card:not(.party-storage)").first.click()
+            expect(self.page.locator("#summary")).to_contain_text("列表区：1号盒 1/30")
             expect(self.page.locator(".box-grid.active")).to_have_count(0)
             expect(self.page.locator(".pokemon-table tbody tr")).to_have_count(1)
             self.page.locator("#content tbody tr").first.click()

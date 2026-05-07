@@ -1046,13 +1046,22 @@ HTML = r"""<!doctype html>
     .pokemon-form-left { flex: 0 0 calc((100% - 6px) / 2); width: calc((100% - 6px) / 2); min-width: 0; max-width: calc((100% - 6px) / 2); }
     .pokemon-form-sprite-wrap { flex: none; align-self: stretch; aspect-ratio: 1 / 1; border: 1px solid #bfbfbf; background: #f3f3f3; display: flex; align-items: center; justify-content: center; }
     .pokemon-form-sprite { width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
+    .pokemon-layout { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 100%; }
+    .pokemon-map { display: grid; grid-template-columns: repeat(auto-fill, minmax(154px, 1fr)); grid-auto-rows: minmax(118px, auto); gap: 8px; padding: 8px; border-bottom: 1px solid #e0e3dc; background: #fbfbf8; }
+    .pokemon-list { min-height: 0; overflow: auto; }
+    .list-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-bottom: 1px solid #e0e3dc; background: #fff; font-weight: 600; }
     .box-overview { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; padding: 8px; }
     .box-card { border: 1px solid #d3d7cf; border-radius: 6px; background: #fbfbf8; padding: 7px; cursor: pointer; }
     .box-card:hover { border-color: #35694f; background: #f4faf6; }
+    .box-card.active { border-color: #2f6f4f; background: #edf8f1; box-shadow: inset 0 0 0 1px #2f6f4f; }
+    .storage-card { min-width: 0; }
+    .party-storage { grid-row: span 2; }
     .box-card h3 { margin: 0 0 6px; font-size: 13px; display: flex; justify-content: space-between; gap: 6px; }
     .box-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; }
+    .party-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; height: calc(100% - 24px); }
     .box-grid.active { padding: 8px; border-bottom: 1px solid #e0e3dc; background: #fbfbf8; }
     .box-slot { aspect-ratio: 1 / 1; min-width: 0; border: 1px solid #d9ded6; border-radius: 4px; background: #eef1ea; display: flex; align-items: center; justify-content: center; position: relative; }
+    .party-slot { min-height: 42px; }
     .box-slot.occupied { background: #fff; cursor: pointer; }
     .box-slot.occupied:hover { border-color: #1f6f9f; background: #eef8ff; }
     .box-slot.occupied:hover::after { content: attr(data-name); position: absolute; left: 50%; bottom: calc(100% + 5px); transform: translateX(-50%); z-index: 12; min-width: max-content; max-width: 180px; padding: 4px 6px; border-radius: 4px; background: #1f2722; color: white; font-size: 12px; line-height: 1.3; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.2); pointer-events: none; }
@@ -1113,8 +1122,7 @@ HTML = r"""<!doctype html>
     <section class="panel">
       <div class="tabs">
         <button id="tab-overview" onclick="showTab('overview')" disabled>存档概览</button>
-        <button id="tab-party" onclick="showTab('party')" disabled>队伍</button>
-        <button id="tab-boxes" onclick="showTab('boxes')" disabled>盒子</button>
+        <button id="tab-pokemon" onclick="showTab('pokemon')" disabled>宝可梦</button>
         <button id="tab-bag" onclick="showTab('bag')" disabled>背包</button>
         <button id="tab-names" onclick="showTab('names')" disabled>字典表</button>
       </div>
@@ -1137,7 +1145,7 @@ let tab = "overview";
 let selected = null;
 let bagSort = "slot";
 let bagPocket = "all";
-let boxView = "all";
+let pokemonView = "party";
 let collectTable = "species";
 let collectSearch = "";
 let collectCodeFilter = [];
@@ -1239,7 +1247,7 @@ function confirmDiscard(action) {
 function render() {
   renderDatalists();
   renderShell();
-  for (const id of ["overview","party","boxes","bag","names"]) document.getElementById("tab-"+id).classList.toggle("active", tab === id);
+  for (const id of ["overview","pokemon","bag","names"]) document.getElementById("tab-"+id).classList.toggle("active", tab === id);
   document.getElementById("form").innerHTML = "";
   setInspector("未选择条目");
   if (!state || !state.ok) {
@@ -1250,8 +1258,7 @@ function render() {
   }
   if (tab === "overview") renderOverview();
   if (tab === "bag") renderBag();
-  if (tab === "party") renderParty();
-  if (tab === "boxes") renderBoxes();
+  if (tab === "pokemon") renderPokemonPage();
   if (tab === "names") renderNames();
 }
 function renderShell() {
@@ -1276,7 +1283,7 @@ function renderShell() {
   document.getElementById("reload-btn").disabled = !loaded;
   document.getElementById("save-btn").disabled = !loaded || !dirty;
   document.getElementById("close-btn").disabled = !loaded;
-  for (const id of ["overview","party","boxes","bag","names"]) document.getElementById("tab-"+id).disabled = !loaded;
+  for (const id of ["overview","pokemon","bag","names"]) document.getElementById("tab-"+id).disabled = !loaded;
 }
 function showPendingChanges() {
   const changes = state?.changes || [];
@@ -1421,46 +1428,70 @@ async function updateBag() {
   await refresh();
 }
 function clearBag() { document.getElementById("item_id").value = 0; document.getElementById("quantity").value = 0; updateBag(); }
-function renderParty() {
-  document.getElementById("summary").textContent = `队伍：${state.party.length} 只，当前槽 ${state.active}`;
-  let html = "<table class='pokemon-table'><thead><tr><th class='sprite-col'>图</th><th>位置</th><th>种族</th><th>属性</th><th>等级</th><th>性格</th><th>性别</th><th>特性</th><th>球</th><th>携带</th><th>招式</th><th>合法性</th></tr></thead><tbody>";
-  state.party.forEach((p, i) => {
-    const moves = p.moves.map((id, idx) => romLink("moves", id, p.move_names[idx])).join(" / ");
-    const held = p.held_item ? displayName("items", p.held_item, p.held_item_name) : "空";
-    html += `<tr id="save-party-${i}" class="${selected===i?"selected":""}" onclick="selectParty(${i})"><td class="sprite-col">${spriteCanvasTag(`party-${i}`, p.species, p.is_shiny, "pokemon-sprite")}</td><td>队伍 ${p.slot}</td><td>${displayName("species", p.species, p.species_name)} ${shinyBadge(p)}</td><td>${pokemonTypeBadges(p.types)}</td><td>${p.level}</td><td>${p.nature_name}</td><td>${p.gender}</td><td>${displayName("abilities", p.ability_id, p.ability_name)}</td><td>${p.caught_ball_name}</td><td>${held}</td><td>${moves}</td><td>${legalityBadge(p)}</td></tr>`;
-  });
-  document.getElementById("content").innerHTML = html + "</tbody></table>";
-  renderSpritesIn(document.getElementById("content"));
-}
-function renderBoxes() {
-  const rows = state.boxes.filter(p => boxView === "all" || String(p.box) === boxView);
-  if (boxView === "all") {
-    document.getElementById("summary").textContent = `盒子：${state.boxes.length} 只非空宝可梦`;
-    document.getElementById("content").innerHTML = renderBoxOverview();
-    renderSpritesIn(document.getElementById("content"));
-    return;
-  }
-  const boxStats = (state.boxes_by_box || {})[String(boxView)] || {filled: 0, total: 30};
+function renderPokemonPage() {
+  if (pokemonView !== "party" && !/^\d+$/.test(String(pokemonView))) pokemonView = "party";
+  const currentLabel = pokemonView === "party" ? "队伍" : `${pokemonView}号盒`;
+  const boxStats = pokemonView === "party" ? null : ((state.boxes_by_box || {})[String(pokemonView)] || {filled: 0, total: 30});
   document.getElementById("summary").innerHTML = `
-    <span>${boxView}号盒：${boxStats.filled}/${boxStats.total}</span>
-    <span class="summary-controls"><button type="button" onclick="setBoxView('all')">全部盒子</button></span>`;
-  let html = "<table class='pokemon-table'><thead><tr><th class='sprite-col'>图</th><th>位置</th><th>种族</th><th>属性</th><th>等级</th><th>性格</th><th>性别</th><th>特性</th><th>球</th><th>携带</th><th>招式</th><th>合法性</th></tr></thead><tbody>";
-  rows.forEach((p) => {
-    const i = state.boxes.indexOf(p);
-    const held = p.held_item ? displayName("items", p.held_item, p.held_item_name) : "空";
-    const moves = p.moves.map((id, idx) => romLink("moves", id, p.move_names[idx])).join(" / ");
-    html += `<tr id="save-box-${i}" class="${selected===i?"selected":""}" onclick="selectBox(${i})"><td class="sprite-col">${spriteCanvasTag(`box-${i}`, p.species, p.is_shiny, "pokemon-sprite")}</td><td>盒子 ${p.box}-${p.box_slot}</td><td>${displayName("species", p.species, p.species_name)} ${shinyBadge(p)}</td><td>${pokemonTypeBadges(p.types)}</td><td>${p.level || "未知"}</td><td>${p.nature_name}</td><td>${p.gender}</td><td>${displayName("abilities", p.ability_id, p.ability_name)}</td><td>${p.caught_ball_name}</td><td>${held}</td><td>${moves}</td><td>${legalityBadge(p)}</td></tr>`;
-  });
-  document.getElementById("content").innerHTML = html + "</tbody></table>";
+    <span>宝可梦：队伍 ${state.party.length}/6，盒子 ${state.boxes.length}/420</span>
+    <span class="summary-controls">列表区：${escapeHtml(currentLabel)}${boxStats ? ` ${boxStats.filled}/${boxStats.total}` : ""}</span>`;
+  document.getElementById("content").innerHTML = `
+    <div class="pokemon-layout">
+      <section class="pokemon-map" aria-label="盒子区">${renderPokemonStorageMap()}</section>
+      <section class="pokemon-list" aria-label="列表区">${renderPokemonList()}</section>
+    </div>`;
   renderSpritesIn(document.getElementById("content"));
 }
-function setBoxView(next) { boxView = next; selected = null; renderBoxes(); }
-function renderBoxOverview() {
-  return `<div class="box-overview">${Array.from({length: 14}, (_, index) => {
-    const box = index + 1;
-    const stats = (state.boxes_by_box || {})[String(box)] || {filled: 0, total: 30};
-    return `<div class="box-card" onclick="setBoxView('${box}')"><h3><span>${box}号盒</span><span>${stats.filled}/${stats.total}</span></h3>${renderBoxGrid(box, false)}</div>`;
-  }).join("")}</div>`;
+function setPokemonView(next) {
+  pokemonView = next;
+  selected = null;
+  renderPokemonPage();
+}
+function renderPokemonStorageMap() {
+  return `
+    <div class="box-card storage-card party-storage ${pokemonView==="party"?"active":""}" onclick="setPokemonView('party')">
+      <h3><span>队伍</span><span>${state.party.length}/6</span></h3>
+      ${renderPartyStorageGrid()}
+    </div>
+    ${Array.from({length: 14}, (_, index) => {
+      const box = index + 1;
+      const stats = (state.boxes_by_box || {})[String(box)] || {filled: 0, total: 30};
+      return `<div class="box-card storage-card ${String(pokemonView)===String(box)?"active":""}" onclick="setPokemonView('${box}')"><h3><span>${box}号盒</span><span>${stats.filled}/${stats.total}</span></h3>${renderBoxGrid(box, false)}</div>`;
+    }).join("")}`;
+}
+function renderPartyStorageGrid() {
+  const slots = Array.from({length: 6}, (_, i) => i + 1).map(slot => {
+    const pokemon = state.party.find(p => Number(p.slot) === slot);
+    if (!pokemon) return `<div class="box-slot party-slot"><span class="box-slot-index">${slot}</span></div>`;
+    const index = state.party.indexOf(pokemon);
+    const label = `${pokemon.species_name} · 队伍 ${slot}`;
+    return `<div class="box-slot party-slot occupied ${isPokemonSelected("party", index)?"selected":""}" title="${escapeHtml(label)}" data-name="${escapeHtml(label)}" onclick="selectParty(${index}); event.stopPropagation();"><span class="box-slot-index">${slot}</span>${spriteCanvasTag(`party-grid-${slot}`, pokemon.species, pokemon.is_shiny, "box-mini-sprite")}</div>`;
+  }).join("");
+  return `<div class="party-grid">${slots}</div>`;
+}
+function renderPokemonList() {
+  const rows = pokemonView === "party"
+    ? state.party.map((p, index) => ({kind: "party", p, index}))
+    : state.boxes.filter(p => String(p.box) === String(pokemonView)).map(p => ({kind: "box", p, index: state.boxes.indexOf(p)}));
+  const title = pokemonView === "party" ? "队伍列表" : `${pokemonView}号盒列表`;
+  const empty = rows.length ? "" : `<tr><td colspan="12" class="muted">没有宝可梦</td></tr>`;
+  const body = rows.map(({kind, p, index}) => pokemonTableRow(kind, p, index)).join("") || empty;
+  return `
+    <div class="list-title"><span>${escapeHtml(title)}</span><span>${rows.length} 只</span></div>
+    <table class='pokemon-table'><thead><tr><th class='sprite-col'>图</th><th>位置</th><th>种族</th><th>属性</th><th>等级</th><th>性格</th><th>性别</th><th>特性</th><th>球</th><th>携带</th><th>招式</th><th>合法性</th></tr></thead><tbody>${body}</tbody></table>`;
+}
+function pokemonTableRow(kind, p, index) {
+  const isParty = kind === "party";
+  const moves = p.moves.map((id, idx) => romLink("moves", id, p.move_names[idx])).join(" / ");
+  const held = p.held_item ? displayName("items", p.held_item, p.held_item_name) : "空";
+  const id = isParty ? `save-party-${index}` : `save-box-${index}`;
+  const location = isParty ? `队伍 ${p.slot}` : `盒子 ${p.box}-${p.box_slot}`;
+  const level = isParty ? p.level : (p.level || "未知");
+  const click = isParty ? `selectParty(${index})` : `selectBox(${index})`;
+  return `<tr id="${id}" class="${isPokemonSelected(kind, index)?"selected":""}" onclick="${click}"><td class="sprite-col">${spriteCanvasTag(`${kind}-${index}`, p.species, p.is_shiny, "pokemon-sprite")}</td><td>${location}</td><td>${displayName("species", p.species, p.species_name)} ${shinyBadge(p)}</td><td>${pokemonTypeBadges(p.types)}</td><td>${level}</td><td>${p.nature_name}</td><td>${p.gender}</td><td>${displayName("abilities", p.ability_id, p.ability_name)}</td><td>${p.caught_ball_name}</td><td>${held}</td><td>${moves}</td><td>${legalityBadge(p)}</td></tr>`;
+}
+function isPokemonSelected(kind, index) {
+  return selected && selected.kind === kind && selected.index === index;
 }
 function renderBoxGrid(box, active) {
   const slots = Array.from({length: 30}, (_, i) => i + 1).map(slot => {
@@ -1469,16 +1500,13 @@ function renderBoxGrid(box, active) {
     const index = state.boxes.indexOf(pokemon);
     const click = active ? ` onclick="selectBoxFromGrid(${index}); event.stopPropagation();"` : "";
     const label = `${pokemon.species_name} · ${box}-${slot}`;
-    return `<div id="box-slot-${box}-${slot}" class="box-slot occupied ${selected===index?"selected":""}" title="${escapeHtml(label)}" data-name="${escapeHtml(label)}"${click}><span class="box-slot-index">${slot}</span>${spriteCanvasTag(`box-grid-${box}-${slot}`, pokemon.species, pokemon.is_shiny, "box-mini-sprite")}</div>`;
+    return `<div id="box-slot-${box}-${slot}" class="box-slot occupied ${isPokemonSelected("box", index)?"selected":""}" title="${escapeHtml(label)}" data-name="${escapeHtml(label)}"${click}><span class="box-slot-index">${slot}</span>${spriteCanvasTag(`box-grid-${box}-${slot}`, pokemon.species, pokemon.is_shiny, "box-mini-sprite")}</div>`;
   }).join("");
   return `<div class="box-grid ${active ? "active" : ""}">${slots}</div>`;
 }
 async function selectBoxFromGrid(index) {
-  selected = index;
-  if (boxView === "all") {
-    boxView = String(state.boxes[index].box);
-    renderBoxes();
-  }
+  pokemonView = String(state.boxes[index].box);
+  renderPokemonPage();
   await selectBox(index);
 }
 function legalityBadge(p) {
@@ -1569,6 +1597,7 @@ function syncPokemonFormTopSquare() {
   spriteWrap.style.maxHeight = `${size}px`;
 }
 async function selectParty(i) {
+  selected = {kind: "party", index: i};
   const p = state.party[i];
   setInspector(`${p.species_name} · 队伍 ${p.slot}`, p.legality.join("\n"));
   pokemonFormConstraints = await loadPokemonConstraints(p.species, p.level);
@@ -1619,6 +1648,7 @@ function renderPokemonForm(p, constraints, location) {
   requestAnimationFrame(syncPokemonFormTopSquare);
 }
 async function selectBox(i) {
+  selected = {kind: "box", index: i};
   const p = state.boxes[i];
   setInspector(`${p.species_name} · 盒子 ${p.box}-${p.box_slot}`, p.legality.join("\n"));
   pokemonFormConstraints = await loadPokemonConstraints(p.species, p.level || 100);
@@ -2076,8 +2106,9 @@ async function jumpToSaveLocation(label) {
     const slot = Number(party[1]);
     const index = state.party.findIndex(p => Number(p.slot) === slot);
     if (index >= 0) {
-      tab = "party";
-      selected = index;
+      tab = "pokemon";
+      pokemonView = "party";
+      selected = {kind: "party", index};
       render();
       await selectParty(index);
       scrollToSaveAnchor(`save-party-${index}`);
@@ -2091,9 +2122,9 @@ async function jumpToSaveLocation(label) {
     const boxSlot = Number(box[2]);
     const index = state.boxes.findIndex(p => Number(p.box) === boxNo && Number(p.box_slot) === boxSlot);
     if (index >= 0) {
-      tab = "boxes";
-      boxView = String(boxNo);
-      selected = index;
+      tab = "pokemon";
+      pokemonView = String(boxNo);
+      selected = {kind: "box", index};
       render();
       await selectBox(index);
       scrollToSaveAnchor(`save-box-${index}`);
