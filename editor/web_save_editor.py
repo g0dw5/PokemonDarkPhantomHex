@@ -1021,6 +1021,8 @@ HTML = r"""<!doctype html>
     button.location-link:hover { border-color: #1f6f9f; background: #e5f4fb; }
     .dictionary-table td { vertical-align: middle; }
     .dictionary-table .name-cell { min-width: 130px; }
+    .dictionary-species .types-cell { min-width: 104px; }
+    .dictionary-species .types-cell .pokemon-type-row { flex-wrap: nowrap; margin-top: 0; }
     .dictionary-table .code-cell { max-width: 170px; color: #555; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
     .dictionary-table .description-cell { min-width: 180px; max-width: 360px; }
     .stat-line { display: grid; grid-template-columns: repeat(6, minmax(36px, 1fr)); gap: 3px; }
@@ -2052,7 +2054,7 @@ function renderDictionaryTable(rows) {
 function dictionaryColumns(table) {
   const common = [{key:"id", label:"ID"}, {key:"name", label:"名称", className:"name-cell"}];
   if (table === "species") {
-    return [...common, {key:"types", label:"属性"}, {key:"baseStats", label:"种族值"}, {key:"abilities", label:"特性"}, {key:"growth", label:"成长"}, {key:"encounters", label:"Encounter"}, {key:"locations", label:"存档引用"}];
+    return [...common, {key:"types", label:"属性", className:"types-cell"}, {key:"baseStats", label:"种族值"}, {key:"abilities", label:"特性"}, {key:"growth", label:"成长"}, {key:"encounters", label:"Encounter"}, {key:"locations", label:"存档引用"}];
   }
   if (table === "moves") {
     return [...common, {key:"pp", label:"PP"}, {key:"description", label:"描述", className:"description-cell"}, {key:"locations", label:"存档引用"}];

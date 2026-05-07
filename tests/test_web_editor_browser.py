@@ -193,15 +193,16 @@ class WebEditorBrowserTest(unittest.TestCase):
                 expect(self.page.locator(".dictionary-table thead")).not_to_contain_text("描述来源")
 
             self.page.evaluate("""() => {
-                const species = {table: "species", table_label: "宝可梦", id: 25, name: "皮卡丘", decoded: "皮卡丘", detail: {types: ["电"]}};
+                const species = {table: "species", table_label: "宝可梦", id: 25, name: "皮卡丘", decoded: "皮卡丘", detail: {types: ["电", "飞行"]}};
                 names = {ok: true, rows: [species], species: [species], items: [], moves: [], abilities: [], stats: {rom: {}, charmap: {}}, table_info: {}};
                 tab = "names";
                 collectTable = "species";
                 render();
             }""")
-            expect(self.page.locator(".dictionary-species .type-badge")).to_have_text("电")
+            expect(self.page.locator(".dictionary-species .types-cell .type-badge")).to_have_count(2)
+            self.assertEqual(self.page.locator(".dictionary-species .types-cell .pokemon-type-row").evaluate("node => getComputedStyle(node).flexWrap"), "nowrap")
             self.page.locator(".dictionary-species tbody tr").first.click()
-            expect(self.page.locator("#detail .type-badge")).to_have_text("电")
+            expect(self.page.locator("#detail .type-badge")).to_have_count(2)
 
             self.page.evaluate("""() => {
                 const row = {table: "items", table_label: "道具", id: 13, name: "伤药", decoded: "伤药", tokens: ["03"], locations: ["电脑道具 #1 x8"], detail: {price: 300, pocket: "道具"}};
