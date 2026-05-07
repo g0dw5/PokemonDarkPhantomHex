@@ -1025,8 +1025,10 @@ HTML = r"""<!doctype html>
     .dictionary-species .types-cell .pokemon-type-row { flex-wrap: nowrap; margin-top: 0; }
     .dictionary-table .code-cell { max-width: 170px; color: #555; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
     .dictionary-table .description-cell { min-width: 180px; max-width: 360px; }
-    .stat-line { display: grid; grid-template-columns: repeat(6, minmax(36px, 1fr)); gap: 3px; }
-    .stat-line span { border: 1px solid #dde1d8; border-radius: 4px; background: #fbfcf8; padding: 2px 4px; text-align: center; }
+    .base-stat-grid { display: grid; grid-template-columns: repeat(6, minmax(28px, 1fr)); gap: 4px; min-width: 190px; }
+    .base-stat { display: grid; gap: 1px; text-align: center; }
+    .base-stat-label { color: #626a61; font-size: 11px; line-height: 1.1; }
+    .base-stat-value { font-variant-numeric: tabular-nums; font-weight: 700; line-height: 1.2; }
     .type-chart-wrap { overflow: auto; padding: 8px; }
     .type-chart { min-width: 900px; table-layout: fixed; }
     .type-chart th, .type-chart td { text-align: center; white-space: nowrap; padding: 4px; }
@@ -2054,7 +2056,7 @@ function renderDictionaryTable(rows) {
 function dictionaryColumns(table) {
   const common = [{key:"id", label:"ID"}, {key:"name", label:"名称", className:"name-cell"}];
   if (table === "species") {
-    return [...common, {key:"types", label:"属性", className:"types-cell"}, {key:"baseStats", label:"种族值"}, {key:"abilities", label:"特性"}, {key:"growth", label:"成长"}, {key:"encounters", label:"Encounter"}, {key:"locations", label:"存档引用"}];
+    return [...common, {key:"types", label:"属性", className:"types-cell"}, {key:"baseStats", label:"种族值"}, {key:"abilities", label:"特性"}, {key:"growthRate", label:"经验曲线"}, {key:"genderRatio", label:"性别"}, {key:"encounters", label:"Encounter"}, {key:"locations", label:"存档引用"}];
   }
   if (table === "moves") {
     return [...common, {key:"pp", label:"PP"}, {key:"description", label:"描述", className:"description-cell"}, {key:"locations", label:"存档引用"}];
@@ -2079,7 +2081,8 @@ function dictionaryCell(row, key) {
   if (key === "types") return pokemonTypeBadges(detail.types || []);
   if (key === "baseStats") return baseStatsInline(detail.base_stats);
   if (key === "abilities") return chipList((detail.abilities || []).map(a => `#${a.id} ${a.name}`));
-  if (key === "growth") return escapeHtml([detail.growth_rate, detail.gender_ratio].filter(Boolean).join(" / "));
+  if (key === "growthRate") return escapeHtml(detail.growth_rate || "");
+  if (key === "genderRatio") return escapeHtml(detail.gender_ratio || "");
   if (key === "encounters") return escapeHtml(encounterSummary(detail.encounters || []));
   if (key === "pp") return `<span class="num">${row.pp ?? detail.pp ?? ""}</span>`;
   if (key === "pocket") return escapeHtml(detail.pocket || "");
@@ -2166,7 +2169,8 @@ function chipList(values, extraClass="") {
 }
 function baseStatsInline(stats) {
   if (!stats) return "";
-  return `<span class="stat-line"><span>HP ${stats.hp}</span><span>攻 ${stats.attack}</span><span>防 ${stats.defense}</span><span>速 ${stats.speed}</span><span>特攻 ${stats.sp_attack}</span><span>特防 ${stats.sp_defense}</span></span>`;
+  const values = [["HP", stats.hp], ["攻", stats.attack], ["防", stats.defense], ["速", stats.speed], ["特攻", stats.sp_attack], ["特防", stats.sp_defense]];
+  return `<span class="base-stat-grid">${values.map(([label, value]) => `<span class="base-stat"><span class="base-stat-label">${label}</span><span class="base-stat-value">${value}</span></span>`).join("")}</span>`;
 }
 function encounterSummary(encounters) {
   if (!encounters?.length) return "";

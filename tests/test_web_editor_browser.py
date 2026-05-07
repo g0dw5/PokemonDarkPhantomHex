@@ -193,7 +193,7 @@ class WebEditorBrowserTest(unittest.TestCase):
                 expect(self.page.locator(".dictionary-table thead")).not_to_contain_text("描述来源")
 
             self.page.evaluate("""() => {
-                const species = {table: "species", table_label: "宝可梦", id: 25, name: "皮卡丘", decoded: "皮卡丘", detail: {types: ["电", "飞行"]}};
+                const species = {table: "species", table_label: "宝可梦", id: 25, name: "皮卡丘", decoded: "皮卡丘", detail: {types: ["电", "飞行"], base_stats: {hp: 35, attack: 55, defense: 40, speed: 90, sp_attack: 50, sp_defense: 50}, growth_rate: "中速", gender_ratio: "雌雄各半"}};
                 names = {ok: true, rows: [species], species: [species], items: [], moves: [], abilities: [], stats: {rom: {}, charmap: {}}, table_info: {}};
                 tab = "names";
                 collectTable = "species";
@@ -201,6 +201,11 @@ class WebEditorBrowserTest(unittest.TestCase):
             }""")
             expect(self.page.locator(".dictionary-species .types-cell .type-badge")).to_have_count(2)
             self.assertEqual(self.page.locator(".dictionary-species .types-cell .pokemon-type-row").evaluate("node => getComputedStyle(node).flexWrap"), "nowrap")
+            expect(self.page.locator(".dictionary-species thead")).to_contain_text("经验曲线")
+            expect(self.page.locator(".dictionary-species thead")).to_contain_text("性别")
+            expect(self.page.locator(".dictionary-species thead")).not_to_contain_text("成长")
+            expect(self.page.locator(".dictionary-species .base-stat")).to_have_count(6)
+            expect(self.page.locator(".dictionary-species .base-stat-value").first).to_have_text("35")
             self.page.locator(".dictionary-species tbody tr").first.click()
             expect(self.page.locator("#detail .type-badge")).to_have_count(2)
 
