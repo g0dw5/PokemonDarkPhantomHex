@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import shutil
 import struct
-import json
 from dataclasses import dataclass
 from datetime import datetime
 from functools import lru_cache
@@ -291,37 +290,37 @@ NATURE_NAMES = [
 ]
 
 
-def _load_rom_name_table(table: str) -> dict[int, str]:
-    path = Path(__file__).resolve().parents[1] / "data" / "rom_text.json"
-    if not path.exists():
-        try:
-            from rom_data import save_rom_text
-
-            save_rom_text()
-        except Exception:
-            return {}
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+def _extract_rom_dictionary() -> dict:
+    if ROM_PATH is None:
         return {}
-    result: dict[int, str] = {}
-    for key, entry in data.get(table, {}).items():
-        try:
-            item_id = int(key)
-        except ValueError:
-            continue
-        name = str(entry.get("name") or entry.get("decoded") or "")
-        result[item_id] = name or f"{table} {item_id}"
-    return result
+    try:
+        from rom_data import extract_rom_text
+
+        return extract_rom_text(ROM_PATH)
+    except Exception:
+        return {}
 
 
 def reload_rom_names() -> None:
-    SPECIES_NAMES.update(_load_rom_name_table("species"))
-    ITEM_NAMES.update(_load_rom_name_table("items"))
+    data = _extract_rom_dictionary()
+
+    def table(name: str) -> dict[int, str]:
+        result: dict[int, str] = {}
+        for key, entry in data.get(name, {}).items():
+            try:
+                item_id = int(key)
+            except ValueError:
+                continue
+            value = str(entry.get("name") or entry.get("decoded") or "")
+            result[item_id] = value or f"{name} {item_id}"
+        return result
+
+    SPECIES_NAMES.update(table("species"))
+    ITEM_NAMES.update(table("items"))
     MOVE_NAMES.clear()
-    MOVE_NAMES.update(_load_rom_name_table("moves"))
+    MOVE_NAMES.update(table("moves"))
     ABILITY_NAMES.clear()
-    ABILITY_NAMES.update(_load_rom_name_table("abilities"))
+    ABILITY_NAMES.update(table("abilities"))
 
 
 reload_rom_names()
@@ -354,6 +353,7 @@ def set_rom_path(path: Path | str | None) -> None:
     constraints_for_species.cache_clear()
     _previous_species_by_target.cache_clear()
     BASE_STATS = _load_base_stats()
+    reload_rom_names()
 
 
 @dataclass(frozen=True)

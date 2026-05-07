@@ -25,7 +25,6 @@ from pokemon_save_core import (
     format_item,
     format_move,
     format_species,
-    reload_rom_names,
     validate_pokemon,
     rom_constraints_loaded,
     set_rom_path,
@@ -36,7 +35,7 @@ from pokemon_save_core import (
     is_shiny,
     adjust_personality,
 )
-from rom_data import OUTPUT as ROM_TEXT_OUTPUT, load_rom_text, save_charmap, save_rom_text, set_default_rom_path
+from rom_data import extract_rom_text, set_default_rom_path
 
 
 DEFAULT_SAVE = None
@@ -203,9 +202,6 @@ class Handler(BaseHTTPRequestHandler):
             if self.path == "/api/save":
                 self.send(*response(api_save()))
                 return
-            if self.path == "/api/charmap":
-                self.send(*response(api_update_charmap(body)))
-                return
         except Exception as exc:
             self.send(*response({"ok": False, "error": str(exc)}, 400))
             return
@@ -315,9 +311,20 @@ def pokemon_payload(p, label: str):
 
 
 def api_names():
-    if not ROM_TEXT_OUTPUT.exists():
-        load_rom_text()
-    raw = load_rom_text()
+    if STATE.rom_path and STATE.rom_path.exists():
+        raw = extract_rom_text(STATE.rom_path)
+    else:
+        raw = {
+            "species": {},
+            "moves": {},
+            "abilities": {},
+            "items": {},
+            "character_map_count": 0,
+            "rom_used_character_key_count": 0,
+            "rom_unknown_character_key_count": 0,
+            "used_character_keys": [],
+            "text_model": {},
+        }
     observed = observed_from_save()
 
     def table(name: str, label: str):
@@ -335,9 +342,12 @@ def api_names():
                 "observed": item_id in observed[name],
                 "locations": observed[name].get(item_id, []),
                 "unknown_count": sum(1 for token in tokens if "{" + token + "}" in (entry.get("decoded") or "")),
+                "description": entry.get("description") or "",
+                "detail": entry.get("detail") or {},
+                "raw_hex": entry.get("raw_hex") or "",
             }
             if name == "moves":
-                row["pp"] = default_pp_for_move(item_id)
+                row["pp"] = entry.get("pp") or default_pp_for_move(item_id)
             rows.append(row)
         return rows
 
@@ -368,6 +378,7 @@ def api_names():
     rows = [*species_rows, *move_rows, *ability_rows, *item_rows]
     observed_key_count = count_observed_charmap_keys(rows)
     stats = {
+        "rom_loaded": bool(STATE.rom_path and STATE.rom_path.exists()),
         "save_loaded": bool(save),
         "party_count": len(save.party()) if save else 0,
         "box_occupied": len(save.boxes()) if save else 0,
@@ -382,14 +393,10 @@ def api_names():
             "items": len(raw.get("items", {})),
         },
         "charmap": {
-            "confirmed": int(raw.get("character_map_count", 0)),
+            "official": int(raw.get("character_map_count", 0)),
             "rom_used": int(raw.get("rom_used_character_key_count", 0)),
             "rom_unknown": int(raw.get("rom_unknown_character_key_count", 0)),
             "rom_unknown_codes": [item.get("code", "") for item in raw.get("used_character_keys", []) if not item.get("known")],
-            "unresolved": len(raw.get("unresolved_character_codes", [])),
-            "unresolved_codes": raw.get("unresolved_character_codes", []),
-            "candidate_unresolved": len(raw.get("candidate_unresolved_character_codes", [])),
-            "candidate_unresolved_codes": raw.get("candidate_unresolved_character_codes", []),
             "observed_keys": observed_key_count,
         },
     }
@@ -402,6 +409,28 @@ def api_names():
         "stats": stats,
         "rows": sorted(rows, key=lambda row: (table_sort_rank(row["table"]), row["id"])),
         "static_rows": static_rows,
+        "table_info": dictionary_table_info(),
+    }
+
+
+def dictionary_table_info() -> dict[str, dict[str, str]]:
+    return {
+        "species": {
+            "label": "宝可梦",
+            "description": "ROM 种族名称表，并补充 base stats：基础能力、属性、性别比例、经验曲线、蛋组、特性和野生携带道具。",
+        },
+        "moves": {
+            "label": "招式",
+            "description": "ROM 招式名称表，并补充招式 PP 和招式描述文本。合法可学范围仍由队伍/盒子编辑页的约束接口计算。",
+        },
+        "abilities": {
+            "label": "特性",
+            "description": "ROM 特性名称表。基础 0..77 号特性有可靠描述；扩展特性描述指针尚未完全定位，因此只展示名称和说明。",
+        },
+        "items": {
+            "label": "道具",
+            "description": "ROM 道具名称表，并补充描述、价格、所属口袋、道具类型、携带效果和内部 secondary id。",
+        },
     }
 
 
@@ -725,59 +754,6 @@ def count_observed_charmap_keys(rows: list[dict]) -> int:
             continue
         codes.update(str(token).upper() for token in row.get("tokens", []))
     return len(codes)
-
-
-def api_update_charmap(body):
-    tokens = [str(token).upper() for token in body.get("tokens", [])]
-    text = str(body.get("text", "")).strip()
-    if not tokens:
-        raise ValueError("没有字符码")
-    if not text:
-        raise ValueError("请填写游戏中看到的文字")
-    chars = list(text)
-    if len(chars) != len(tokens):
-        tokens = coalesce_tokens_for_text(tokens, len(chars))
-    if len(chars) != len(tokens):
-        raise ValueError(f"填写文字长度 {len(chars)} 与字符码数量 {len(tokens)} 不一致：{' '.join(tokens)}")
-    updates = dict(zip(tokens, chars))
-    save_charmap(updates)
-    save_rom_text()
-    reload_rom_names()
-    if STATE.save:
-        load_save(STATE.save.path)
-    return {"ok": True, "message": f"已更新 {len(updates)} 个字符码", "updates": updates}
-
-
-def coalesce_tokens_for_text(tokens: list[str], target_count: int) -> list[str]:
-    """Merge adjacent one-byte tokens when old tokenization split a two-byte character."""
-    memo: dict[tuple[int, int], list[str] | None] = {}
-
-    def solve(index: int, remaining: int) -> list[str] | None:
-        key = (index, remaining)
-        if key in memo:
-            return memo[key]
-        if remaining < 0:
-            return None
-        if index == len(tokens):
-            return [] if remaining == 0 else None
-        keep = solve(index + 1, remaining - 1)
-        if keep is not None:
-            memo[key] = [tokens[index], *keep]
-            return memo[key]
-        if (
-            index + 1 < len(tokens)
-            and len(tokens[index]) == 2
-            and len(tokens[index + 1]) == 2
-        ):
-            merged = tokens[index] + tokens[index + 1]
-            use_merged = solve(index + 2, remaining - 1)
-            if use_merged is not None:
-                memo[key] = [merged, *use_merged]
-                return memo[key]
-        memo[key] = None
-        return None
-
-    return solve(0, target_count) or tokens
 
 
 def api_update_bag(body):
@@ -1674,7 +1650,8 @@ function renderNames() {
   const dictionaryTabButtons = dictionaryTabs.map(([id, label]) => `<button class="${collectTable===id?"active":""}" onclick="setCollectTable('${escapeJsString(id)}')">${escapeHtml(label)}</button>`).join("");
   document.getElementById("summary").innerHTML =
     `<span>字典表：全部 ${names.rows.length} 条</span>
-     <span class="summary-controls"><button type="button" onclick="reloadNames()">刷新码表</button></span>`;
+     <span class="summary-controls"><button type="button" onclick="reloadNames()">刷新字典</button></span>`;
+  const currentInfo = names.table_info?.[collectTable] || {label: "全部", description: "按官方内置字码表实时解析当前 ROM 的名称和说明；这里不再提供字符校正写入。"};
   let html = `
     <div class="metrics">
       <div class="metric"><b>${stats.rom.species}</b>宝可梦枚举</div>
@@ -1685,28 +1662,30 @@ function renderNames() {
       <div class="metric"><b>${stats.box_occupied}/${stats.box_slots}</b>盒子占用</div>
       <div class="metric"><b>${stats.bag_filled}/${stats.bag_slots}</b>背包占用</div>
       <div class="metric"><b>${stats.charmap.observed_keys}</b>存档引用字符码</div>
-      <div class="metric"><b>${stats.charmap.rom_used}</b>ROM 已检查字符</div>
-      <div class="metric"><b>${stats.charmap.confirmed}</b>已有字符翻译</div>
-      <div class="metric clickable" onclick="jumpToCharmapCodes('rom_unknown')"><b>${stats.charmap.rom_unknown}</b>ROM 未翻译字符</div>
-      <div class="metric clickable" onclick="jumpToCharmapCodes('candidate_unresolved')"><b>${stats.charmap.candidate_unresolved}</b>候选仍未解</div>
+      <div class="metric"><b>${stats.charmap.rom_used}</b>名称表字符码</div>
+      <div class="metric"><b>${stats.charmap.official}</b>内置官方映射</div>
+      <div class="metric ${stats.charmap.rom_unknown ? "clickable" : ""}" ${stats.charmap.rom_unknown ? `onclick="jumpToCharmapCodes('rom_unknown')"` : ""}><b>${stats.charmap.rom_unknown}</b>未知字符码</div>
+    </div>
+    <div class="filters">
+      <span class="badge">${escapeHtml(currentInfo.label || "全部")}</span>
+      <span>${escapeHtml(currentInfo.description || "")}</span>
     </div>
     <div class="tabs subtabs dictionary-tabs">
       ${dictionaryTabButtons}
-      <input value="${escapeHtml(collectSearch)}" onchange="setCollectSearch(this.value)" placeholder="按 ID、字码、当前值搜索">
+      <input value="${escapeHtml(collectSearch)}" onchange="setCollectSearch(this.value)" placeholder="按 ID、字码、名称、说明搜索">
       ${collectCodeFilter.length ? `<span class="badge">${escapeHtml(collectCodeLabel)} ${collectCodeFilter.length} 个 <button type="button" onclick="clearCollectCodeFilter()">清除</button></span>` : ""}
       <span class="badge">当前 ${rows.length} 条</span>
     </div>
-    <table><thead><tr><th>ID</th><th>字码</th><th>当前值</th><th>修改值</th><th>操作</th></tr></thead><tbody>`;
+    <table><thead><tr><th>ID</th><th>名称</th><th>字码</th><th>说明</th><th>存档引用</th></tr></thead><tbody>`;
   rows.forEach(({r, idx}, viewIndex) => {
     const decoded = r.decoded || r.name || "";
     const unknown = r.unknown_count ? ` <span class="bad">${r.unknown_count}</span>` : "";
-    const inputId = `name-${viewIndex}`;
     const selectedClass = selected && selected.table === r.table && selected.id === r.id ? "selected" : "";
-    html += `<tr id="rom-${r.table}-${r.id}" class="${selectedClass}" onclick="selectNameIndex(${idx})"><td>${r.id}</td><td>${escapeHtml((r.tokens || []).join(" "))}</td><td>${escapeHtml(decoded)}${unknown}</td><td><input id="${inputId}" value="" placeholder="按游戏里看到的文字填写" onclick="event.stopPropagation();"></td><td><button type="button" onclick="saveNameCollected('${r.table}', ${r.id}, '${inputId}'); event.stopPropagation();">写入码表</button></td></tr>`;
+    html += `<tr id="rom-${r.table}-${r.id}" class="${selectedClass}" onclick="selectNameIndex(${idx})"><td>${r.id}</td><td>${escapeHtml(decoded)}${unknown}</td><td>${escapeHtml((r.tokens || []).join(" "))}</td><td>${escapeHtml(summaryForDictionaryRow(r))}</td><td>${escapeHtml((r.locations || []).slice(0, 3).join("；") || (r.observed ? "已引用" : ""))}</td></tr>`;
   });
   html += "</tbody></table>";
   document.getElementById("content").innerHTML = html;
-  document.getElementById("detail").textContent = "字典表来自 data/rom_text.json。字码是 ROM 文本编码单元，可能是 1 字节或 2 字节，不等同于半角/全角字符；填写完整显示名后会更新 character_map，并刷新其他 tab。";
+  document.getElementById("detail").textContent = "字典表来自当前 ROM 和内置官方字符映射，不再读取或写入 data/rom_text.json。字码是 ROM 文本编码单元，可能是 1 字节、多字节控制码或 2 字节汉字。";
 }
 function filteredNameRows() {
   const q = collectSearch.trim().toLowerCase();
@@ -1714,7 +1693,7 @@ function filteredNameRows() {
     .map((r, idx) => ({r, idx}))
     .filter(({r}) => collectTable === "all" || r.table === collectTable)
     .filter(({r}) => !collectCodeFilter.length || (r.tokens || []).some(token => collectCodeFilter.includes(String(token).toUpperCase())))
-    .filter(({r}) => !q || String(r.id).includes(q) || String(r.decoded || r.name || "").toLowerCase().includes(q) || (r.tokens || []).join(" ").toLowerCase().includes(q));
+    .filter(({r}) => !q || String(r.id).includes(q) || String(r.decoded || r.name || "").toLowerCase().includes(q) || String(r.description || "").toLowerCase().includes(q) || detailLinesForDictionaryRow(r).join(" ").toLowerCase().includes(q) || (r.tokens || []).join(" ").toLowerCase().includes(q));
   return rows.map(row => ({...row, location: ""}));
 }
 function setCollectTable(next) { collectTable = next; renderNames(); }
@@ -1722,11 +1701,11 @@ function setCollectSearch(next) { collectSearch = next; collectCodeFilter = []; 
 function clearCollectCodeFilter() { collectCodeFilter = []; collectCodeLabel = ""; renderNames(); }
 function jumpToCharmapCodes(kind) {
   const charmap = names?.stats?.charmap || {};
-  const codes = kind === "rom_unknown" ? (charmap.rom_unknown_codes || []) : (charmap.candidate_unresolved_codes || []);
+  const codes = charmap.rom_unknown_codes || [];
   collectTable = "all";
   collectSearch = "";
   collectCodeFilter = codes.map(code => String(code).toUpperCase()).filter(Boolean);
-  collectCodeLabel = kind === "rom_unknown" ? "ROM 未翻译字符" : "候选仍未解";
+  collectCodeLabel = "未知字符码";
   renderNames();
   const rows = filteredNameRows();
   if (!rows.length) {
@@ -1758,6 +1737,7 @@ function selectNameRow(table, id) {
     `${table} #${id}`,
     `当前解码：${row.decoded || row.name || ""}`,
     `字符码：${(row.tokens || []).join(" ")}`,
+    ...detailLinesForDictionaryRow(row),
   ].join("\n");
 }
 function selectNameIndex(idx) {
@@ -1768,6 +1748,9 @@ function selectNameIndex(idx) {
     `${row.table_label} #${row.id}`,
     `当前解码：${row.decoded || row.name || ""}`,
     `字符码：${(row.tokens || []).join(" ")}`,
+    `原始字节：${row.raw_hex || ""}`,
+    ...detailLinesForDictionaryRow(row),
+    ...(row.locations?.length ? [`存档引用：${row.locations.join("；")}`] : []),
   ].join("\n");
 }
 function jumpToRom(table, id) {
@@ -1782,13 +1765,44 @@ function jumpToRom(table, id) {
     selectNameIndex(nameIndex(table, id));
   }
 }
-async function saveNameCollected(table, id, inputId) {
-  const row = nameRow(table, id);
-  if (!row) return;
-  const text = document.getElementById(inputId).value;
-  const data = await request("/api/charmap", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({tokens: row.tokens, text})});
-  setStatus(data.message + "\n" + Object.entries(data.updates).map(([k,v]) => `${k}=${v}`).join(" "));
-  await refresh();
+function summaryForDictionaryRow(row) {
+  const lines = detailLinesForDictionaryRow(row);
+  return lines.slice(0, 2).join("；");
+}
+function detailLinesForDictionaryRow(row) {
+  const detail = row.detail || {};
+  const lines = [];
+  if (row.description) lines.push(`描述：${row.description}`);
+  if (row.table === "moves") {
+    lines.push(`PP：${row.pp ?? detail.pp ?? ""}`);
+  }
+  if (row.table === "abilities" && detail.description_note) {
+    lines.push(detail.description_note);
+  }
+  if (row.table === "items") {
+    if (detail.price !== undefined) lines.push(`价格：${detail.price}`);
+    if (detail.pocket) lines.push(`口袋：${detail.pocket}`);
+    if (detail.type) lines.push(`类型：${detail.type}`);
+    if (detail.hold_effect !== undefined) lines.push(`携带效果：${detail.hold_effect} / 参数 ${detail.hold_param}`);
+    if (detail.secondary_id !== undefined) lines.push(`内部 secondary id：${detail.secondary_id}`);
+  }
+  if (row.table === "species") {
+    if (detail.types?.length) lines.push(`属性：${detail.types.join("/")}`);
+    if (detail.base_stats) {
+      const s = detail.base_stats;
+      lines.push(`种族值：HP ${s.hp} / 攻 ${s.attack} / 防 ${s.defense} / 速 ${s.speed} / 特攻 ${s.sp_attack} / 特防 ${s.sp_defense}`);
+    }
+    if (detail.abilities?.length) lines.push(`特性：${detail.abilities.map(a => `#${a.id} ${a.name}`).join("；")}`);
+    if (detail.gender_ratio) lines.push(`性别：${detail.gender_ratio}`);
+    if (detail.growth_rate) lines.push(`经验曲线：${detail.growth_rate}`);
+    if (detail.egg_groups?.length) lines.push(`蛋组：${detail.egg_groups.join("/")}`);
+    if (detail.egg_cycles !== undefined) lines.push(`孵化周期：${detail.egg_cycles}`);
+    if (detail.base_friendship !== undefined) lines.push(`初始亲密度：${detail.base_friendship}`);
+    if (detail.catch_rate !== undefined) lines.push(`捕获率：${detail.catch_rate}`);
+    if (detail.exp_yield !== undefined) lines.push(`击败经验：${detail.exp_yield}`);
+    if (detail.wild_items?.length) lines.push(`野生携带：${detail.wild_items.map(item => `#${item.id} ${item.name}`).join("；")}`);
+  }
+  return lines.filter(Boolean);
 }
 function field(id, label, value, readonly=false, list="", onchange="") { return `<label>${label}<input id="${id}" value="${value}" ${list?`list="${list}"`:""} ${readonly?"readonly":""} ${onchange?`onchange="${onchange}"`:""}></label>`; }
 function val(id) { return document.getElementById(id).value; }

@@ -1,0 +1,3 @@
+[submodule "Pokemon_GBA_Font_Patch"]
+	path = Pokemon_GBA_Font_Patch
+	url = https://github.com/Wokann/Pokemon_GBA_Font_Patch.git
