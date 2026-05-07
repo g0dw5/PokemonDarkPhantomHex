@@ -37,7 +37,6 @@
 ```
 
 ## 待处理
-- [ ] P1 字典表中的所有子页可以都把字符码去掉了
 - [ ] P1 道具中去掉????占位
 - [ ] P1 字典表-宝可梦页面下的属性,没有像修改部分一样显示颜色
 
@@ -105,6 +104,9 @@
   - 验证：`PYTHONPYCACHEPREFIX=.pycache python3 tests/run_browser_tests.py` 通过，总覆盖率 93.4%。
 - [x] P1 特性页可以去除描述来源了
   - 结果：特性字典页去除“描述来源”列，右侧详情也不再展示描述来源字段。
+  - 验证：`PYTHONPYCACHEPREFIX=.pycache python3 tests/run_browser_tests.py` 通过，总覆盖率 93.4%。
+- [x] P1 字典表中的所有子页可以都把字符码去掉了
+  - 结果：字典表搜索、表格列和右侧详情去除可见字符码/原始字节展示，内部 tokens 仅保留给解析和兼容逻辑使用。
   - 验证：`PYTHONPYCACHEPREFIX=.pycache python3 tests/run_browser_tests.py` 通过，总覆盖率 93.4%。
 - [x] P0 使用真正的浏览器交互进行单元测试,覆盖显示/修改内容各种场景的测试用例,并在后续的每次任务确保单测通过,即可提交代码
   - 结果：新增后端/API/存档核心测试和 Playwright Chromium 浏览器测试，覆盖真实 `.sav` 加载、背包多轮写入/保存/重载/关闭、队伍和盒子宝可梦修改、超过 100 个宝可梦表单控件交互子用例。

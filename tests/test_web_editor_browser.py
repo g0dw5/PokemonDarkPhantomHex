@@ -181,14 +181,16 @@ class WebEditorBrowserTest(unittest.TestCase):
             self.page.get_by_role("button", name="字典表").click()
 
             expect(self.page.locator(".dictionary-tabs")).to_be_visible()
-            expect(self.page.locator(".dictionary-tabs input")).to_have_attribute("placeholder", "按 ID、字码、名称、说明搜索")
+            expect(self.page.locator(".dictionary-tabs input")).to_have_attribute("placeholder", "按 ID、名称、说明搜索")
             expect(self.page.locator(".dictionary-tabs")).not_to_contain_text("全部")
             self.assertEqual(self.page.locator(".dictionary-tabs").evaluate("node => getComputedStyle(node).position"), "sticky")
             expect(self.page.locator(".metric")).to_have_count(0)
             expect(self.page.locator("#inspector-title")).to_have_text("未选择字典项")
 
-            self.page.get_by_role("button", name="特性").click()
-            expect(self.page.locator(".dictionary-table thead")).not_to_contain_text("描述来源")
+            for tab_name in ("宝可梦", "特性", "招式", "道具"):
+                self.page.get_by_role("button", name=tab_name).click()
+                expect(self.page.locator(".dictionary-table thead")).not_to_contain_text("字码")
+                expect(self.page.locator(".dictionary-table thead")).not_to_contain_text("描述来源")
 
             self.page.evaluate("""() => {
                 const row = {table: "items", table_label: "道具", id: 13, name: "伤药", decoded: "伤药", tokens: ["03"], locations: ["电脑道具 #1"], detail: {price: 300, pocket: "道具"}};

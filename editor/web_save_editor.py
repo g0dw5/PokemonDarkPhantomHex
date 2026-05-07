@@ -1984,7 +1984,7 @@ function renderNames() {
   let html = `
     <div class="tabs subtabs dictionary-tabs">
       ${dictionaryTabButtons}
-      ${isTypeChart ? "" : `<input value="${escapeHtml(collectSearch)}" onchange="setCollectSearch(this.value)" placeholder="按 ID、字码、名称、说明搜索">`}
+      ${isTypeChart ? "" : `<input value="${escapeHtml(collectSearch)}" onchange="setCollectSearch(this.value)" placeholder="按 ID、名称、说明搜索">`}
       ${!isTypeChart && collectCodeFilter.length ? `<span class="badge">${escapeHtml(collectCodeLabel)} ${collectCodeFilter.length} 个 <button type="button" onclick="clearCollectCodeFilter()">清除</button></span>` : ""}
       <span class="badge">${isTypeChart ? `${TYPE_CHART_IDS.length} 属性` : `${rows.length}/${names.rows.length}`}</span>
       ${isTypeChart ? "" : `<button type="button" onclick="reloadNames()">刷新</button>`}
@@ -2010,15 +2010,15 @@ function dictionaryColumns(table) {
     return [...common, {key:"types", label:"属性"}, {key:"baseStats", label:"种族值"}, {key:"abilities", label:"特性"}, {key:"growth", label:"成长"}, {key:"encounters", label:"Encounter"}, {key:"locations", label:"存档引用"}];
   }
   if (table === "moves") {
-    return [...common, {key:"pp", label:"PP"}, {key:"description", label:"描述", className:"description-cell"}, {key:"tokens", label:"字码", className:"code-cell"}, {key:"locations", label:"存档引用"}];
+    return [...common, {key:"pp", label:"PP"}, {key:"description", label:"描述", className:"description-cell"}, {key:"locations", label:"存档引用"}];
   }
   if (table === "abilities") {
-    return [...common, {key:"description", label:"描述", className:"description-cell"}, {key:"tokens", label:"字码", className:"code-cell"}, {key:"locations", label:"存档引用"}];
+    return [...common, {key:"description", label:"描述", className:"description-cell"}, {key:"locations", label:"存档引用"}];
   }
   if (table === "items") {
     return [...common, {key:"pocket", label:"口袋"}, {key:"price", label:"价格"}, {key:"itemType", label:"类型"}, {key:"holdEffect", label:"携带效果"}, {key:"description", label:"描述", className:"description-cell"}, {key:"locations", label:"存档引用"}];
   }
-  return [{key:"table", label:"类型"}, ...common, {key:"summary", label:"摘要", className:"description-cell"}, {key:"tokens", label:"字码", className:"code-cell"}, {key:"locations", label:"存档引用"}];
+  return [{key:"table", label:"类型"}, ...common, {key:"summary", label:"摘要", className:"description-cell"}, {key:"locations", label:"存档引用"}];
 }
 function dictionaryCell(row, key) {
   const detail = row.detail || {};
@@ -2043,7 +2043,7 @@ function dictionaryCell(row, key) {
 }
 function dictionaryNameCell(row) {
   const decoded = row.decoded || row.name || "";
-  const unknown = row.unknown_count ? ` <span class="bad" title="未知字码数量">${row.unknown_count}</span>` : "";
+  const unknown = row.unknown_count ? ` <span class="bad" title="未知字符数量">${row.unknown_count}</span>` : "";
   return `${escapeHtml(decoded)}${unknown}`;
 }
 function dictionaryLocationsCell(row) {
@@ -2202,7 +2202,7 @@ function filteredNameRows() {
     .map((r, idx) => ({r, idx}))
     .filter(({r}) => r.table === collectTable)
     .filter(({r}) => !collectCodeFilter.length || (r.tokens || []).some(token => collectCodeFilter.includes(String(token).toUpperCase())))
-    .filter(({r}) => !q || String(r.id).includes(q) || String(r.decoded || r.name || "").toLowerCase().includes(q) || String(r.description || "").toLowerCase().includes(q) || detailLinesForDictionaryRow(r).join(" ").toLowerCase().includes(q) || (r.tokens || []).join(" ").toLowerCase().includes(q));
+    .filter(({r}) => !q || String(r.id).includes(q) || String(r.decoded || r.name || "").toLowerCase().includes(q) || String(r.description || "").toLowerCase().includes(q) || detailLinesForDictionaryRow(r).join(" ").toLowerCase().includes(q));
   return rows.map(row => ({...row, location: ""}));
 }
 function setCollectTable(next) { collectTable = next; renderNames(); }
@@ -2213,7 +2213,7 @@ function jumpToCharmapCodes(kind) {
   const codes = charmap.rom_unknown_codes || [];
   collectSearch = "";
   collectCodeFilter = codes.map(code => String(code).toUpperCase()).filter(Boolean);
-  collectCodeLabel = "未知字符码";
+  collectCodeLabel = "未知字符";
   const rows = (names?.rows || [])
     .map((r, idx) => ({r, idx}))
     .filter(({r}) => (r.tokens || []).some(token => collectCodeFilter.includes(String(token).toUpperCase())));
@@ -2247,7 +2247,6 @@ function selectNameRow(table, id) {
   if (!row) return;
   setInspector(`${table} #${id}`, [
     `当前解码：${row.decoded || row.name || ""}`,
-    `字符码：${(row.tokens || []).join(" ")}`,
     ...detailLinesForDictionaryRow(row),
   ].join("\n"));
 }
@@ -2277,8 +2276,6 @@ function dictionaryInspectorHtml(row) {
   const detail = row.detail || {};
   const fields = [
     ["当前解码", row.decoded || row.name || ""],
-    ["字符码", (row.tokens || []).join(" ") || "无"],
-    ["原始字节", row.raw_hex || "无"],
   ];
   if (row.description) fields.push(["描述", row.description, true]);
   if (row.table === "moves") {
