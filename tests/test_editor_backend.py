@@ -484,7 +484,11 @@ class BackendEditorTest(unittest.TestCase):
                 "species": {"25": {"name": "皮卡丘", "decoded": "皮卡丘", "tokens": ["01"], "detail": {"types": ["电"]}}},
                 "moves": {"33": {"name": "撞击", "decoded": "{AA}", "tokens": ["AA"], "pp": 0, "description": "撞"}},
                 "abilities": {"1": {"name": "恶臭", "decoded": "恶臭", "tokens": ["02"]}},
-                "items": {"13": {"name": "伤药", "decoded": "伤药", "tokens": ["03"], "detail": {"price": 300}}},
+                "items": {
+                    "0": {"name": "？？？？？？？？", "decoded": "？？？？？？？？", "tokens": ["3D"], "description": "？？？？？", "detail": {"description": "？？？？？", "price": 0}},
+                    "13": {"name": "伤药", "decoded": "伤药", "tokens": ["03"], "detail": {"price": 300}},
+                    "58": {"name": "？？？？？？？？", "decoded": "？？？？？？？？", "tokens": ["3D"], "description": "？？？？？", "detail": {"description": "？？？？？", "price": 0}},
+                },
                 "character_map_count": 10,
                 "rom_used_character_key_count": 3,
                 "rom_unknown_character_key_count": 1,
@@ -496,17 +500,25 @@ class BackendEditorTest(unittest.TestCase):
                 names = editor.api_names()
             self.assertEqual(names["stats"]["charmap"]["rom_unknown"], 1)
             self.assertEqual(names["moves"][0]["unknown_count"], 1)
+            item_rows = {row["id"]: row for row in names["items"]}
+            self.assertEqual(item_rows[0]["name"], "空")
+            self.assertEqual(item_rows[58]["name"], "道具 58")
+            self.assertEqual(item_rows[58]["description"], "")
+            self.assertNotIn("？", json.dumps(names["items"], ensure_ascii=False))
             self.assertTrue(editor.dictionary_table_info()["species"]["description"])
 
             with mock.patch("pokemon_save_core._extract_rom_dictionary", return_value={
                 "species": {"bad": {}, "77": {"name": ""}},
-                "items": {"88": {"decoded": ""}},
+                "items": {"13": {"decoded": "？？？？？？？？"}, "58": {"decoded": "？？？？？？？？"}, "88": {"decoded": ""}},
                 "moves": {"99": {"name": "测试招式"}},
                 "abilities": {"7": {"decoded": "测试特性"}},
             }):
                 core.reload_rom_names()
             self.assertEqual(core.SPECIES_NAMES[77], "species 77")
-            self.assertEqual(core.ITEM_NAMES[88], "items 88")
+            self.assertEqual(core.ITEM_NAMES[13], "伤药")
+            self.assertEqual(core.format_item(58), "道具 58")
+            self.assertNotEqual(core.ITEM_NAMES.get(88), "items 88")
+            self.assertEqual(core.format_item(88), "道具 88")
             self.assertEqual(core.MOVE_NAMES[99], "测试招式")
             self.assertEqual(core.ABILITY_NAMES[7], "测试特性")
 

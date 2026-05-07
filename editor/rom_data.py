@@ -7149,6 +7149,11 @@ def decode_tokens(tokens: list[bytes], charmap: dict[str, str] | None = None) ->
     return "".join(chars)
 
 
+def is_placeholder_text(value: object) -> bool:
+    text = str(value or "").strip()
+    return bool(text) and all(char in "?？" for char in text)
+
+
 def read_c_string(rom: bytes, offset: int, limit: int = 1000) -> bytes:
     if not (0 <= offset < len(rom)):
         return b""

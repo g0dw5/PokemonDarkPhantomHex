@@ -36,7 +36,7 @@ from pokemon_save_core import (
     is_shiny,
     adjust_personality,
 )
-from rom_data import extract_rom_text, set_default_rom_path
+from rom_data import extract_rom_text, is_placeholder_text, set_default_rom_path
 
 
 DEFAULT_SAVE = None
@@ -353,18 +353,30 @@ def api_names():
         for key, entry in sorted(raw.get(name, {}).items(), key=lambda item: int(item[0])):
             item_id = int(key)
             tokens = entry.get("tokens") or []
+            row_name = entry.get("name") or ""
+            decoded = entry.get("decoded") or ""
+            description = entry.get("description") or ""
+            detail = dict(entry.get("detail") or {})
+            if name == "items":
+                if is_placeholder_text(row_name or decoded):
+                    row_name = format_item(item_id)
+                    decoded = row_name
+                if is_placeholder_text(description):
+                    description = ""
+                if is_placeholder_text(detail.get("description")):
+                    detail["description"] = ""
             row = {
                 "table": name,
                 "table_label": label,
                 "id": item_id,
-                "name": entry.get("name") or "",
-                "decoded": entry.get("decoded") or "",
+                "name": row_name,
+                "decoded": decoded,
                 "tokens": tokens,
                 "observed": item_id in observed[name],
                 "locations": observed[name].get(item_id, []),
                 "unknown_count": sum(1 for token in tokens if "{" + token + "}" in (entry.get("decoded") or "")),
-                "description": entry.get("description") or "",
-                "detail": entry.get("detail") or {},
+                "description": description,
+                "detail": detail,
                 "raw_hex": entry.get("raw_hex") or "",
             }
             if name == "moves":

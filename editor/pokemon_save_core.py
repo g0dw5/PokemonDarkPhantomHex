@@ -304,6 +304,7 @@ def _extract_rom_dictionary() -> dict:
 
 def reload_rom_names() -> None:
     data = _extract_rom_dictionary()
+    from rom_data import is_placeholder_text
 
     def table(name: str) -> dict[int, str]:
         result: dict[int, str] = {}
@@ -313,6 +314,8 @@ def reload_rom_names() -> None:
             except ValueError:
                 continue
             value = str(entry.get("name") or entry.get("decoded") or "")
+            if name == "items" and (not value or is_placeholder_text(value)):
+                continue
             result[item_id] = value or f"{name} {item_id}"
         return result
 
