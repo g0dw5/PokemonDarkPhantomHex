@@ -945,7 +945,7 @@ HTML = r"""<!doctype html>
     .tabs button { padding: 6px 10px; }
     .tabs button.active { background: #24352d; border-color: #24352d; color: white; }
     .subtabs { background: #fff; }
-    .dictionary-tabs { align-items: center; }
+    .dictionary-tabs { align-items: center; position: sticky; top: 0; z-index: 4; }
     .dictionary-tabs input { margin-left: auto; width: min(300px, 100%); }
     .summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-bottom: 1px solid #e0e3dc; font-weight: 600; background: #fbfbf8; }
     .summary:empty { display: none; }
@@ -1125,7 +1125,7 @@ let selected = null;
 let bagSort = "slot";
 let bagPocket = "all";
 let boxView = "all";
-let collectTable = "all";
+let collectTable = "species";
 let collectSearch = "";
 let collectCodeFilter = [];
 let collectCodeLabel = "";
@@ -1973,8 +1973,8 @@ async function loadExperienceLevel(species, level, experience) {
 }
 function renderNames() {
   if (!names) return;
-  const dictionaryTabs = [["all", "全部"], ["species", "宝可梦"], ["abilities", "特性"], ["moves", "招式"], ["items", "道具"], ["type_chart", "属性克制"]];
-  if (!dictionaryTabs.some(([id]) => id === collectTable)) collectTable = "all";
+  const dictionaryTabs = [["species", "宝可梦"], ["abilities", "特性"], ["moves", "招式"], ["items", "道具"], ["type_chart", "属性克制"]];
+  if (!dictionaryTabs.some(([id]) => id === collectTable)) collectTable = "species";
   const isTypeChart = collectTable === "type_chart";
   const rows = isTypeChart ? [] : filteredNameRows();
   const dictionaryTabButtons = dictionaryTabs.map(([id, label]) => `<button class="${collectTable===id?"active":""}" onclick="setCollectTable('${escapeJsString(id)}')">${escapeHtml(label)}</button>`).join("");
@@ -2199,7 +2199,7 @@ function filteredNameRows() {
   const q = collectSearch.trim().toLowerCase();
   const rows = names.rows
     .map((r, idx) => ({r, idx}))
-    .filter(({r}) => collectTable === "all" || r.table === collectTable)
+    .filter(({r}) => r.table === collectTable)
     .filter(({r}) => !collectCodeFilter.length || (r.tokens || []).some(token => collectCodeFilter.includes(String(token).toUpperCase())))
     .filter(({r}) => !q || String(r.id).includes(q) || String(r.decoded || r.name || "").toLowerCase().includes(q) || String(r.description || "").toLowerCase().includes(q) || detailLinesForDictionaryRow(r).join(" ").toLowerCase().includes(q) || (r.tokens || []).join(" ").toLowerCase().includes(q));
   return rows.map(row => ({...row, location: ""}));
@@ -2210,17 +2210,20 @@ function clearCollectCodeFilter() { collectCodeFilter = []; collectCodeLabel = "
 function jumpToCharmapCodes(kind) {
   const charmap = names?.stats?.charmap || {};
   const codes = charmap.rom_unknown_codes || [];
-  collectTable = "all";
   collectSearch = "";
   collectCodeFilter = codes.map(code => String(code).toUpperCase()).filter(Boolean);
   collectCodeLabel = "未知字符码";
-  renderNames();
-  const rows = filteredNameRows();
+  const rows = (names?.rows || [])
+    .map((r, idx) => ({r, idx}))
+    .filter(({r}) => (r.tokens || []).some(token => collectCodeFilter.includes(String(token).toUpperCase())));
   if (!rows.length) {
+    collectTable = "species";
+    renderNames();
     setStatus(`${collectCodeLabel} 没有匹配到当前字典行`);
     return;
   }
   const first = rows[0];
+  collectTable = first.r.table;
   selected = {table: first.r.table, id: first.r.id};
   renderNames();
   const target = document.getElementById(`rom-${first.r.table}-${first.r.id}`);

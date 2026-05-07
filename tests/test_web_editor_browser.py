@@ -182,6 +182,8 @@ class WebEditorBrowserTest(unittest.TestCase):
 
             expect(self.page.locator(".dictionary-tabs")).to_be_visible()
             expect(self.page.locator(".dictionary-tabs input")).to_have_attribute("placeholder", "按 ID、字码、名称、说明搜索")
+            expect(self.page.locator(".dictionary-tabs")).not_to_contain_text("全部")
+            self.assertEqual(self.page.locator(".dictionary-tabs").evaluate("node => getComputedStyle(node).position"), "sticky")
             expect(self.page.locator(".metric")).to_have_count(0)
             expect(self.page.locator("#inspector-title")).to_have_text("未选择字典项")
 
