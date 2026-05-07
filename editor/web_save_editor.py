@@ -32,6 +32,7 @@ from pokemon_save_core import (
     experience_for_level,
     level_for_experience,
     gender_for_species,
+    species_type_names,
     is_shiny,
     adjust_personality,
 )
@@ -57,6 +58,7 @@ class State:
     rom_path: Path | None = None
     save: EmeraldSave | None = None
     dirty = False
+    changes: list[str] = []
     error = "请选择存档文件"
 
 
@@ -74,6 +76,7 @@ def load_save(path: Path | None = None) -> None:
         STATE.save = None
         STATE.rom_path = None
         STATE.dirty = False
+        STATE.changes = []
         configure_rom(None)
         STATE.error = "请选择存档文件"
         return
@@ -81,11 +84,13 @@ def load_save(path: Path | None = None) -> None:
         STATE.save = EmeraldSave(STATE.save_path)
         configure_rom(find_matching_rom(STATE.save_path))
         STATE.dirty = False
+        STATE.changes = []
         STATE.error = ""
     except Exception as exc:
         STATE.save = None
         STATE.rom_path = None
         STATE.dirty = False
+        STATE.changes = []
         configure_rom(None)
         STATE.error = str(exc)
 
@@ -231,7 +236,7 @@ class Handler(BaseHTTPRequestHandler):
 def api_state():
     save = STATE.save
     if not save:
-        return {"ok": False, "dirty": STATE.dirty, "path": str(STATE.save_path) if STATE.save_path else "", "rom_path": str(STATE.rom_path) if STATE.rom_path else "", "error": STATE.error, "bag": [], "party": [], "validation": []}
+        return {"ok": False, "dirty": STATE.dirty, "changes": STATE.changes, "path": str(STATE.save_path) if STATE.save_path else "", "rom_path": str(STATE.rom_path) if STATE.rom_path else "", "error": STATE.error, "bag": [], "party": [], "validation": []}
     bag = [{"pocket": e.pocket, "slot": e.slot, "item_id": e.item_id, "name": format_item(e.item_id) if e.item_id else "空", "quantity": e.quantity} for e in save.read_bag()]
     party = []
     for p in save.party():
@@ -251,6 +256,7 @@ def api_state():
     return {
         "ok": True,
         "dirty": STATE.dirty,
+        "changes": STATE.changes,
         "path": str(save.path),
         "rom_path": str(STATE.rom_path) if STATE.rom_path else "",
         "active": active,
@@ -295,6 +301,7 @@ def pokemon_payload(p, label: str):
         "box_slot": p.box_slot,
         "species": p.species,
         "species_name": p.species_name,
+        "types": species_type_names(p.species),
         "personality": p.personality,
         "ot_id": p.ot_id,
         "held_item": p.held_item,
@@ -431,7 +438,7 @@ def dictionary_table_info() -> dict[str, dict[str, str]]:
     return {
         "species": {
             "label": "宝可梦",
-            "description": "ROM 种族名称表，并补充 base stats：基础能力、属性、性别比例、经验曲线、蛋组、特性和野生携带道具。",
+            "description": "ROM 种族名称表，并补充 base stats：基础能力、属性、性别比例、经验曲线、蛋组、特性、野生携带道具和野生 Encounter。",
         },
         "moves": {
             "label": "招式",
@@ -439,7 +446,7 @@ def dictionary_table_info() -> dict[str, dict[str, str]]:
         },
         "abilities": {
             "label": "特性",
-            "description": "ROM 特性名称表。基础 0..77 号特性有可靠描述；扩展特性描述指针尚未完全定位，因此只展示名称和说明。",
+            "description": "ROM 特性名称表。基础 0..77 和扩展 78..150 号特性均已定位描述指针并展示说明。",
         },
         "items": {
             "label": "道具",
@@ -770,12 +777,26 @@ def count_observed_charmap_keys(rows: list[dict]) -> int:
     return len(codes)
 
 
+def record_change(message: str, diffs: list[dict] | None = None) -> None:
+    STATE.changes.append({"summary": message, "diffs": diffs or []})
+    if len(STATE.changes) > 100:
+        STATE.changes = STATE.changes[-100:]
+
+
 def api_update_bag(body):
     save = require_save()
     entry = BagEntry(str(body["pocket"]), int(body["slot"]), int(body["item_id"]), int(body["quantity"]))
+    before = next((old for old in save.read_bag() if old.pocket == entry.pocket and old.slot == entry.slot), None)
     save.write_bag_entry(entry)
     STATE.dirty = True
-    return {"ok": True, "message": f"已写入背包：{entry.pocket} {entry.slot} = {format_item(entry.item_id)} x{entry.quantity}"}
+    message = f"已写入背包：{entry.pocket} {entry.slot} = {format_item(entry.item_id)} x{entry.quantity}"
+    diffs = []
+    if before and before.item_id != entry.item_id:
+        diffs.append({"field": "道具", "before": format_item(before.item_id) if before.item_id else "空", "after": format_item(entry.item_id) if entry.item_id else "空"})
+    if before and before.quantity != entry.quantity:
+        diffs.append({"field": "数量", "before": before.quantity, "after": entry.quantity})
+    record_change(message, diffs)
+    return {"ok": True, "message": message}
 
 
 def api_update_pokemon(body):
@@ -807,14 +828,43 @@ def api_update_pokemon(body):
     if location == "box":
         box = int(body["box"])
         box_slot = int(body["box_slot"])
+        before = next((pokemon for pokemon in save.boxes() if pokemon.box == box and pokemon.box_slot == box_slot), None)
         pokemon = save.update_box_pokemon(box, box_slot, updates)
         STATE.dirty = True
-        return {"ok": True, "message": f"已写入盒子 {box}-{box_slot}：{format_species(pokemon.species)}"}
+        message = f"已写入盒子 {box}-{box_slot}：{format_species(pokemon.species)}"
+        record_change(message, pokemon_diffs(before, pokemon))
+        return {"ok": True, "message": message}
     slot = int(body["slot"])
     updates["level"] = int(body["level"])
+    party = save.party()
+    before = party[slot - 1] if 1 <= slot <= len(party) else None
     pokemon = save.update_party_pokemon(slot, updates)
     STATE.dirty = True
-    return {"ok": True, "message": f"已写入队伍 {slot}：{format_species(pokemon.species)}"}
+    message = f"已写入队伍 {slot}：{format_species(pokemon.species)}"
+    record_change(message, pokemon_diffs(before, pokemon))
+    return {"ok": True, "message": message}
+
+
+def pokemon_diffs(before, after) -> list[dict]:
+    if before is None:
+        return []
+    fields = [
+        ("种族", format_species(before.species), format_species(after.species)),
+        ("携带", format_item(before.held_item) if before.held_item else "空", format_item(after.held_item) if after.held_item else "空"),
+        ("等级", before.level, after.level),
+        ("亲密度", before.friendship, after.friendship),
+        ("性格", before.nature_name, after.nature_name),
+        ("性别", before.gender, after.gender),
+        ("闪光", "是" if before.is_shiny else "否", "是" if after.is_shiny else "否"),
+        ("球", before.caught_ball_name, after.caught_ball_name),
+        ("特性位", before.ability_bit, after.ability_bit),
+        ("蛋", "是" if before.is_egg else "否", "是" if after.is_egg else "否"),
+        ("招式", " / ".join(format_move(move_id) if move_id else "空" for move_id in before.moves), " / ".join(format_move(move_id) if move_id else "空" for move_id in after.moves)),
+        ("PP", ",".join(map(str, before.pps)), ",".join(map(str, after.pps))),
+        ("个体值", ",".join(map(str, before.ivs)), ",".join(map(str, after.ivs))),
+        ("努力值", ",".join(map(str, before.evs)), ",".join(map(str, after.evs))),
+    ]
+    return [{"field": field, "before": old, "after": new} for field, old, new in fields if old != new]
 
 
 def api_save():
@@ -829,6 +879,7 @@ def api_close():
     STATE.save = None
     STATE.rom_path = None
     STATE.dirty = False
+    STATE.changes = []
     STATE.error = "请选择存档文件"
     configure_rom(None)
     return api_state()
@@ -882,6 +933,8 @@ HTML = r"""<!doctype html>
     .file-meta { min-width: 0; color: #626a61; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .toolbar { flex: 0 0 auto; display: flex; gap: 6px; align-items: center; }
     .pill { display: inline-flex; align-items: center; min-height: 20px; border: 1px solid #bec5bb; border-radius: 999px; padding: 1px 7px; font-size: 12px; font-weight: 500; background: #fff; color: #4d554b; white-space: nowrap; }
+    .pill.clickable { cursor: pointer; }
+    .pill.clickable:hover { border-color: #35694f; background: #f4faf6; }
     .pill.dirty { color: #8a4a00; border-color: #dfb66c; background: #fff7e6; }
     .pill.ok { color: #2f6f4f; border-color: #9fceb1; background: #eef8f1; }
     .pill.warn { color: #9f351f; border-color: #e6aa9e; background: #fff1ee; }
@@ -908,6 +961,8 @@ HTML = r"""<!doctype html>
     .badge { display: inline-block; border: 1px solid #aeb5aa; border-radius: 999px; padding: 1px 7px; font-size: 12px; background: #fff; color: #4d554b; }
     .empty-state { padding: 18px; color: #5d655c; }
     .id-chip { display: inline-block; font-variant-numeric: tabular-nums; color: #555; margin-right: 3px; }
+    .muted { color: #6a7168; }
+    .num { font-variant-numeric: tabular-nums; }
     .shiny-badge { color: #9a6700; font-weight: 700; }
     .bad { color: #b42318; font-weight: 600; }
     .table-wrap { overflow: auto; flex: 1 1 auto; min-height: 0; }
@@ -935,6 +990,39 @@ HTML = r"""<!doctype html>
     #inspector-title { font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; }
     #detail { max-height: 150px; white-space: pre-wrap; overflow: auto; background: #f8f9f5; border: 1px solid #d9ded6; border-radius: 6px; padding: 8px; color: #394038; }
     #detail:empty { display: none; }
+    #detail.structured { max-height: none; white-space: normal; background: transparent; border: 0; padding: 0; }
+    .detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+    .detail-field { border: 1px solid #d9ded6; border-radius: 6px; padding: 7px; background: #f8f9f5; min-width: 0; }
+    .detail-field.wide { grid-column: 1 / -1; }
+    .detail-label { display: block; color: #626a61; font-size: 12px; margin-bottom: 3px; }
+    .detail-value { overflow-wrap: anywhere; }
+    .chip-list { display: flex; flex-wrap: wrap; gap: 4px; }
+    .data-chip { display: inline-flex; align-items: center; min-height: 20px; border: 1px solid #cbd1c7; border-radius: 999px; padding: 1px 7px; background: #fff; color: #30372f; font-size: 12px; }
+    .type-chip { border-color: #aeb5aa; background: #edf4ef; color: #24352d; font-weight: 600; }
+    .pokemon-type-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+    .type-badge { display: inline-flex; min-width: 42px; justify-content: center; align-items: center; min-height: 18px; border-radius: 3px; border: 1px solid rgba(0,0,0,.22); padding: 1px 6px; color: white; font-size: 12px; font-weight: 700; text-shadow: 0 1px 0 rgba(0,0,0,.35); box-shadow: inset 0 1px 0 rgba(255,255,255,.25); }
+    .encounter-panel { margin-top: 8px; }
+    .encounter-list { display: grid; gap: 4px; margin-top: 4px; }
+    button.location-link { border-color: #a9c7d8; color: #1f5f85; background: #f2f9fc; text-decoration: none; }
+    button.location-link:hover { border-color: #1f6f9f; background: #e5f4fb; }
+    .dictionary-table td { vertical-align: middle; }
+    .dictionary-table .name-cell { min-width: 130px; }
+    .dictionary-table .code-cell { max-width: 170px; color: #555; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+    .dictionary-table .description-cell { min-width: 180px; max-width: 360px; }
+    .stat-line { display: grid; grid-template-columns: repeat(6, minmax(36px, 1fr)); gap: 3px; }
+    .stat-line span { border: 1px solid #dde1d8; border-radius: 4px; background: #fbfcf8; padding: 2px 4px; text-align: center; }
+    .type-chart-wrap { overflow: auto; padding: 8px; }
+    .type-chart { min-width: 900px; table-layout: fixed; }
+    .type-chart th, .type-chart td { text-align: center; white-space: nowrap; padding: 4px; }
+    .type-chart th:first-child { left: 0; z-index: 2; }
+    .effect-0 { background: #eceff1; color: #5f666c; }
+    .effect-025, .effect-05 { background: #f7e8e4; color: #9f351f; font-weight: 600; }
+    .effect-1 { background: #fbfcf8; color: #6a7168; }
+    .effect-2, .effect-4 { background: #e4f2e8; color: #236341; font-weight: 700; }
+    .type-tools { display: flex; align-items: center; gap: 8px; padding: 8px; border-bottom: 1px solid #e0e3dc; flex-wrap: wrap; }
+    .type-tools label { display: flex; align-items: center; gap: 4px; }
+    .type-profile { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: 7px; padding: 8px; border-bottom: 1px solid #e0e3dc; }
+    .type-profile h4 { margin: 0 0 4px; font-size: 13px; }
     #status { color: #4d554b; white-space: pre-wrap; font-size: 13px; }
     .move-grid { display: grid; grid-template-columns: minmax(0, 1fr) 132px; gap: 6px; align-items: end; margin-top: 8px; }
     .move-grid label { margin-top: 0; }
@@ -946,6 +1034,18 @@ HTML = r"""<!doctype html>
     .pokemon-form-left { flex: 0 0 calc((100% - 6px) / 2); width: calc((100% - 6px) / 2); min-width: 0; max-width: calc((100% - 6px) / 2); }
     .pokemon-form-sprite-wrap { flex: none; align-self: stretch; aspect-ratio: 1 / 1; border: 1px solid #bfbfbf; background: #f3f3f3; display: flex; align-items: center; justify-content: center; }
     .pokemon-form-sprite { width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
+    .box-overview { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; padding: 8px; }
+    .box-card { border: 1px solid #d3d7cf; border-radius: 6px; background: #fbfbf8; padding: 7px; cursor: pointer; }
+    .box-card:hover { border-color: #35694f; background: #f4faf6; }
+    .box-card h3 { margin: 0 0 6px; font-size: 13px; display: flex; justify-content: space-between; gap: 6px; }
+    .box-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; }
+    .box-grid.active { padding: 8px; border-bottom: 1px solid #e0e3dc; background: #fbfbf8; }
+    .box-slot { aspect-ratio: 1 / 1; min-width: 0; border: 1px solid #d9ded6; border-radius: 4px; background: #eef1ea; display: flex; align-items: center; justify-content: center; position: relative; }
+    .box-slot.occupied { background: #fff; cursor: pointer; }
+    .box-slot.occupied:hover { border-color: #1f6f9f; background: #eef8ff; }
+    .box-slot.selected { border-color: #2f6f4f; box-shadow: inset 0 0 0 1px #2f6f4f; }
+    .box-slot-index { position: absolute; left: 3px; top: 2px; font-size: 10px; color: #7b8279; }
+    .box-mini-sprite { width: 100%; height: 100%; max-width: 32px; max-height: 32px; image-rendering: pixelated; image-rendering: crisp-edges; }
     .single-toggle { width: 100%; height: 31px; margin-top: 3px; border: 0; background: transparent; color: #111; padding: 0; display: flex; align-items: center; justify-content: center; }
     .single-toggle .track { width: 42px; height: 22px; border-radius: 999px; background: #d0d0d0; position: relative; flex: 0 0 auto; }
     .single-toggle .thumb { width: 18px; height: 18px; border-radius: 999px; background: #fff; border: 1px solid #888; position: absolute; left: 2px; top: 2px; transition: left .12s ease; }
@@ -1030,6 +1130,34 @@ let collectSearch = "";
 let collectCodeFilter = [];
 let collectCodeLabel = "";
 let pokemonFormConstraints = null;
+let typeDefenseA = 10;
+let typeDefenseB = 11;
+const TYPE_NAMES = ["一般", "格斗", "飞行", "毒", "地面", "岩石", "虫", "幽灵", "钢", "未知09", "火", "水", "草", "电", "超能", "冰", "龙", "恶"];
+const TYPE_CHART_IDS = TYPE_NAMES.map((_name, id) => id).filter(id => id !== 9);
+const TYPE_COLORS = {
+  "一般": "#9fa19f", "格斗": "#ff8000", "飞行": "#81b9ef", "毒": "#9141cb", "地面": "#915121", "岩石": "#afa981",
+  "虫": "#91a119", "幽灵": "#704170", "钢": "#60a1b8", "未知09": "#68a090", "火": "#e62829", "水": "#2980ef",
+  "草": "#3fa129", "电": "#fac000", "超能": "#ef4179", "冰": "#3fd8ff", "龙": "#5060e1", "恶": "#50413f",
+};
+const TYPE_EFFECTIVENESS = {
+  "0>5": 0.5, "0>7": 0, "0>8": 0.5,
+  "1>0": 2, "1>2": 0.5, "1>3": 0.5, "1>5": 2, "1>6": 0.5, "1>7": 0, "1>8": 2, "1>14": 0.5, "1>15": 2, "1>17": 2,
+  "2>1": 2, "2>5": 0.5, "2>6": 2, "2>8": 0.5, "2>12": 2, "2>13": 0.5,
+  "3>3": 0.5, "3>4": 0.5, "3>5": 0.5, "3>7": 0.5, "3>8": 0, "3>12": 2,
+  "4>2": 0, "4>3": 2, "4>5": 2, "4>6": 0.5, "4>8": 2, "4>10": 2, "4>12": 0.5, "4>13": 2,
+  "5>1": 0.5, "5>2": 2, "5>4": 0.5, "5>6": 2, "5>8": 0.5, "5>10": 2, "5>15": 2,
+  "6>1": 0.5, "6>2": 0.5, "6>3": 0.5, "6>7": 0.5, "6>8": 0.5, "6>10": 0.5, "6>12": 2, "6>14": 2, "6>17": 2,
+  "7>0": 0, "7>7": 2, "7>8": 0.5, "7>14": 2, "7>17": 0.5,
+  "8>5": 2, "8>8": 0.5, "8>10": 0.5, "8>11": 0.5, "8>13": 0.5, "8>15": 2,
+  "10>5": 0.5, "10>6": 2, "10>8": 2, "10>10": 0.5, "10>11": 0.5, "10>12": 2, "10>15": 2, "10>16": 0.5,
+  "11>4": 2, "11>5": 2, "11>10": 2, "11>11": 0.5, "11>12": 0.5, "11>16": 0.5,
+  "12>2": 0.5, "12>3": 0.5, "12>4": 2, "12>5": 2, "12>6": 0.5, "12>8": 0.5, "12>10": 0.5, "12>11": 2, "12>12": 0.5, "12>16": 0.5,
+  "13>2": 2, "13>4": 0, "13>11": 2, "13>12": 0.5, "13>13": 0.5, "13>16": 0.5,
+  "14>1": 2, "14>3": 2, "14>8": 0.5, "14>14": 0.5, "14>17": 0,
+  "15>2": 2, "15>4": 2, "15>8": 0.5, "15>10": 0.5, "15>11": 0.5, "15>12": 2, "15>15": 0.5, "15>16": 2,
+  "16>8": 0.5, "16>16": 2,
+  "17>1": 0.5, "17>7": 2, "17>8": 0.5, "17>14": 2, "17>17": 0.5,
+};
 
 async function request(url, options, allowFalse=false) {
   const res = await fetch(url, options);
@@ -1121,12 +1249,15 @@ function renderShell() {
   const fileMeta = document.getElementById("file-meta");
   const dirtyPill = document.getElementById("dirty-pill");
   const romPill = document.getElementById("rom-pill");
+  const changeCount = (state?.changes || []).length;
   fileName.textContent = loaded ? basename(state.path) : "未加载存档";
   fileName.title = state?.path || "";
   fileMeta.textContent = loaded ? `${state.path}${state.rom_path ? " · ROM " + basename(state.rom_path) : " · 未找到同名 ROM"}` : (state?.error || "请选择 .sav 文件");
   fileMeta.title = loaded ? `${state.path}${state.rom_path ? "\n" + state.rom_path : ""}` : "";
-  dirtyPill.textContent = loaded ? (dirty ? "未保存" : "已保存") : "未加载";
-  dirtyPill.className = "pill" + (dirty ? " dirty" : loaded ? " ok" : "");
+  dirtyPill.textContent = loaded ? (dirty ? `未保存 ${changeCount}` : "已保存") : "未加载";
+  dirtyPill.title = dirty ? "点击查看未保存修改" : "";
+  dirtyPill.onclick = dirty ? showPendingChanges : null;
+  dirtyPill.className = "pill" + (dirty ? " dirty clickable" : loaded ? " ok" : "");
   romPill.textContent = loaded ? (romLoaded ? "ROM 已加载" : "ROM 缺失") : "ROM 未加载";
   romPill.className = "pill" + (romLoaded ? " ok" : " warn");
   document.getElementById("reload-btn").disabled = !loaded;
@@ -1134,12 +1265,35 @@ function renderShell() {
   document.getElementById("close-btn").disabled = !loaded;
   for (const id of ["overview","party","boxes","bag","names"]) document.getElementById("tab-"+id).disabled = !loaded;
 }
+function showPendingChanges() {
+  const changes = state?.changes || [];
+  if (!changes.length) {
+    setInspector("未保存修改", "暂无记录");
+    return;
+  }
+  document.getElementById("form").innerHTML = "";
+  setInspectorHtml("未保存修改", `<div class="detail-grid">${changes.map(renderPendingChange).join("")}</div>`);
+}
+function renderPendingChange(change, index) {
+  const summary = typeof change === "string" ? change : change.summary;
+  const diffs = typeof change === "string" ? [] : (change.diffs || []);
+  const diffRows = diffs.length ? `<table><thead><tr><th>字段</th><th>原值</th><th>新值</th></tr></thead><tbody>${diffs.map(diff => `<tr><td>${escapeHtml(diff.field)}</td><td>${escapeHtml(diff.before)}</td><td>${escapeHtml(diff.after)}</td></tr>`).join("")}</tbody></table>` : `<div class="muted">没有字段差异</div>`;
+  return `<div class="detail-field wide"><span class="detail-label">#${index + 1}</span><div class="detail-value">${escapeHtml(summary)}</div>${diffRows}</div>`;
+}
 function basename(path) {
   return String(path || "").split(/[\\/]/).filter(Boolean).pop() || "";
 }
 function setInspector(title, detail="") {
   document.getElementById("inspector-title").textContent = title || "未选择条目";
-  document.getElementById("detail").textContent = detail || "";
+  const detailNode = document.getElementById("detail");
+  detailNode.classList.remove("structured");
+  detailNode.textContent = detail || "";
+}
+function setInspectorHtml(title, detailHtml="") {
+  document.getElementById("inspector-title").textContent = title || "未选择条目";
+  const detailNode = document.getElementById("detail");
+  detailNode.classList.add("structured");
+  detailNode.innerHTML = detailHtml || "";
 }
 function renderDatalists() {
   if (!names) return;
@@ -1218,7 +1372,7 @@ function renderBag() {
     </span>`;
   const rows = sortedBagRows().filter(({e}) => bagPocket === "all" || e.pocket === bagPocket);
   let html = "<table><thead><tr><th>口袋</th><th>格位</th><th>道具 ID</th><th>名称</th><th>数量</th></tr></thead><tbody>";
-  rows.forEach(({e, i}) => html += `<tr class="${selected===i?"selected":""}" onclick="selectBag(${i})"><td>${escapeHtml(e.pocket)}</td><td>${e.slot}</td><td>${e.item_id}</td><td>${romLink("items", e.item_id, e.name)}</td><td>${e.quantity}</td></tr>`);
+  rows.forEach(({e, i}) => html += `<tr id="save-bag-${i}" class="${selected===i?"selected":""}" onclick="selectBag(${i})"><td>${escapeHtml(e.pocket)}</td><td>${e.slot}</td><td>${e.item_id}</td><td>${romLink("items", e.item_id, e.name)}</td><td>${e.quantity}</td></tr>`);
   document.getElementById("content").innerHTML = renderSubtabs(pockets, bagPocket, "setBagPocket") + html + "</tbody></table>";
 }
 function setBagPocket(next) { bagPocket = next; selected = null; renderBag(); }
@@ -1256,11 +1410,11 @@ async function updateBag() {
 function clearBag() { document.getElementById("item_id").value = 0; document.getElementById("quantity").value = 0; updateBag(); }
 function renderParty() {
   document.getElementById("summary").textContent = `队伍：${state.party.length} 只，当前槽 ${state.active}`;
-  let html = "<table class='pokemon-table'><thead><tr><th class='sprite-col'>图</th><th>位置</th><th>种族</th><th>等级</th><th>性格</th><th>性别</th><th>特性</th><th>球</th><th>携带</th><th>招式</th><th>合法性</th></tr></thead><tbody>";
+  let html = "<table class='pokemon-table'><thead><tr><th class='sprite-col'>图</th><th>位置</th><th>种族</th><th>属性</th><th>等级</th><th>性格</th><th>性别</th><th>特性</th><th>球</th><th>携带</th><th>招式</th><th>合法性</th></tr></thead><tbody>";
   state.party.forEach((p, i) => {
     const moves = p.moves.map((id, idx) => romLink("moves", id, p.move_names[idx])).join(" / ");
     const held = p.held_item ? displayName("items", p.held_item, p.held_item_name) : "空";
-    html += `<tr onclick="selectParty(${i})"><td class="sprite-col">${spriteCanvasTag(`party-${i}`, p.species, p.is_shiny, "pokemon-sprite")}</td><td>队伍 ${p.slot}</td><td>${displayName("species", p.species, p.species_name)} ${shinyBadge(p)}</td><td>${p.level}</td><td>${p.nature_name}</td><td>${p.gender}</td><td>${displayName("abilities", p.ability_id, p.ability_name)}</td><td>${p.caught_ball_name}</td><td>${held}</td><td>${moves}</td><td>${legalityBadge(p)}</td></tr>`;
+    html += `<tr id="save-party-${i}" class="${selected===i?"selected":""}" onclick="selectParty(${i})"><td class="sprite-col">${spriteCanvasTag(`party-${i}`, p.species, p.is_shiny, "pokemon-sprite")}</td><td>队伍 ${p.slot}</td><td>${displayName("species", p.species, p.species_name)} ${shinyBadge(p)}</td><td>${pokemonTypeBadges(p.types)}</td><td>${p.level}</td><td>${p.nature_name}</td><td>${p.gender}</td><td>${displayName("abilities", p.ability_id, p.ability_name)}</td><td>${p.caught_ball_name}</td><td>${held}</td><td>${moves}</td><td>${legalityBadge(p)}</td></tr>`;
   });
   document.getElementById("content").innerHTML = html + "</tbody></table>";
   renderSpritesIn(document.getElementById("content"));
@@ -1273,17 +1427,46 @@ function renderBoxes() {
   })];
   const rows = state.boxes.filter(p => boxView === "all" || String(p.box) === boxView);
   document.getElementById("summary").textContent = `盒子：${state.boxes.length} 只非空宝可梦`;
-  let html = "<table class='pokemon-table'><thead><tr><th class='sprite-col'>图</th><th>位置</th><th>种族</th><th>等级</th><th>性格</th><th>性别</th><th>特性</th><th>球</th><th>携带</th><th>招式</th><th>合法性</th></tr></thead><tbody>";
+  if (boxView === "all") {
+    document.getElementById("content").innerHTML = renderSubtabs(tabs, boxView, "setBoxView") + renderBoxOverview();
+    renderSpritesIn(document.getElementById("content"));
+    return;
+  }
+  let html = "<table class='pokemon-table'><thead><tr><th class='sprite-col'>图</th><th>位置</th><th>种族</th><th>属性</th><th>等级</th><th>性格</th><th>性别</th><th>特性</th><th>球</th><th>携带</th><th>招式</th><th>合法性</th></tr></thead><tbody>";
   rows.forEach((p) => {
     const i = state.boxes.indexOf(p);
     const held = p.held_item ? displayName("items", p.held_item, p.held_item_name) : "空";
     const moves = p.moves.map((id, idx) => romLink("moves", id, p.move_names[idx])).join(" / ");
-    html += `<tr onclick="selectBox(${i})"><td class="sprite-col">${spriteCanvasTag(`box-${i}`, p.species, p.is_shiny, "pokemon-sprite")}</td><td>盒子 ${p.box}-${p.box_slot}</td><td>${displayName("species", p.species, p.species_name)} ${shinyBadge(p)}</td><td>${p.level || "未知"}</td><td>${p.nature_name}</td><td>${p.gender}</td><td>${displayName("abilities", p.ability_id, p.ability_name)}</td><td>${p.caught_ball_name}</td><td>${held}</td><td>${moves}</td><td>${legalityBadge(p)}</td></tr>`;
+    html += `<tr id="save-box-${i}" class="${selected===i?"selected":""}" onclick="selectBox(${i})"><td class="sprite-col">${spriteCanvasTag(`box-${i}`, p.species, p.is_shiny, "pokemon-sprite")}</td><td>盒子 ${p.box}-${p.box_slot}</td><td>${displayName("species", p.species, p.species_name)} ${shinyBadge(p)}</td><td>${pokemonTypeBadges(p.types)}</td><td>${p.level || "未知"}</td><td>${p.nature_name}</td><td>${p.gender}</td><td>${displayName("abilities", p.ability_id, p.ability_name)}</td><td>${p.caught_ball_name}</td><td>${held}</td><td>${moves}</td><td>${legalityBadge(p)}</td></tr>`;
   });
-  document.getElementById("content").innerHTML = renderSubtabs(tabs, boxView, "setBoxView") + html + "</tbody></table>";
+  document.getElementById("content").innerHTML = renderSubtabs(tabs, boxView, "setBoxView") + renderBoxGrid(Number(boxView), true) + html + "</tbody></table>";
   renderSpritesIn(document.getElementById("content"));
 }
 function setBoxView(next) { boxView = next; selected = null; renderBoxes(); }
+function renderBoxOverview() {
+  return `<div class="box-overview">${Array.from({length: 14}, (_, index) => {
+    const box = index + 1;
+    const stats = (state.boxes_by_box || {})[String(box)] || {filled: 0, total: 30};
+    return `<div class="box-card" onclick="setBoxView('${box}')"><h3><span>${box}号盒</span><span>${stats.filled}/${stats.total}</span></h3>${renderBoxGrid(box, false)}</div>`;
+  }).join("")}</div>`;
+}
+function renderBoxGrid(box, active) {
+  const slots = Array.from({length: 30}, (_, i) => i + 1).map(slot => {
+    const pokemon = state.boxes.find(p => Number(p.box) === Number(box) && Number(p.box_slot) === slot);
+    if (!pokemon) return `<div class="box-slot"><span class="box-slot-index">${slot}</span></div>`;
+    const index = state.boxes.indexOf(pokemon);
+    return `<div id="box-slot-${box}-${slot}" class="box-slot occupied ${selected===index?"selected":""}" title="${escapeHtml(pokemon.species_name)} · ${box}-${slot}" onclick="selectBoxFromGrid(${index}); event.stopPropagation();"><span class="box-slot-index">${slot}</span>${spriteCanvasTag(`box-grid-${box}-${slot}`, pokemon.species, pokemon.is_shiny, "box-mini-sprite")}</div>`;
+  }).join("");
+  return `<div class="box-grid ${active ? "active" : ""}">${slots}</div>`;
+}
+async function selectBoxFromGrid(index) {
+  selected = index;
+  if (boxView === "all") {
+    boxView = String(state.boxes[index].box);
+    renderBoxes();
+  }
+  await selectBox(index);
+}
 function legalityBadge(p) {
   const rows = p.legality || [];
   const ok = rows.length === 1 && /合法性通过$/.test(rows[0]);
@@ -1292,6 +1475,27 @@ function legalityBadge(p) {
 }
 function shinyBadge(p) {
   return p.is_shiny ? `<span class="shiny-badge">闪</span>` : "";
+}
+function pokemonTypeBadges(types) {
+  if (!types?.length) return `<span class="muted">未知</span>`;
+  return `<span class="pokemon-type-row">${types.map(type => `<span class="type-badge" style="background:${TYPE_COLORS[type] || "#777"}">${escapeHtml(type)}</span>`).join("")}</span>`;
+}
+function speciesTypesForForm(speciesId, payloadTypes=[]) {
+  if (payloadTypes?.length) return payloadTypes;
+  return nameRow("species", speciesId)?.detail?.types || [];
+}
+function pokemonEncounterPanel(speciesId) {
+  const row = nameRow("species", speciesId);
+  const encounters = row?.detail?.encounters || [];
+  if (!encounters.length) return `<div class="detail-field encounter-panel"><span class="detail-label">Encounter</span><div class="detail-value muted">无 Encounter 数据</div></div>`;
+  return `<div class="detail-field encounter-panel"><span class="detail-label">Encounter</span><div class="encounter-list">${encounters.slice(0, 6).map(encounter => `<span>${escapeHtml(encounterLabel(encounter))} · 几率 ${escapeHtml(encounter.rate)} · 槽位 ${escapeHtml((encounter.slots || []).join("/"))}</span>`).join("")}${encounters.length > 6 ? `<span class="muted">+${encounters.length - 6}</span>` : ""}</div></div>`;
+}
+function refreshFormSpeciesMeta() {
+  const typeTarget = document.getElementById("form-types");
+  const encounterTarget = document.getElementById("form-encounters");
+  const row = nameRow("species", idNum("species"));
+  if (typeTarget) typeTarget.innerHTML = pokemonTypeBadges(row?.detail?.types || []);
+  if (encounterTarget) encounterTarget.innerHTML = pokemonEncounterPanel(idNum("species"));
 }
 function spriteCanvasTag(id, species, shiny, className) {
   return `<canvas id="sprite-${escapeHtml(id)}" class="${className}" width="64" height="64" data-species="${Number(species) || 0}" data-shiny="${shiny ? 1 : 0}"></canvas>`;
@@ -1365,10 +1569,12 @@ function renderPokemonForm(p, constraints, location) {
     <div class="pokemon-form-top">
       <div class="pokemon-form-left">
         <div class="form-grid pid-grid">
-          ${field("personality","PID",p.personality,true)}
+        ${field("personality","PID",p.personality,true)}
           ${binaryToggleField("is_shiny", "闪光", p.is_shiny)}
         </div>
         ${field("species","种族",idName(p.species, p.species_name),false,"species-list", "handleSpeciesChanged()")}
+        <div id="form-types">${pokemonTypeBadges(speciesTypesForForm(p.species, p.types))}</div>
+        <div id="form-encounters">${pokemonEncounterPanel(p.species)}</div>
         ${field("held_item","携带道具",idName(p.held_item, p.held_item_name),false,"item-list")}
       </div>
       <div class="pokemon-form-sprite-wrap">
@@ -1667,6 +1873,7 @@ async function loadPokemonConstraints(species, level) {
 async function handleSpeciesChanged() {
   await syncExperienceFromLevel();
   await refreshPokemonConstraintsFromForm({resetMoves: true, resetAbility: true});
+  refreshFormSpeciesMeta();
   refreshFormSprite();
   await refreshPersonalityDerivedFields();
 }
@@ -1766,29 +1973,227 @@ async function loadExperienceLevel(species, level, experience) {
 }
 function renderNames() {
   if (!names) return;
-  const dictionaryTabs = [["all", "全部"], ["species", "宝可梦"], ["abilities", "特性"], ["moves", "招式"], ["items", "道具"]];
+  const dictionaryTabs = [["all", "全部"], ["species", "宝可梦"], ["abilities", "特性"], ["moves", "招式"], ["items", "道具"], ["type_chart", "属性克制"]];
   if (!dictionaryTabs.some(([id]) => id === collectTable)) collectTable = "all";
-  const rows = filteredNameRows();
+  const isTypeChart = collectTable === "type_chart";
+  const rows = isTypeChart ? [] : filteredNameRows();
   const dictionaryTabButtons = dictionaryTabs.map(([id, label]) => `<button class="${collectTable===id?"active":""}" onclick="setCollectTable('${escapeJsString(id)}')">${escapeHtml(label)}</button>`).join("");
   document.getElementById("summary").textContent = "";
   let html = `
     <div class="tabs subtabs dictionary-tabs">
       ${dictionaryTabButtons}
-      <input value="${escapeHtml(collectSearch)}" onchange="setCollectSearch(this.value)" placeholder="按 ID、字码、名称、说明搜索">
-      ${collectCodeFilter.length ? `<span class="badge">${escapeHtml(collectCodeLabel)} ${collectCodeFilter.length} 个 <button type="button" onclick="clearCollectCodeFilter()">清除</button></span>` : ""}
-      <span class="badge">${rows.length}/${names.rows.length}</span>
-      <button type="button" onclick="reloadNames()">刷新</button>
+      ${isTypeChart ? "" : `<input value="${escapeHtml(collectSearch)}" onchange="setCollectSearch(this.value)" placeholder="按 ID、字码、名称、说明搜索">`}
+      ${!isTypeChart && collectCodeFilter.length ? `<span class="badge">${escapeHtml(collectCodeLabel)} ${collectCodeFilter.length} 个 <button type="button" onclick="clearCollectCodeFilter()">清除</button></span>` : ""}
+      <span class="badge">${isTypeChart ? `${TYPE_CHART_IDS.length} 属性` : `${rows.length}/${names.rows.length}`}</span>
+      ${isTypeChart ? "" : `<button type="button" onclick="reloadNames()">刷新</button>`}
     </div>
-    <table><thead><tr><th>ID</th><th>名称</th><th>字码</th><th>说明</th><th>存档引用</th></tr></thead><tbody>`;
-  rows.forEach(({r, idx}, viewIndex) => {
-    const decoded = r.decoded || r.name || "";
-    const unknown = r.unknown_count ? ` <span class="bad">${r.unknown_count}</span>` : "";
-    const selectedClass = selected && selected.table === r.table && selected.id === r.id ? "selected" : "";
-    html += `<tr id="rom-${r.table}-${r.id}" class="${selectedClass}" onclick="selectNameIndex(${idx})"><td>${r.id}</td><td>${escapeHtml(decoded)}${unknown}</td><td>${escapeHtml((r.tokens || []).join(" "))}</td><td>${escapeHtml(summaryForDictionaryRow(r))}</td><td>${escapeHtml((r.locations || []).slice(0, 3).join("；") || (r.observed ? "已引用" : ""))}</td></tr>`;
-  });
-  html += "</tbody></table>";
+    ${isTypeChart ? renderTypeChart() : renderDictionaryTable(rows)}`;
   document.getElementById("content").innerHTML = html;
-  setInspector("未选择字典项");
+  if (isTypeChart) setInspector("属性克制表", "行表示攻击属性，列表示防守属性。组合防守会把两个防守属性的倍率相乘。");
+  else setInspector("未选择字典项");
+}
+function renderDictionaryTable(rows) {
+  const columns = dictionaryColumns(collectTable);
+  const head = columns.map(col => `<th>${escapeHtml(col.label)}</th>`).join("");
+  const body = rows.map(({r, idx}) => {
+    const selectedClass = selected && selected.table === r.table && selected.id === r.id ? "selected" : "";
+    const cells = columns.map(col => `<td class="${col.className || ""}">${dictionaryCell(r, col.key)}</td>`).join("");
+    return `<tr id="rom-${r.table}-${r.id}" class="${selectedClass}" onclick="selectNameIndex(${idx})">${cells}</tr>`;
+  }).join("");
+  return `<table class="dictionary-table dictionary-${collectTable}"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+}
+function dictionaryColumns(table) {
+  const common = [{key:"id", label:"ID"}, {key:"name", label:"名称", className:"name-cell"}];
+  if (table === "species") {
+    return [...common, {key:"types", label:"属性"}, {key:"baseStats", label:"种族值"}, {key:"abilities", label:"特性"}, {key:"growth", label:"成长"}, {key:"encounters", label:"Encounter"}, {key:"locations", label:"存档引用"}];
+  }
+  if (table === "moves") {
+    return [...common, {key:"pp", label:"PP"}, {key:"description", label:"描述", className:"description-cell"}, {key:"tokens", label:"字码", className:"code-cell"}, {key:"locations", label:"存档引用"}];
+  }
+  if (table === "abilities") {
+    return [...common, {key:"description", label:"描述", className:"description-cell"}, {key:"abilityScope", label:"描述来源"}, {key:"tokens", label:"字码", className:"code-cell"}, {key:"locations", label:"存档引用"}];
+  }
+  if (table === "items") {
+    return [...common, {key:"pocket", label:"口袋"}, {key:"price", label:"价格"}, {key:"itemType", label:"类型"}, {key:"holdEffect", label:"携带效果"}, {key:"description", label:"描述", className:"description-cell"}, {key:"locations", label:"存档引用"}];
+  }
+  return [{key:"table", label:"类型"}, ...common, {key:"summary", label:"摘要", className:"description-cell"}, {key:"tokens", label:"字码", className:"code-cell"}, {key:"locations", label:"存档引用"}];
+}
+function dictionaryCell(row, key) {
+  const detail = row.detail || {};
+  if (key === "id") return `<span class="num">#${row.id}</span>`;
+  if (key === "table") return escapeHtml(row.table_label || row.table || "");
+  if (key === "name") return dictionaryNameCell(row);
+  if (key === "tokens") return escapeHtml((row.tokens || []).join(" ") || "无");
+  if (key === "locations") return dictionaryLocationsCell(row);
+  if (key === "summary") return escapeHtml(summaryForDictionaryRow(row) || row.description || "");
+  if (key === "description") return escapeHtml(row.description || detail.description_note || "");
+  if (key === "types") return chipList(detail.types || [], "type-chip");
+  if (key === "baseStats") return baseStatsInline(detail.base_stats);
+  if (key === "abilities") return chipList((detail.abilities || []).map(a => `#${a.id} ${a.name}`));
+  if (key === "growth") return escapeHtml([detail.growth_rate, detail.gender_ratio].filter(Boolean).join(" / "));
+  if (key === "encounters") return escapeHtml(encounterSummary(detail.encounters || []));
+  if (key === "pp") return `<span class="num">${row.pp ?? detail.pp ?? ""}</span>`;
+  if (key === "abilityScope") return escapeHtml(row.description ? "描述已定位" : "仅名称");
+  if (key === "pocket") return escapeHtml(detail.pocket || "");
+  if (key === "price") return detail.price !== undefined ? `<span class="num">${detail.price}</span>` : "";
+  if (key === "itemType") return escapeHtml(detail.type || "");
+  if (key === "holdEffect") return detail.hold_effect !== undefined ? escapeHtml(`${detail.hold_effect} / 参数 ${detail.hold_param}`) : "";
+  return "";
+}
+function dictionaryNameCell(row) {
+  const decoded = row.decoded || row.name || "";
+  const unknown = row.unknown_count ? ` <span class="bad" title="未知字码数量">${row.unknown_count}</span>` : "";
+  return `${escapeHtml(decoded)}${unknown}`;
+}
+function dictionaryLocationsCell(row) {
+  const locations = row.locations || [];
+  if (locations.length) return dictionaryLocationButtons(locations, 4);
+  return row.observed ? "已引用" : `<span class="muted">未引用</span>`;
+}
+function dictionaryLocationButtons(locations, limit=0) {
+  const visible = limit ? locations.slice(0, limit) : locations;
+  const more = limit && locations.length > limit ? `<span class="muted">+${locations.length - limit}</span>` : "";
+  return `<span class="chip-list">${visible.map(location => `<button type="button" class="data-chip location-link" onclick="jumpToSaveLocation('${escapeJsString(location)}'); event.stopPropagation();">${escapeHtml(location)}</button>`).join("")}${more}</span>`;
+}
+async function jumpToSaveLocation(label) {
+  if (!state?.ok) return;
+  const clean = String(label || "").replace(/\s+携带$/, "").trim();
+  const party = clean.match(/^队伍 #?(\d+)$/);
+  if (party) {
+    const slot = Number(party[1]);
+    const index = state.party.findIndex(p => Number(p.slot) === slot);
+    if (index >= 0) {
+      tab = "party";
+      selected = index;
+      render();
+      await selectParty(index);
+      scrollToSaveAnchor(`save-party-${index}`);
+      setStatus(`已跳转到${label}`);
+    }
+    return;
+  }
+  const box = clean.match(/^盒子 (\d+)-(\d+)$/);
+  if (box) {
+    const boxNo = Number(box[1]);
+    const boxSlot = Number(box[2]);
+    const index = state.boxes.findIndex(p => Number(p.box) === boxNo && Number(p.box_slot) === boxSlot);
+    if (index >= 0) {
+      tab = "boxes";
+      boxView = String(boxNo);
+      selected = index;
+      render();
+      await selectBox(index);
+      scrollToSaveAnchor(`save-box-${index}`);
+      setStatus(`已跳转到${label}`);
+    }
+    return;
+  }
+  const bag = clean.match(/^(.+) #(\d+)$/);
+  if (bag) {
+    const pocket = bag[1];
+    const slot = Number(bag[2]);
+    const index = state.bag.findIndex(e => e.pocket === pocket && Number(e.slot) === slot);
+    if (index >= 0) {
+      tab = "bag";
+      bagPocket = pocket;
+      selected = index;
+      render();
+      selectBag(index);
+      scrollToSaveAnchor(`save-bag-${index}`);
+      setStatus(`已跳转到${label}`);
+    }
+  }
+}
+function scrollToSaveAnchor(id) {
+  requestAnimationFrame(() => {
+    const target = document.getElementById(id);
+    if (target) target.scrollIntoView({block: "center"});
+  });
+}
+function chipList(values, extraClass="") {
+  const items = (values || []).filter(Boolean);
+  if (!items.length) return "";
+  return `<span class="chip-list">${items.map(value => `<span class="data-chip ${extraClass}">${escapeHtml(value)}</span>`).join("")}</span>`;
+}
+function baseStatsInline(stats) {
+  if (!stats) return "";
+  return `<span class="stat-line"><span>HP ${stats.hp}</span><span>攻 ${stats.attack}</span><span>防 ${stats.defense}</span><span>速 ${stats.speed}</span><span>特攻 ${stats.sp_attack}</span><span>特防 ${stats.sp_defense}</span></span>`;
+}
+function encounterSummary(encounters) {
+  if (!encounters?.length) return "";
+  const first = encounters.slice(0, 3).map(encounterLabel).join("；");
+  return encounters.length > 3 ? `${first}；+${encounters.length - 3}` : first;
+}
+function encounterLabel(encounter) {
+  const level = encounter.min_level === encounter.max_level ? `Lv${encounter.min_level}` : `Lv${encounter.min_level}-${encounter.max_level}`;
+  return `${encounter.location} ${encounter.method} ${level}`;
+}
+function renderTypeChart() {
+  const profile = typeDefenseProfile(typeDefenseA, typeDefenseB);
+  const head = `<tr><th>攻击 \\ 防守</th>${TYPE_CHART_IDS.map(id => `<th>${escapeHtml(TYPE_NAMES[id])}</th>`).join("")}</tr>`;
+  const body = TYPE_CHART_IDS.map((attackId) => {
+    const attackName = TYPE_NAMES[attackId];
+    const cells = TYPE_CHART_IDS.map((defenseId) => {
+      const defenseName = TYPE_NAMES[defenseId];
+      const value = typeEffectiveness(attackId, defenseId);
+      return `<td class="${effectClass(value)}" title="${escapeHtml(attackName)} 攻击 ${escapeHtml(defenseName)}">${effectLabel(value)}</td>`;
+    }).join("");
+    return `<tr><th>${escapeHtml(attackName)}</th>${cells}</tr>`;
+  }).join("");
+  return `
+    <div class="type-tools">
+      <label>防守属性 1 <select onchange="setTypeDefense(1, this.value)">${typeOptions(typeDefenseA, false)}</select></label>
+      <label>防守属性 2 <select onchange="setTypeDefense(2, this.value)">${typeOptions(typeDefenseB, true)}</select></label>
+      <span class="badge">第三世代属性表</span>
+      <span class="badge">钢抵抗幽灵/恶</span>
+    </div>
+    <div class="type-profile">
+      ${typeProfileGroup("4 倍弱点", profile[4])}
+      ${typeProfileGroup("2 倍弱点", profile[2])}
+      ${typeProfileGroup("1/2 抵抗", profile[0.5])}
+      ${typeProfileGroup("1/4 抵抗", profile[0.25])}
+      ${typeProfileGroup("免疫", profile[0])}
+      ${typeProfileGroup("正常伤害", profile[1])}
+    </div>
+    <div class="type-chart-wrap"><table class="type-chart"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+}
+function typeOptions(selected, allowEmpty) {
+  const empty = allowEmpty ? `<option value="" ${selected === "" || selected === null || selected === undefined ? "selected" : ""}>无</option>` : "";
+  return empty + TYPE_CHART_IDS.map(id => `<option value="${id}" ${Number(selected) === id ? "selected" : ""}>${escapeHtml(TYPE_NAMES[id])}</option>`).join("");
+}
+function setTypeDefense(slot, value) {
+  const parsed = value === "" ? "" : Number(value);
+  if (slot === 1) typeDefenseA = parsed;
+  else typeDefenseB = parsed;
+  renderNames();
+}
+function typeEffectiveness(attackId, defenseId) {
+  return TYPE_EFFECTIVENESS[`${attackId}>${defenseId}`] ?? 1;
+}
+function dualTypeEffectiveness(attackId, defenseA, defenseB) {
+  const first = defenseA === "" || defenseA === null || defenseA === undefined ? 1 : typeEffectiveness(attackId, Number(defenseA));
+  const second = defenseB === "" || defenseB === null || defenseB === undefined || Number(defenseB) === Number(defenseA) ? 1 : typeEffectiveness(attackId, Number(defenseB));
+  return first * second;
+}
+function typeDefenseProfile(defenseA, defenseB) {
+  const profile = {0: [], 0.25: [], 0.5: [], 1: [], 2: [], 4: []};
+  TYPE_CHART_IDS.forEach((attackId) => {
+    const name = TYPE_NAMES[attackId];
+    const value = dualTypeEffectiveness(attackId, defenseA, defenseB);
+    (profile[value] || profile[1]).push(name);
+  });
+  return profile;
+}
+function typeProfileGroup(title, values) {
+  return `<div class="detail-field"><h4>${escapeHtml(title)}</h4>${values.length ? chipList(values, "type-chip") : `<span class="muted">无</span>`}</div>`;
+}
+function effectLabel(value) {
+  if (value === 0.25) return "1/4";
+  if (value === 0.5) return "1/2";
+  return `${value}x`;
+}
+function effectClass(value) {
+  return `effect-${String(value).replace(".", "")}`;
 }
 function filteredNameRows() {
   const q = collectSearch.trim().toLowerCase();
@@ -1846,13 +2251,7 @@ function selectNameIndex(idx) {
   const row = names.rows[idx];
   if (!row) return;
   selected = {table: row.table, id: row.id};
-  setInspector(`${row.table_label} #${row.id} ${row.decoded || row.name || ""}`, [
-    `当前解码：${row.decoded || row.name || ""}`,
-    `字符码：${(row.tokens || []).join(" ")}`,
-    `原始字节：${row.raw_hex || ""}`,
-    ...detailLinesForDictionaryRow(row),
-    ...(row.locations?.length ? [`存档引用：${row.locations.join("；")}`] : []),
-  ].join("\n"));
+  setInspectorHtml(`${row.table_label} #${row.id} ${row.decoded || row.name || ""}`, dictionaryInspectorHtml(row));
 }
 function jumpToRom(table, id) {
   collectTable = table;
@@ -1869,6 +2268,44 @@ function jumpToRom(table, id) {
 function summaryForDictionaryRow(row) {
   const lines = detailLinesForDictionaryRow(row);
   return lines.slice(0, 2).join("；");
+}
+function dictionaryInspectorHtml(row) {
+  const detail = row.detail || {};
+  const fields = [
+    ["当前解码", row.decoded || row.name || ""],
+    ["字符码", (row.tokens || []).join(" ") || "无"],
+    ["原始字节", row.raw_hex || "无"],
+  ];
+  if (row.description) fields.push(["描述", row.description, true]);
+  if (row.table === "moves") {
+    fields.push(["PP", row.pp ?? detail.pp ?? ""]);
+  }
+  if (row.table === "abilities") {
+    fields.push(["描述来源", row.description ? "描述指针已定位" : (detail.description_note || "未找到特性描述文本")]);
+  }
+  if (row.table === "items") {
+    fields.push(["口袋", detail.pocket || ""]);
+    fields.push(["价格", detail.price]);
+    fields.push(["类型", detail.type || ""]);
+    fields.push(["携带效果", detail.hold_effect !== undefined ? `${detail.hold_effect} / 参数 ${detail.hold_param}` : ""]);
+    fields.push(["Secondary ID", detail.secondary_id]);
+  }
+  if (row.table === "species") {
+    fields.push(["属性", detail.types?.join(" / ") || ""]);
+    if (detail.base_stats) fields.push(["种族值", baseStatsInline(detail.base_stats), true, true]);
+    fields.push(["特性", (detail.abilities || []).map(a => `#${a.id} ${a.name}`).join("；")]);
+    fields.push(["性别比例", detail.gender_ratio || ""]);
+    fields.push(["经验曲线", detail.growth_rate || ""]);
+    fields.push(["蛋组", detail.egg_groups?.join(" / ") || ""]);
+    fields.push(["孵化周期", detail.egg_cycles]);
+    fields.push(["初始亲密度", detail.base_friendship]);
+    fields.push(["捕获率", detail.catch_rate]);
+    fields.push(["击败经验", detail.exp_yield]);
+    fields.push(["野生携带", (detail.wild_items || []).map(item => `#${item.id} ${item.name}`).join("；")]);
+    fields.push(["Encounter", (detail.encounters || []).map(encounter => `${encounterLabel(encounter)}，几率 ${encounter.rate}，槽位 ${(encounter.slots || []).join("/")}`).join("；"), true]);
+  }
+  if (row.locations?.length) fields.push(["存档引用", dictionaryLocationButtons(row.locations), true, true]);
+  return `<div class="detail-grid">${fields.filter(([, value]) => value !== undefined && value !== null && String(value) !== "").map(([label, value, wide, html]) => `<div class="detail-field ${wide ? "wide" : ""}"><span class="detail-label">${escapeHtml(label)}</span><div class="detail-value">${html ? value : escapeHtml(value)}</div></div>`).join("")}</div>`;
 }
 function detailLinesForDictionaryRow(row) {
   const detail = row.detail || {};
@@ -1902,6 +2339,7 @@ function detailLinesForDictionaryRow(row) {
     if (detail.catch_rate !== undefined) lines.push(`捕获率：${detail.catch_rate}`);
     if (detail.exp_yield !== undefined) lines.push(`击败经验：${detail.exp_yield}`);
     if (detail.wild_items?.length) lines.push(`野生携带：${detail.wild_items.map(item => `#${item.id} ${item.name}`).join("；")}`);
+    if (detail.encounters?.length) lines.push(`Encounter：${encounterSummary(detail.encounters)}`);
   }
   return lines.filter(Boolean);
 }

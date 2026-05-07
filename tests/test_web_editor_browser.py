@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import re
 import tempfile
 import threading
 import unittest
@@ -184,6 +185,29 @@ class WebEditorBrowserTest(unittest.TestCase):
             expect(self.page.locator(".metric")).to_have_count(0)
             expect(self.page.locator("#inspector-title")).to_have_text("未选择字典项")
 
+            self.page.evaluate("""() => {
+                const row = {table: "items", table_label: "道具", id: 13, name: "伤药", decoded: "伤药", tokens: ["03"], locations: ["电脑道具 #1"], detail: {price: 300, pocket: "道具"}};
+                names = {ok: true, rows: [row], items: [row], species: [], moves: [], abilities: [], stats: {rom: {}, charmap: {}}, table_info: {}};
+                tab = "names";
+                collectTable = "items";
+                render();
+            }""")
+            self.page.get_by_role("button", name="电脑道具 #1").click()
+            expect(self.page.locator("#tab-bag")).to_have_class(re.compile("active"))
+            expect(self.page.locator("#inspector-title")).to_have_text("电脑道具 #1")
+            expect(self.page.locator("#item_id")).to_be_visible()
+
+            self.page.get_by_role("button", name="字典表").click()
+            self.page.get_by_role("button", name="属性克制").click()
+            expect(self.page.locator(".type-chart")).to_be_visible()
+            expect(self.page.locator("#inspector-title")).to_have_text("属性克制表")
+            expect(self.page.locator(".dictionary-tabs")).to_contain_text("17 属性")
+            expect(self.page.locator(".type-chart")).not_to_contain_text("未知09")
+            expect(self.page.locator(".type-profile")).to_contain_text("4 倍弱点")
+            expect(self.page.locator(".type-profile")).to_contain_text("电")
+            expect(self.page.locator(".type-profile")).to_contain_text("草")
+            expect(self.page.locator(".type-chart tbody tr").filter(has_text="电").locator("td").nth(10)).to_have_text("2x")
+
     def test_bag_edit_save_reload_and_close_from_loaded_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             save_path = Path(tmp) / "sample.sav"
@@ -204,7 +228,12 @@ class WebEditorBrowserTest(unittest.TestCase):
                 self.page.locator("#item_id").fill("13")
                 self.page.locator("#quantity").fill(str(quantity))
                 self.page.locator("#form button.primary").evaluate("button => button.click()")
-                expect(self.page.locator("#dirty-pill")).to_have_text("未保存")
+                expect(self.page.locator("#dirty-pill")).to_have_text(re.compile(r"未保存 \d+"))
+                self.page.locator("#dirty-pill").click()
+                expect(self.page.locator("#inspector-title")).to_have_text("未保存修改")
+                expect(self.page.locator("#detail")).to_contain_text("已写入背包")
+                expect(self.page.locator("#detail")).to_contain_text("道具")
+                expect(self.page.locator("#detail")).to_contain_text("数量")
                 expect(self.page.locator("#status")).to_contain_text("尚未保存到文件")
                 self.page.get_by_role("button", name="保存").click()
                 expect(self.page.locator("#dirty-pill")).to_have_text("已保存")
@@ -221,10 +250,17 @@ class WebEditorBrowserTest(unittest.TestCase):
             save_path = Path(tmp) / "sample.sav"
             write_save_fixture(save_path)
             self.goto_loaded_save(save_path)
+            self.page.evaluate("""() => {
+                const species = {table: "species", table_label: "宝可梦", id: 25, name: "皮卡丘", decoded: "皮卡丘", tokens: ["01"], detail: {types: ["电"], encounters: [{location: "地图 1-2", method: "草丛", min_level: 3, max_level: 6, rate: 20, slots: [1, 2]}]}};
+                names = {...names, rows: [species], species: [species]};
+                renderDatalists();
+            }""")
             self.page.get_by_role("button", name="队伍").click()
             self.page.locator("#content tbody tr").first.click()
             expect(self.page.locator("#inspector-title")).to_contain_text("皮卡丘")
             expect(self.page.locator("#form")).to_contain_text("写入宝可梦")
+            expect(self.page.locator("#form-types")).to_contain_text("电")
+            expect(self.page.locator("#form-encounters")).to_contain_text("地图 1-2 草丛 Lv3-6")
 
             case_count = 0
             case_count += self.assert_input_cases("#species", ["#25 · 皮卡丘", "#133 · 伊布", "#129 · 鲤鱼王", "#25 · 皮卡丘"])
@@ -280,6 +316,7 @@ class WebEditorBrowserTest(unittest.TestCase):
             self.page.get_by_role("button", name="队伍").click()
             self.page.locator("#content tbody tr").first.click()
             expect(self.page.locator("#form")).to_contain_text("写入宝可梦")
+            expect(self.page.locator("#form-encounters")).to_contain_text("地图 1-2 草丛 Lv3-6")
             self.page.locator("#held_item").fill("#189 · 神奇糖果")
             self.page.locator("#level").fill("50")
             self.page.locator("#friendship").fill("220")
@@ -293,7 +330,7 @@ class WebEditorBrowserTest(unittest.TestCase):
             self.page.locator("#move_2").select_option("0")
             self.page.locator("#move_3").select_option("0")
             self.page.locator("#form button.primary").evaluate("button => button.click()")
-            expect(self.page.locator("#dirty-pill")).to_have_text("未保存")
+            expect(self.page.locator("#dirty-pill")).to_have_text(re.compile(r"未保存 \d+"))
             self.page.get_by_role("button", name="保存").click()
             expect(self.page.locator("#dirty-pill")).to_have_text("已保存")
             self.page.get_by_role("button", name="重载").click()
@@ -317,6 +354,9 @@ class WebEditorBrowserTest(unittest.TestCase):
 
             self.page.get_by_role("button", name="盒子").click()
             expect(self.page.locator("#summary")).to_contain_text("盒子：1 只非空宝可梦")
+            expect(self.page.locator(".box-card")).to_have_count(14)
+            self.page.locator(".box-card").first.click()
+            expect(self.page.locator(".box-grid.active .box-slot")).to_have_count(30)
             self.page.locator("#content tbody tr").first.click()
             expect(self.page.locator("#inspector-title")).to_contain_text("鲤鱼王")
             self.page.locator("#species").fill("#130 · 暴鲤龙")
@@ -325,7 +365,7 @@ class WebEditorBrowserTest(unittest.TestCase):
             self.page.locator("#nature_id").select_option("4")
             self.page.locator("#gender").select_option("无性别")
             self.page.get_by_role("button", name="写入宝可梦").click()
-            expect(self.page.locator("#dirty-pill")).to_have_text("未保存")
+            expect(self.page.locator("#dirty-pill")).to_have_text(re.compile(r"未保存 \d+"))
             self.page.get_by_role("button", name="保存").click()
             self.page.get_by_role("button", name="重载").click()
 

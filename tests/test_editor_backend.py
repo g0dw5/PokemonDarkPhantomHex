@@ -17,6 +17,7 @@ EDITOR = ROOT / "editor"
 sys.path.insert(0, str(EDITOR))
 
 import pokemon_save_core as core  # noqa: E402
+import rom_data  # noqa: E402
 import web_save_editor as editor  # noqa: E402
 from test_web_editor_browser import build_pokemon_raw, write_save_fixture, _w16, _w32  # noqa: E402
 
@@ -30,6 +31,8 @@ def fake_rom(path: Path) -> None:
     rom = bytearray(rom_size)
     species = 25
     stats = bytearray(28)
+    stats[6] = 13
+    stats[7] = 13
     stats[16] = 127
     stats[19] = 0
     stats[22] = 1
@@ -80,6 +83,26 @@ def fake_rom(path: Path) -> None:
         _w32(rom, table + species * editor.SPRITE_TABLE_ENTRY_SIZE, core.GBA_ROM_POINTER_BASE + sprite_offset)
     for table in (editor.NORMAL_PALETTE_TABLE_OFFSET, editor.SHINY_PALETTE_TABLE_OFFSET):
         _w32(rom, table + species * editor.SPRITE_TABLE_ENTRY_SIZE, core.GBA_ROM_POINTER_BASE + palette_offset)
+
+    ability_desc_offset = 0x614000
+    _w32(rom, rom_data.ABILITY_DESCRIPTION_EXT_POINTERS_OFFSET, core.GBA_ROM_POINTER_BASE + ability_desc_offset)
+    rom[ability_desc_offset : ability_desc_offset + 4] = bytes([0xBB, 0xBC, 0xBD, 0xFF])
+
+    wild_header = rom_data.WILD_ENCOUNTER_HEADERS_OFFSET
+    wild_info = 0x613000
+    wild_list = 0x613100
+    rom[wild_header] = 1
+    rom[wild_header + 1] = 2
+    _w32(rom, wild_header + 4, core.GBA_ROM_POINTER_BASE + wild_info)
+    rom[wild_header + rom_data.WILD_ENCOUNTER_HEADER_SIZE] = 0xFF
+    rom[wild_header + rom_data.WILD_ENCOUNTER_HEADER_SIZE + 1] = 0xFF
+    _w32(rom, wild_info, 20)
+    _w32(rom, wild_info + 4, core.GBA_ROM_POINTER_BASE + wild_list)
+    for slot in range(12):
+        entry = wild_list + slot * 4
+        rom[entry] = 3 + slot
+        rom[entry + 1] = 5 + slot
+        _w16(rom, entry + 2, species if slot < 2 else 26)
     path.write_bytes(rom)
 
 
@@ -169,6 +192,9 @@ class BackendEditorTest(unittest.TestCase):
 
             bag = editor.api_update_bag({"pocket": "电脑道具", "slot": 1, "item_id": 13, "quantity": 8})
             self.assertIn("已写入背包", bag["message"])
+            bag_change = editor.api_state()["changes"][0]
+            self.assertIn("已写入背包", bag_change["summary"])
+            self.assertTrue(any(diff["field"] == "道具" for diff in bag_change["diffs"]))
             party = editor.api_update_pokemon({
                 "location": "party",
                 "slot": 1,
@@ -207,7 +233,9 @@ class BackendEditorTest(unittest.TestCase):
                 "is_egg": 0,
             })
             self.assertIn("已写入盒子", box["message"])
+            self.assertEqual(len(editor.api_state()["changes"]), 3)
             self.assertTrue(editor.api_save()["ok"])
+            self.assertEqual(editor.api_state()["changes"], [])
             closed = editor.api_close()
             self.assertFalse(closed["ok"])
             with self.assertRaises(ValueError):
@@ -232,12 +260,19 @@ class BackendEditorTest(unittest.TestCase):
             self.assertEqual(core.tmhm_move_for_item(core.TMHM_FIRST_ITEM_ID), 33)
             self.assertIn(26, core._previous_species_by_target())
             self.assertIn("雄", core.gender_options_for_species(25))
+            self.assertEqual(core.species_type_names(25), ["电"])
             self.assertEqual(core.ability_options_for_species(25), [(0, 1), (1, 2)])
             legality = core.move_legality_for_species(25, 10, 33)
             self.assertTrue(legality.is_known_legal)
             api_constraints = editor.api_pokemon_constraints(25, 10)
             self.assertTrue(api_constraints["available"])
             self.assertTrue(api_constraints["moves"])
+            rom_text = rom_data.extract_rom_text(rom_path)
+            self.assertEqual(rom_text["abilities"]["78"]["description"], "ABC")
+            encounters = rom_text["species"]["25"]["detail"]["encounters"]
+            self.assertEqual(encounters[0]["location"], "地图 1-2")
+            self.assertEqual(encounters[0]["method"], "草丛")
+            self.assertEqual((encounters[0]["min_level"], encounters[0]["max_level"]), (3, 6))
 
             for growth_rate in range(6):
                 self.assertGreaterEqual(core.experience_for_level(growth_rate, 20), 0)

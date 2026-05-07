@@ -29,6 +29,8 @@ ABILITY_NAME_SIZE = 13
 ABILITY_COUNT = 151
 ABILITY_DESCRIPTION_POINTERS_OFFSET = 0x31BAD4
 ABILITY_DESCRIPTION_COUNT = 78
+ABILITY_DESCRIPTION_EXT_POINTERS_OFFSET = 0x1BFFE00
+ABILITY_DESCRIPTION_EXT_START = 78
 
 ITEMS_OFFSET = 0x5839A0
 ITEM_ENTRY_SIZE = 44
@@ -45,6 +47,15 @@ ITEM_SECONDARY_ID_OFFSET = 40
 
 BASE_STATS_OFFSET = 0x3203CC
 BASE_STATS_SIZE = 28
+WILD_ENCOUNTER_HEADERS_OFFSET = 0x552D5C
+WILD_ENCOUNTER_HEADER_SIZE = 20
+WILD_ENCOUNTER_MAX_HEADERS = 600
+WILD_ENCOUNTER_METHODS = (
+    (4, "草丛", 12),
+    (8, "冲浪", 5),
+    (12, "碎岩", 5),
+    (16, "钓鱼", 10),
+)
 GBA_ROM_POINTER_BASE = 0x08000000
 TEXT_TERMINATOR = 0xFF
 CONTROL_TOKENS = {
@@ -7197,8 +7208,11 @@ def extract_move_descriptions(rom: bytes) -> dict[int, str]:
 
 def extract_ability_descriptions(rom: bytes) -> dict[int, str]:
     descriptions: dict[int, str] = {}
-    for ability_id in range(ABILITY_DESCRIPTION_COUNT):
-        pointer_offset = ABILITY_DESCRIPTION_POINTERS_OFFSET + ability_id * 4
+    for ability_id in range(ABILITY_COUNT):
+        if ability_id < ABILITY_DESCRIPTION_COUNT:
+            pointer_offset = ABILITY_DESCRIPTION_POINTERS_OFFSET + ability_id * 4
+        else:
+            pointer_offset = ABILITY_DESCRIPTION_EXT_POINTERS_OFFSET + (ability_id - ABILITY_DESCRIPTION_EXT_START) * 4
         if pointer_offset + 4 > len(rom):
             break
         pointer = int.from_bytes(rom[pointer_offset : pointer_offset + 4], "little")
@@ -7245,7 +7259,53 @@ def gender_ratio_label(value: int) -> str:
     return f"雄 {male_percent:.1f}% / 雌 {female_percent:.1f}%"
 
 
-def enrich_species(table: dict[str, dict], rom: bytes, ability_names: dict[str, dict], item_names: dict[str, dict]) -> None:
+def extract_wild_encounters(rom: bytes) -> dict[str, list[dict]]:
+    encounters: dict[str, dict[tuple[int, int, str], dict]] = {}
+    for index in range(WILD_ENCOUNTER_MAX_HEADERS):
+        header = WILD_ENCOUNTER_HEADERS_OFFSET + index * WILD_ENCOUNTER_HEADER_SIZE
+        if header + WILD_ENCOUNTER_HEADER_SIZE > len(rom):
+            break
+        map_group = rom[header]
+        map_number = rom[header + 1]
+        if map_group == 0xFF and map_number == 0xFF:
+            break
+        if map_group > 60 or map_number > 200:
+            break
+        if not any(u32(rom, header + pointer_offset) for pointer_offset, _method, _count in WILD_ENCOUNTER_METHODS):
+            break
+        for pointer_offset, method, count in WILD_ENCOUNTER_METHODS:
+            info_offset = gba_pointer_to_offset(u32(rom, header + pointer_offset), len(rom))
+            if info_offset is None or info_offset + 8 > len(rom):
+                continue
+            encounter_rate = u32(rom, info_offset)
+            list_offset = gba_pointer_to_offset(u32(rom, info_offset + 4), len(rom))
+            if encounter_rate > 100 or list_offset is None or list_offset + count * 4 > len(rom):
+                continue
+            for slot in range(count):
+                entry = list_offset + slot * 4
+                min_level = rom[entry]
+                max_level = rom[entry + 1]
+                species = u16(rom, entry + 2)
+                if not (1 <= min_level <= max_level <= 100 and 1 <= species < 1000):
+                    continue
+                aggregate_key = (map_group, map_number, method)
+                row = encounters.setdefault(str(species), {}).setdefault(aggregate_key, {
+                    "map_group": map_group,
+                    "map_number": map_number,
+                    "location": f"地图 {map_group}-{map_number}",
+                    "method": method,
+                    "rate": encounter_rate,
+                    "min_level": min_level,
+                    "max_level": max_level,
+                    "slots": [],
+                })
+                row["min_level"] = min(row["min_level"], min_level)
+                row["max_level"] = max(row["max_level"], max_level)
+                row["slots"].append(slot + 1)
+    return {species: sorted(rows.values(), key=lambda row: (row["map_group"], row["map_number"], row["method"], row["min_level"])) for species, rows in encounters.items()}
+
+
+def enrich_species(table: dict[str, dict], rom: bytes, ability_names: dict[str, dict], item_names: dict[str, dict], encounters: dict[str, list[dict]]) -> None:
     for key, row in table.items():
         species_id = int(key)
         offset = BASE_STATS_OFFSET + species_id * BASE_STATS_SIZE
@@ -7268,6 +7328,7 @@ def enrich_species(table: dict[str, dict], rom: bytes, ability_names: dict[str, 
             "egg_groups": [EGG_GROUP_NAMES.get(data[20], f"蛋组 {data[20]}"), EGG_GROUP_NAMES.get(data[21], f"蛋组 {data[21]}")],
             "abilities": [{"id": ability_id, "name": ability_names.get(str(ability_id), {}).get("name", f"特性 {ability_id}")} for ability_id in ability_ids],
             "wild_items": [{"id": item_id, "name": item_names.get(str(item_id), {}).get("name", "无" if item_id == 0 else f"道具 {item_id}")} for item_id in wild_items if item_id],
+            "encounters": encounters.get(key, []),
         }
 
 
@@ -7287,7 +7348,7 @@ def enrich_abilities(table: dict[str, dict], rom: bytes) -> None:
         row["description"] = descriptions.get(ability_id, "")
         row["detail"] = {
             "description": row["description"],
-            "description_note": "" if ability_id < ABILITY_DESCRIPTION_COUNT else "扩展特性的描述指针未可靠定位，当前只展示名称。",
+            "description_note": "" if row["description"] else "未找到特性描述文本。",
         }
 
 
@@ -7354,7 +7415,8 @@ def extract_rom_text(rom_path: Path | None = DEFAULT_ROM) -> dict:
     enrich_moves(tables["moves"], rom)
     enrich_abilities(tables["abilities"], rom)
     enrich_items(tables["items"], rom)
-    enrich_species(tables["species"], rom, tables["abilities"], tables["items"])
+    encounters = extract_wild_encounters(rom)
+    enrich_species(tables["species"], rom, tables["abilities"], tables["items"], encounters)
     used_keys = collect_used_charmap_keys(tables)
     charmap = official_charmap()
     return {
@@ -7379,6 +7441,11 @@ def extract_rom_text(rom_path: Path | None = DEFAULT_ROM) -> dict:
                 "ext_start": spec.ext_start,
             }
             for spec in TABLES
+        },
+        "wild_encounters": {
+            "header_offset": WILD_ENCOUNTER_HEADERS_OFFSET,
+            "record_count": sum(1 for rows in encounters.values() for _row in rows),
+            "species_count": len(encounters),
         },
         "text_model": {
             "source": "embedded Pokemon_GBA_Font_Patch PMRSEFRLG_charmap.txt plus ROM-specific 71=U+2009",

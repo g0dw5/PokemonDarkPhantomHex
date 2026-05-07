@@ -56,6 +56,7 @@ COINS_OFFSET = 0x0494
 ROM_PATH: Path | None = None
 BASE_STATS_OFFSET = 0x3203CC
 BASE_STATS_SIZE = 28
+TYPE_NAMES = ["一般", "格斗", "飞行", "毒", "地面", "岩石", "虫", "幽灵", "钢", "未知09", "火", "水", "草", "电", "超能", "冰", "龙", "恶"]
 BASE_STATS_GROWTH_RATE_OFFSET = 19
 ROM_SPECIES_COUNT = 412
 ROM_MOVE_COUNT = 472
@@ -969,6 +970,15 @@ def growth_rate_for_species(species_id: int) -> int | None:
     if not stats or len(stats) <= BASE_STATS_GROWTH_RATE_OFFSET:
         return None
     return stats[BASE_STATS_GROWTH_RATE_OFFSET]
+
+
+def species_type_names(species_id: int) -> list[str]:
+    stats = BASE_STATS.get(species_id)
+    if not stats or len(stats) <= 7:
+        return []
+    first = TYPE_NAMES[stats[6]] if stats[6] < len(TYPE_NAMES) else f"属性 {stats[6]}"
+    second = TYPE_NAMES[stats[7]] if stats[7] < len(TYPE_NAMES) else f"属性 {stats[7]}"
+    return [first] if first == second else [first, second]
 
 
 def experience_for_level(growth_rate: int, level: int) -> int:
