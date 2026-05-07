@@ -1046,8 +1046,8 @@ HTML = r"""<!doctype html>
     .pokemon-form-left { flex: 0 0 calc((100% - 6px) / 2); width: calc((100% - 6px) / 2); min-width: 0; max-width: calc((100% - 6px) / 2); }
     .pokemon-form-sprite-wrap { flex: none; align-self: stretch; aspect-ratio: 1 / 1; border: 1px solid #bfbfbf; background: #f3f3f3; display: flex; align-items: center; justify-content: center; }
     .pokemon-form-sprite { width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
-    .pokemon-layout { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 100%; }
-    .pokemon-map { display: grid; grid-template-columns: repeat(auto-fill, minmax(154px, 1fr)); grid-auto-rows: minmax(118px, auto); gap: 8px; padding: 8px; border-bottom: 1px solid #e0e3dc; background: #fbfbf8; }
+    .pokemon-layout { display: grid; grid-template-rows: auto minmax(0, 1fr); height: 100%; min-height: 0; overflow: hidden; }
+    .pokemon-map { display: grid; grid-template-columns: repeat(auto-fill, minmax(154px, 1fr)); grid-auto-rows: minmax(118px, auto); align-content: start; gap: 8px; max-height: min(360px, 45vh); overflow: auto; padding: 8px; border-bottom: 1px solid #e0e3dc; background: #fbfbf8; }
     .pokemon-list { min-height: 0; overflow: auto; }
     .list-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-bottom: 1px solid #e0e3dc; background: #fff; font-weight: 600; }
     .box-overview { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; padding: 8px; }
