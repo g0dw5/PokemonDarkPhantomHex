@@ -16,6 +16,15 @@ python3 editor/web_save_editor.py
 chmod +x run_editor.command
 ```
 
+## 测试
+
+浏览器交互测试使用 Python 版 Playwright 和真实 Chromium：
+
+```bash
+python3 -m playwright install chromium
+python3 -m unittest discover -s tests
+```
+
 ## 功能
 
 - 通过页面“打开/加载”选择并加载 `.sav` 存档
