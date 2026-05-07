@@ -367,6 +367,10 @@ def api_names():
                     description = ""
                 if is_placeholder_text(detail.get("description")):
                     detail["description"] = ""
+            visible_name = row_name or decoded
+            generic_label = {"moves": "招式", "abilities": "特性", "items": "道具"}.get(name)
+            if generic_label and (item_id == 0 or visible_name == f"{generic_label} {item_id}"):
+                continue
             row = {
                 "table": name,
                 "table_label": label,

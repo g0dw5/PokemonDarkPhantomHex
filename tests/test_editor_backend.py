@@ -485,12 +485,13 @@ class BackendEditorTest(unittest.TestCase):
                     "0": {"name": "空", "decoded": "空", "tokens": ["00"]},
                     "25": {"name": "皮卡丘", "decoded": "皮卡丘", "tokens": ["01"], "detail": {"types": ["电"]}},
                 },
-                "moves": {"33": {"name": "撞击", "decoded": "{AA}", "tokens": ["AA"], "pp": 0, "description": "撞"}},
-                "abilities": {"1": {"name": "恶臭", "decoded": "恶臭", "tokens": ["02"]}},
+                "moves": {"0": {"name": "招式 0", "decoded": "招式 0", "tokens": []}, "33": {"name": "撞击", "decoded": "{AA}", "tokens": ["AA"], "pp": 0, "description": "撞"}},
+                "abilities": {"0": {"name": "特性 0", "decoded": "特性 0", "tokens": []}, "1": {"name": "恶臭", "decoded": "恶臭", "tokens": ["02"]}},
                 "items": {
                     "0": {"name": "？？？？？？？？", "decoded": "？？？？？？？？", "tokens": ["3D"], "description": "？？？？？", "detail": {"description": "？？？？？", "price": 0}},
                     "13": {"name": "伤药", "decoded": "伤药", "tokens": ["03"], "detail": {"price": 300}},
                     "58": {"name": "？？？？？？？？", "decoded": "？？？？？？？？", "tokens": ["3D"], "description": "？？？？？", "detail": {"description": "？？？？？", "price": 0}},
+                    "88": {"name": "道具 88", "decoded": "道具 88", "tokens": ["04"]},
                 },
                 "character_map_count": 10,
                 "rom_used_character_key_count": 3,
@@ -504,10 +505,12 @@ class BackendEditorTest(unittest.TestCase):
             self.assertEqual(names["stats"]["charmap"]["rom_unknown"], 1)
             self.assertEqual(names["moves"][0]["unknown_count"], 1)
             self.assertNotIn(0, {row["id"] for row in names["species"]})
+            self.assertNotIn(0, {row["id"] for row in names["moves"]})
+            self.assertNotIn(0, {row["id"] for row in names["abilities"]})
             item_rows = {row["id"]: row for row in names["items"]}
-            self.assertEqual(item_rows[0]["name"], "空")
-            self.assertEqual(item_rows[58]["name"], "道具 58")
-            self.assertEqual(item_rows[58]["description"], "")
+            self.assertNotIn(0, item_rows)
+            self.assertNotIn(58, item_rows)
+            self.assertNotIn(88, item_rows)
             self.assertNotIn("？", json.dumps(names["items"], ensure_ascii=False))
             self.assertTrue(editor.dictionary_table_info()["species"]["description"])
 
