@@ -357,6 +357,7 @@ class WebEditorBrowserTest(unittest.TestCase):
             self.page.get_by_role("button", name="盒子").click()
             expect(self.page.locator("#summary")).to_contain_text("盒子：1 只非空宝可梦")
             expect(self.page.locator(".box-card")).to_have_count(14)
+            expect(self.page.locator(".box-slot.occupied").first).to_have_attribute("data-name", re.compile("鲤鱼王"))
             expect(self.page.locator("#content .subtabs")).to_have_count(0)
             self.page.locator(".box-card").first.click()
             expect(self.page.locator("#summary")).to_contain_text("1号盒：1/30")

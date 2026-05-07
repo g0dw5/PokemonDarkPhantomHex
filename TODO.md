@@ -37,7 +37,6 @@
 ```
 
 ## 待处理
-- [ ] P1 盒子增加悬停显示名字能力
 - [ ] P1 特性页可以去除描述来源了
 - [ ] P1 字典表中的所有子页可以都把字符码去掉了
 - [ ] P1 道具中去掉????占位
@@ -101,6 +100,9 @@
   - 验证：`PYTHONPYCACHEPREFIX=.pycache python3 tests/run_browser_tests.py` 通过，总覆盖率 93.4%。
 - [x] P1 字典表页去除全部tab,其他几个tab也锁定在上方,不随滚动条挪动
   - 结果：字典表去除“全部”子 tab，默认进入宝可梦页；字典子 tab 在内容滚动区顶部 sticky 固定。
+  - 验证：`PYTHONPYCACHEPREFIX=.pycache python3 tests/run_browser_tests.py` 通过，总覆盖率 93.4%。
+- [x] P1 盒子增加悬停显示名字能力
+  - 结果：盒子缩略格为非空宝可梦提供 `data-name` 和原生 title，并用悬停浮层显示宝可梦名与盒内位置。
   - 验证：`PYTHONPYCACHEPREFIX=.pycache python3 tests/run_browser_tests.py` 通过，总覆盖率 93.4%。
 - [x] P0 使用真正的浏览器交互进行单元测试,覆盖显示/修改内容各种场景的测试用例,并在后续的每次任务确保单测通过,即可提交代码
   - 结果：新增后端/API/存档核心测试和 Playwright Chromium 浏览器测试，覆盖真实 `.sav` 加载、背包多轮写入/保存/重载/关闭、队伍和盒子宝可梦修改、超过 100 个宝可梦表单控件交互子用例。

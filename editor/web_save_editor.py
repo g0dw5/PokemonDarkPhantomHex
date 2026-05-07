@@ -1043,6 +1043,7 @@ HTML = r"""<!doctype html>
     .box-slot { aspect-ratio: 1 / 1; min-width: 0; border: 1px solid #d9ded6; border-radius: 4px; background: #eef1ea; display: flex; align-items: center; justify-content: center; position: relative; }
     .box-slot.occupied { background: #fff; cursor: pointer; }
     .box-slot.occupied:hover { border-color: #1f6f9f; background: #eef8ff; }
+    .box-slot.occupied:hover::after { content: attr(data-name); position: absolute; left: 50%; bottom: calc(100% + 5px); transform: translateX(-50%); z-index: 12; min-width: max-content; max-width: 180px; padding: 4px 6px; border-radius: 4px; background: #1f2722; color: white; font-size: 12px; line-height: 1.3; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.2); pointer-events: none; }
     .box-slot.selected { border-color: #2f6f4f; box-shadow: inset 0 0 0 1px #2f6f4f; }
     .box-slot-index { position: absolute; left: 3px; top: 2px; font-size: 10px; color: #7b8279; }
     .box-mini-sprite { width: 100%; height: 100%; max-width: 32px; max-height: 32px; image-rendering: pixelated; image-rendering: crisp-edges; }
@@ -1455,7 +1456,8 @@ function renderBoxGrid(box, active) {
     if (!pokemon) return `<div class="box-slot"><span class="box-slot-index">${slot}</span></div>`;
     const index = state.boxes.indexOf(pokemon);
     const click = active ? ` onclick="selectBoxFromGrid(${index}); event.stopPropagation();"` : "";
-    return `<div id="box-slot-${box}-${slot}" class="box-slot occupied ${selected===index?"selected":""}" title="${escapeHtml(pokemon.species_name)} · ${box}-${slot}"${click}><span class="box-slot-index">${slot}</span>${spriteCanvasTag(`box-grid-${box}-${slot}`, pokemon.species, pokemon.is_shiny, "box-mini-sprite")}</div>`;
+    const label = `${pokemon.species_name} · ${box}-${slot}`;
+    return `<div id="box-slot-${box}-${slot}" class="box-slot occupied ${selected===index?"selected":""}" title="${escapeHtml(label)}" data-name="${escapeHtml(label)}"${click}><span class="box-slot-index">${slot}</span>${spriteCanvasTag(`box-grid-${box}-${slot}`, pokemon.species, pokemon.is_shiny, "box-mini-sprite")}</div>`;
   }).join("");
   return `<div class="box-grid ${active ? "active" : ""}">${slots}</div>`;
 }
