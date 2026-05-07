@@ -187,6 +187,9 @@ class WebEditorBrowserTest(unittest.TestCase):
             expect(self.page.locator(".metric")).to_have_count(0)
             expect(self.page.locator("#inspector-title")).to_have_text("未选择字典项")
 
+            self.page.get_by_role("button", name="特性").click()
+            expect(self.page.locator(".dictionary-table thead")).not_to_contain_text("描述来源")
+
             self.page.evaluate("""() => {
                 const row = {table: "items", table_label: "道具", id: 13, name: "伤药", decoded: "伤药", tokens: ["03"], locations: ["电脑道具 #1"], detail: {price: 300, pocket: "道具"}};
                 names = {ok: true, rows: [row], items: [row], species: [], moves: [], abilities: [], stats: {rom: {}, charmap: {}}, table_info: {}};

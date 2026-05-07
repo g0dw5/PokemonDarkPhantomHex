@@ -2013,7 +2013,7 @@ function dictionaryColumns(table) {
     return [...common, {key:"pp", label:"PP"}, {key:"description", label:"描述", className:"description-cell"}, {key:"tokens", label:"字码", className:"code-cell"}, {key:"locations", label:"存档引用"}];
   }
   if (table === "abilities") {
-    return [...common, {key:"description", label:"描述", className:"description-cell"}, {key:"abilityScope", label:"描述来源"}, {key:"tokens", label:"字码", className:"code-cell"}, {key:"locations", label:"存档引用"}];
+    return [...common, {key:"description", label:"描述", className:"description-cell"}, {key:"tokens", label:"字码", className:"code-cell"}, {key:"locations", label:"存档引用"}];
   }
   if (table === "items") {
     return [...common, {key:"pocket", label:"口袋"}, {key:"price", label:"价格"}, {key:"itemType", label:"类型"}, {key:"holdEffect", label:"携带效果"}, {key:"description", label:"描述", className:"description-cell"}, {key:"locations", label:"存档引用"}];
@@ -2035,7 +2035,6 @@ function dictionaryCell(row, key) {
   if (key === "growth") return escapeHtml([detail.growth_rate, detail.gender_ratio].filter(Boolean).join(" / "));
   if (key === "encounters") return escapeHtml(encounterSummary(detail.encounters || []));
   if (key === "pp") return `<span class="num">${row.pp ?? detail.pp ?? ""}</span>`;
-  if (key === "abilityScope") return escapeHtml(row.description ? "描述已定位" : "仅名称");
   if (key === "pocket") return escapeHtml(detail.pocket || "");
   if (key === "price") return detail.price !== undefined ? `<span class="num">${detail.price}</span>` : "";
   if (key === "itemType") return escapeHtml(detail.type || "");
@@ -2285,9 +2284,6 @@ function dictionaryInspectorHtml(row) {
   if (row.table === "moves") {
     fields.push(["PP", row.pp ?? detail.pp ?? ""]);
   }
-  if (row.table === "abilities") {
-    fields.push(["描述来源", row.description ? "描述指针已定位" : (detail.description_note || "未找到特性描述文本")]);
-  }
   if (row.table === "items") {
     fields.push(["口袋", detail.pocket || ""]);
     fields.push(["价格", detail.price]);
@@ -2318,9 +2314,6 @@ function detailLinesForDictionaryRow(row) {
   if (row.description) lines.push(`描述：${row.description}`);
   if (row.table === "moves") {
     lines.push(`PP：${row.pp ?? detail.pp ?? ""}`);
-  }
-  if (row.table === "abilities" && detail.description_note) {
-    lines.push(detail.description_note);
   }
   if (row.table === "items") {
     if (detail.price !== undefined) lines.push(`价格：${detail.price}`);
