@@ -56,6 +56,7 @@ class State:
     save_path: Path | None = DEFAULT_SAVE
     rom_path: Path | None = None
     save: EmeraldSave | None = None
+    dirty = False
     error = "请选择存档文件"
 
 
@@ -72,16 +73,19 @@ def load_save(path: Path | None = None) -> None:
     if STATE.save_path is None:
         STATE.save = None
         STATE.rom_path = None
+        STATE.dirty = False
         configure_rom(None)
         STATE.error = "请选择存档文件"
         return
     try:
         STATE.save = EmeraldSave(STATE.save_path)
         configure_rom(find_matching_rom(STATE.save_path))
+        STATE.dirty = False
         STATE.error = ""
     except Exception as exc:
         STATE.save = None
         STATE.rom_path = None
+        STATE.dirty = False
         configure_rom(None)
         STATE.error = str(exc)
 
@@ -202,6 +206,9 @@ class Handler(BaseHTTPRequestHandler):
             if self.path == "/api/save":
                 self.send(*response(api_save()))
                 return
+            if self.path == "/api/close":
+                self.send(*response(api_close()))
+                return
         except Exception as exc:
             self.send(*response({"ok": False, "error": str(exc)}, 400))
             return
@@ -218,7 +225,7 @@ class Handler(BaseHTTPRequestHandler):
 def api_state():
     save = STATE.save
     if not save:
-        return {"ok": False, "path": str(STATE.save_path) if STATE.save_path else "", "rom_path": str(STATE.rom_path) if STATE.rom_path else "", "error": STATE.error, "bag": [], "party": [], "validation": []}
+        return {"ok": False, "dirty": STATE.dirty, "path": str(STATE.save_path) if STATE.save_path else "", "rom_path": str(STATE.rom_path) if STATE.rom_path else "", "error": STATE.error, "bag": [], "party": [], "validation": []}
     bag = [{"pocket": e.pocket, "slot": e.slot, "item_id": e.item_id, "name": format_item(e.item_id) if e.item_id else "空", "quantity": e.quantity} for e in save.read_bag()]
     party = []
     for p in save.party():
@@ -237,6 +244,7 @@ def api_state():
         stats["filled"] += 1
     return {
         "ok": True,
+        "dirty": STATE.dirty,
         "path": str(save.path),
         "rom_path": str(STATE.rom_path) if STATE.rom_path else "",
         "active": active,
@@ -760,6 +768,7 @@ def api_update_bag(body):
     save = require_save()
     entry = BagEntry(str(body["pocket"]), int(body["slot"]), int(body["item_id"]), int(body["quantity"]))
     save.write_bag_entry(entry)
+    STATE.dirty = True
     return {"ok": True, "message": f"已写入背包：{entry.pocket} {entry.slot} = {format_item(entry.item_id)} x{entry.quantity}"}
 
 
@@ -793,10 +802,12 @@ def api_update_pokemon(body):
         box = int(body["box"])
         box_slot = int(body["box_slot"])
         pokemon = save.update_box_pokemon(box, box_slot, updates)
+        STATE.dirty = True
         return {"ok": True, "message": f"已写入盒子 {box}-{box_slot}：{format_species(pokemon.species)}"}
     slot = int(body["slot"])
     updates["level"] = int(body["level"])
     pokemon = save.update_party_pokemon(slot, updates)
+    STATE.dirty = True
     return {"ok": True, "message": f"已写入队伍 {slot}：{format_species(pokemon.species)}"}
 
 
@@ -805,6 +816,16 @@ def api_save():
     backup = save.save()
     load_save(save.path)
     return {"ok": True, "message": f"已保存，备份：{backup.name}"}
+
+
+def api_close():
+    STATE.save_path = None
+    STATE.save = None
+    STATE.rom_path = None
+    STATE.dirty = False
+    STATE.error = "请选择存档文件"
+    configure_rom(None)
+    return api_state()
 
 
 def require_save() -> EmeraldSave:
@@ -837,20 +858,38 @@ HTML = r"""<!doctype html>
   <title>漆黑的魅影信息采集器</title>
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", Arial, sans-serif; color: #111; background: #f2f2f2; }
-    header { display: flex; gap: 6px; align-items: center; padding: 8px 10px; background: #e4e4e4; border-bottom: 1px solid #ccc; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", Arial, sans-serif; color: #1d211f; background: #f5f6f2; }
+    header { min-height: 58px; display: flex; gap: 12px; align-items: center; padding: 9px 12px; background: #fbfbf8; border-bottom: 1px solid #d7d9d2; }
     input, select, button, textarea { font: inherit; }
-    input, textarea, select { background: white; color: #111; border: 1px solid #aaa; padding: 6px; }
-    button { border: 1px solid #777; background: white; color: #111; padding: 5px 9px; cursor: pointer; }
-    button.primary { background: #1f6feb; color: white; border-color: #185abc; }
-    button.link { border: 0; background: transparent; color: #0969da; padding: 0; text-align: left; text-decoration: underline; }
-    #path { flex: 1; }
-    main { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 8px; padding: 8px; height: calc(100vh - 45px); }
-    .panel { background: white; border: 1px solid #c9c9c9; min-height: 0; }
-    .tabs { display: flex; gap: 4px; padding: 6px; background: #eee; border-bottom: 1px solid #ccc; flex-wrap: wrap; }
-    .tabs button.active { background: #111; color: white; }
-    .dictionary-tabs input { margin-left: auto; width: min(260px, 100%); }
-    .summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px; border-bottom: 1px solid #ddd; font-weight: 600; }
+    input, textarea, select { background: #fff; color: #1d211f; border: 1px solid #aeb5aa; border-radius: 6px; padding: 6px 7px; }
+    button { border: 1px solid #9ba59a; border-radius: 6px; background: #fff; color: #1d211f; padding: 6px 10px; cursor: pointer; }
+    button:hover:not(:disabled) { border-color: #35694f; background: #f4faf6; }
+    button:disabled { color: #8a8f88; background: #eeeeeb; border-color: #d1d4ce; cursor: default; }
+    button.primary { background: #2f6f4f; color: white; border-color: #265d42; }
+    button.primary:hover:not(:disabled) { background: #285f43; border-color: #204d37; }
+    button.primary:disabled { color: #8a8f88; background: #eeeeeb; border-color: #d1d4ce; }
+    button.link { border: 0; background: transparent; color: #1f6f9f; padding: 0; text-align: left; text-decoration: underline; }
+    .app-title { flex: 0 0 auto; font-weight: 700; letter-spacing: 0; }
+    .file-state { flex: 1 1 auto; min-width: 0; display: grid; gap: 2px; }
+    .file-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .file-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+    .file-meta { min-width: 0; color: #626a61; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .toolbar { flex: 0 0 auto; display: flex; gap: 6px; align-items: center; }
+    .pill { display: inline-flex; align-items: center; min-height: 20px; border: 1px solid #bec5bb; border-radius: 999px; padding: 1px 7px; font-size: 12px; font-weight: 500; background: #fff; color: #4d554b; white-space: nowrap; }
+    .pill.dirty { color: #8a4a00; border-color: #dfb66c; background: #fff7e6; }
+    .pill.ok { color: #2f6f4f; border-color: #9fceb1; background: #eef8f1; }
+    .pill.warn { color: #9f351f; border-color: #e6aa9e; background: #fff1ee; }
+    main { display: grid; grid-template-columns: minmax(0, 1fr) 430px; gap: 10px; padding: 10px; height: calc(100vh - 58px); }
+    .panel { background: #fff; border: 1px solid #d3d7cf; border-radius: 8px; min-height: 0; overflow: hidden; }
+    section.panel { display: flex; flex-direction: column; }
+    .tabs { display: flex; gap: 5px; padding: 7px; background: #f0f2ec; border-bottom: 1px solid #d7d9d2; flex-wrap: wrap; }
+    .tabs button { padding: 6px 10px; }
+    .tabs button.active { background: #24352d; border-color: #24352d; color: white; }
+    .subtabs { background: #fff; }
+    .dictionary-tabs { align-items: center; }
+    .dictionary-tabs input { margin-left: auto; width: min(300px, 100%); }
+    .summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-bottom: 1px solid #e0e3dc; font-weight: 600; background: #fbfbf8; }
+    .summary:empty { display: none; }
     .summary-controls { display: flex; align-items: center; gap: 6px; font-weight: 400; font-size: 13px; }
     .summary-controls select { padding: 4px 6px; }
     .metrics { display: grid; grid-template-columns: repeat(4, minmax(110px, 1fr)); gap: 6px; padding: 6px; border-bottom: 1px solid #ddd; background: #fafafa; }
@@ -860,20 +899,21 @@ HTML = r"""<!doctype html>
     .metric b { display: block; font-size: 16px; margin-bottom: 1px; }
     .filters { display: flex; gap: 6px; align-items: center; padding: 6px; border-bottom: 1px solid #ddd; background: #f7f7f7; flex-wrap: wrap; }
     .filters input { width: min(220px, 100%); }
-    .badge { display: inline-block; border: 1px solid #aaa; border-radius: 999px; padding: 1px 7px; font-size: 12px; background: #fff; }
+    .badge { display: inline-block; border: 1px solid #aeb5aa; border-radius: 999px; padding: 1px 7px; font-size: 12px; background: #fff; color: #4d554b; }
+    .empty-state { padding: 18px; color: #5d655c; }
     .id-chip { display: inline-block; font-variant-numeric: tabular-nums; color: #555; margin-right: 3px; }
     .shiny-badge { color: #9a6700; font-weight: 700; }
     .bad { color: #b42318; font-weight: 600; }
-    .table-wrap { overflow: auto; height: calc(100% - 74px); }
+    .table-wrap { overflow: auto; flex: 1 1 auto; min-height: 0; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: auto; }
-    th, td { border-bottom: 1px solid #eee; padding: 4px 5px; text-align: left; white-space: normal; vertical-align: top; }
+    th, td { border-bottom: 1px solid #eceee8; padding: 5px 7px; text-align: left; white-space: normal; vertical-align: top; }
     td input { width: 100%; min-width: 96px; }
     td:nth-child(1), td:nth-child(2), td:nth-child(8) { white-space: nowrap; }
     td:nth-child(3), td:nth-child(4), td:nth-child(5), td:nth-child(6) { max-width: 260px; overflow-wrap: anywhere; }
-    th { position: sticky; top: 0; background: #ddd; z-index: 1; }
-    tr:hover { background: #edf4ff; }
-    tr.selected { background: #cfe2ff; }
-    aside { padding: 8px; overflow: auto; }
+    th { position: sticky; top: 0; background: #e8ece5; z-index: 1; }
+    tr:hover { background: #f1f7f4; }
+    tr.selected { background: #dcefe4; }
+    aside { padding: 10px; overflow: auto; display: flex; flex-direction: column; gap: 8px; }
     aside label { display: block; margin-top: 8px; font-size: 13px; color: #333; }
     aside input, aside select, aside textarea { width: 100%; margin-top: 3px; }
     .form-grid { display: grid; gap: 6px; align-items: end; margin-top: 8px; }
@@ -885,8 +925,11 @@ HTML = r"""<!doctype html>
     .toggle-field input { display: none; }
     .hint-mark { position: relative; display: inline-block; margin-left: 4px; color: #666; cursor: help; font-weight: 700; }
     .hint-mark:hover::after { content: attr(data-tip); position: absolute; left: 0; top: 18px; z-index: 20; width: 210px; padding: 6px 7px; border: 1px solid #999; background: #111; color: white; border-radius: 4px; font-weight: 400; line-height: 1.35; white-space: normal; box-shadow: 0 2px 8px rgba(0,0,0,.18); }
-    #detail { height: 120px; white-space: pre-wrap; overflow: auto; background: #fafafa; border: 1px solid #ccc; padding: 8px; }
-    #status { margin-top: 10px; color: #333; white-space: pre-wrap; }
+    .inspector-head { border-bottom: 1px solid #e0e3dc; padding-bottom: 8px; }
+    #inspector-title { font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; }
+    #detail { max-height: 150px; white-space: pre-wrap; overflow: auto; background: #f8f9f5; border: 1px solid #d9ded6; border-radius: 6px; padding: 8px; color: #394038; }
+    #detail:empty { display: none; }
+    #status { color: #4d554b; white-space: pre-wrap; font-size: 13px; }
     .move-grid { display: grid; grid-template-columns: minmax(0, 1fr) 132px; gap: 6px; align-items: end; margin-top: 8px; }
     .move-grid label { margin-top: 0; }
     .move-grid select, .move-grid input { width: 100%; }
@@ -916,8 +959,12 @@ HTML = r"""<!doctype html>
     .pp-up-control button.active { background: #111; color: white; }
     select.invalid-move { border-color: #b42318; background: #fff1f0; color: #7a1d15; }
     @media (max-width: 1100px) {
-      main { grid-template-columns: 1fr; height: auto; min-height: calc(100vh - 45px); }
+      header { align-items: flex-start; flex-wrap: wrap; }
+      .toolbar { width: 100%; }
+      .toolbar button { flex: 1 1 0; }
+      main { grid-template-columns: 1fr; height: auto; min-height: calc(100vh - 58px); }
       aside { min-height: 170px; }
+      .dictionary-tabs input { margin-left: 0; width: 100%; }
       .metrics { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
     }
   </style>
@@ -927,25 +974,39 @@ HTML = r"""<!doctype html>
   <datalist id="item-list"></datalist>
   <datalist id="move-list"></datalist>
   <header>
-    <span>存档</span>
-    <input id="path">
-    <button onclick="loadPath()">打开/加载</button>
-    <button onclick="reload()">重新加载</button>
+    <div class="app-title">漆黑的魅影存档编辑器</div>
+    <div class="file-state" id="file-state">
+      <div class="file-line">
+        <span class="file-name" id="file-name">未加载存档</span>
+        <span class="pill" id="dirty-pill">未修改</span>
+        <span class="pill" id="rom-pill">ROM 未加载</span>
+      </div>
+      <div class="file-meta" id="file-meta">请选择 .sav 文件</div>
+    </div>
+    <div class="toolbar">
+      <button id="open-btn" onclick="openSave()">打开</button>
+      <button id="reload-btn" onclick="reloadSave()" disabled>重载</button>
+      <button id="save-btn" class="primary" onclick="saveFile()" disabled>保存</button>
+      <button id="close-btn" onclick="closeSave()" disabled>关闭</button>
+    </div>
   </header>
   <main>
     <section class="panel">
       <div class="tabs">
-        <button id="tab-overview" onclick="showTab('overview')">存档概览</button>
-        <button id="tab-party" onclick="showTab('party')">队伍</button>
-        <button id="tab-boxes" onclick="showTab('boxes')">盒子</button>
-        <button id="tab-bag" onclick="showTab('bag')">背包</button>
-        <button id="tab-names" onclick="showTab('names')">字典表</button>
+        <button id="tab-overview" onclick="showTab('overview')" disabled>存档概览</button>
+        <button id="tab-party" onclick="showTab('party')" disabled>队伍</button>
+        <button id="tab-boxes" onclick="showTab('boxes')" disabled>盒子</button>
+        <button id="tab-bag" onclick="showTab('bag')" disabled>背包</button>
+        <button id="tab-names" onclick="showTab('names')" disabled>字典表</button>
       </div>
       <div class="summary" id="summary">加载中</div>
       <div class="table-wrap" id="content"></div>
     </section>
     <aside class="panel">
-      <div id="detail">请选择左侧条目</div>
+      <div class="inspector-head">
+        <div id="inspector-title">未选择条目</div>
+      </div>
+      <div id="detail"></div>
       <form id="form"></form>
       <div id="status"></div>
     </aside>
@@ -964,52 +1025,80 @@ let collectCodeFilter = [];
 let collectCodeLabel = "";
 let pokemonFormConstraints = null;
 
-async function request(url, options) {
+async function request(url, options, allowFalse=false) {
   const res = await fetch(url, options);
   const data = await res.json();
-  if (!res.ok || data.ok === false) throw new Error(data.error || data.message || "请求失败");
+  if (!res.ok || (!allowFalse && data.ok === false)) throw new Error(data.error || data.message || "请求失败");
   return data;
 }
 async function refresh() {
-  [state, names] = await Promise.all([request("/api/state"), request("/api/names")]);
-  document.getElementById("path").value = state.path || "";
+  [state, names] = await Promise.all([request("/api/state", undefined, true), request("/api/names")]);
   render();
 }
-async function loadPath() {
+async function openSave() {
+  if (!confirmDiscard("打开其他存档")) return;
   try {
     state = await request("/api/pick_save");
     names = await request("/api/names");
     selected = null;
     render();
   } catch (err) {
+    await refresh();
     setStatus(err.message);
   }
 }
-async function reload() {
+async function reloadSave() {
+  if (!state?.path) return;
+  if (!confirmDiscard("重载存档")) return;
   try {
-    state = await request("/api/load?path=" + encodeURIComponent(document.getElementById("path").value));
+    state = await request("/api/load");
     names = await request("/api/names");
     selected = null;
+    render();
+  } catch (err) {
+    await refresh();
+    setStatus(err.message);
+  }
+}
+async function saveFile() {
+  if (!state?.ok || !state?.dirty) return;
+  try {
+    const data = await request("/api/save", {method:"POST", headers:{"Content-Type":"application/json"}, body:"{}"});
+    await refresh();
+    setStatus(data.message);
+  } catch (err) {
+    setStatus(err.message);
+  }
+}
+async function closeSave() {
+  if (!state?.ok) return;
+  if (!confirmDiscard("关闭存档")) return;
+  try {
+    state = await request("/api/close", {method:"POST", headers:{"Content-Type":"application/json"}, body:"{}"}, true);
+    names = await request("/api/names");
+    selected = null;
+    tab = "overview";
     render();
   } catch (err) {
     setStatus(err.message);
   }
 }
-async function saveFile() {
-  const data = await request("/api/save", {method:"POST", headers:{"Content-Type":"application/json"}, body:"{}"});
-  await refresh();
-  setStatus(data.message);
-}
 function showTab(next) { tab = next; selected = null; render(); }
 function setStatus(text) { document.getElementById("status").textContent = text; }
+function confirmDiscard(action) {
+  if (!state?.dirty) return true;
+  return window.confirm(`当前修改还没有保存，${action} 会丢弃这些修改。继续？`);
+}
 function render() {
   renderDatalists();
+  renderShell();
   for (const id of ["overview","party","boxes","bag","names"]) document.getElementById("tab-"+id).classList.toggle("active", tab === id);
   document.getElementById("form").innerHTML = "";
-  document.getElementById("detail").textContent = "请选择左侧条目";
+  setInspector("未选择条目");
   if (!state || !state.ok) {
-    document.getElementById("summary").textContent = "加载失败";
-    document.getElementById("content").innerHTML = "<p style='padding:12px'>" + (state?.error || "未知错误") + "</p>";
+    document.getElementById("summary").textContent = "";
+    document.getElementById("content").innerHTML = `<div class="empty-state">${escapeHtml(state?.error || "请选择存档文件")}</div>`;
+    setInspector("未加载存档", state?.error || "");
     return;
   }
   if (tab === "overview") renderOverview();
@@ -1017,6 +1106,34 @@ function render() {
   if (tab === "party") renderParty();
   if (tab === "boxes") renderBoxes();
   if (tab === "names") renderNames();
+}
+function renderShell() {
+  const loaded = Boolean(state?.ok);
+  const dirty = Boolean(state?.dirty);
+  const romLoaded = Boolean(state?.rom_path);
+  const fileName = document.getElementById("file-name");
+  const fileMeta = document.getElementById("file-meta");
+  const dirtyPill = document.getElementById("dirty-pill");
+  const romPill = document.getElementById("rom-pill");
+  fileName.textContent = loaded ? basename(state.path) : "未加载存档";
+  fileName.title = state?.path || "";
+  fileMeta.textContent = loaded ? `${state.path}${state.rom_path ? " · ROM " + basename(state.rom_path) : " · 未找到同名 ROM"}` : (state?.error || "请选择 .sav 文件");
+  fileMeta.title = loaded ? `${state.path}${state.rom_path ? "\n" + state.rom_path : ""}` : "";
+  dirtyPill.textContent = loaded ? (dirty ? "未保存" : "已保存") : "未加载";
+  dirtyPill.className = "pill" + (dirty ? " dirty" : loaded ? " ok" : "");
+  romPill.textContent = loaded ? (romLoaded ? "ROM 已加载" : "ROM 缺失") : "ROM 未加载";
+  romPill.className = "pill" + (romLoaded ? " ok" : " warn");
+  document.getElementById("reload-btn").disabled = !loaded;
+  document.getElementById("save-btn").disabled = !loaded || !dirty;
+  document.getElementById("close-btn").disabled = !loaded;
+  for (const id of ["overview","party","boxes","bag","names"]) document.getElementById("tab-"+id).disabled = !loaded;
+}
+function basename(path) {
+  return String(path || "").split(/[\\/]/).filter(Boolean).pop() || "";
+}
+function setInspector(title, detail="") {
+  document.getElementById("inspector-title").textContent = title || "未选择条目";
+  document.getElementById("detail").textContent = detail || "";
 }
 function renderDatalists() {
   if (!names) return;
@@ -1074,7 +1191,7 @@ function renderOverview() {
     <table><thead><tr><th>背包口袋</th><th>非空/总格</th></tr></thead><tbody>${bagStats}</tbody></table>
     <table><thead><tr><th>盒子</th><th>占用/总格</th></tr></thead><tbody>${boxStats}</tbody></table>
     <table><thead><tr><th>槽</th><th>Section</th><th>校验</th><th>物理序号</th><th>保存序号</th><th>存储校验</th><th>计算校验</th></tr></thead><tbody>${sections}</tbody></table>`;
-  document.getElementById("detail").textContent = "这里展示已经从当前存档结构中读取的非宝可梦/非背包数据；训练家名字仍按原始字节展示，避免误用 ROM 中文码表。";
+  setInspector("存档概览");
 }
 function renderBag() {
   const nonempty = state.bag.filter(e => e.item_id || e.quantity).length;
@@ -1116,7 +1233,7 @@ function sortedBagRows() {
 function selectBag(i) {
   selected = i;
   const e = state.bag[i];
-  document.getElementById("detail").textContent = `口袋：${e.pocket}\n格位：${e.slot}\n道具：${e.item_id} ${e.name}\n数量：${e.quantity}`;
+  setInspector(`${e.pocket} #${e.slot}`, `道具：${e.item_id} ${e.name}\n数量：${e.quantity}`);
   document.getElementById("form").innerHTML = `
     <label>口袋<select id="pocket">${["电脑道具","普通道具","重要道具","精灵球","招式机/秘传机","树果"].map(p=>`<option ${p===e.pocket?"selected":""}>${p}</option>`).join("")}</select></label>
     <label>格位<input id="slot" value="${e.slot}"></label>
@@ -1229,7 +1346,7 @@ function syncPokemonFormTopSquare() {
 }
 async function selectParty(i) {
   const p = state.party[i];
-  document.getElementById("detail").textContent = p.legality.join("\n");
+  setInspector(`${p.species_name} · 队伍 ${p.slot}`, p.legality.join("\n"));
   pokemonFormConstraints = await loadPokemonConstraints(p.species, p.level);
   renderPokemonForm(p, pokemonFormConstraints, "party");
 }
@@ -1277,7 +1394,7 @@ function renderPokemonForm(p, constraints, location) {
 }
 async function selectBox(i) {
   const p = state.boxes[i];
-  document.getElementById("detail").textContent = p.legality.join("\n");
+  setInspector(`${p.species_name} · 盒子 ${p.box}-${p.box_slot}`, p.legality.join("\n"));
   pokemonFormConstraints = await loadPokemonConstraints(p.species, p.level || 100);
   renderPokemonForm(p, pokemonFormConstraints, "box");
 }
@@ -1643,38 +1760,18 @@ async function loadExperienceLevel(species, level, experience) {
 }
 function renderNames() {
   if (!names) return;
-  const stats = names.stats;
   const dictionaryTabs = [["all", "全部"], ["species", "宝可梦"], ["abilities", "特性"], ["moves", "招式"], ["items", "道具"]];
   if (!dictionaryTabs.some(([id]) => id === collectTable)) collectTable = "all";
   const rows = filteredNameRows();
   const dictionaryTabButtons = dictionaryTabs.map(([id, label]) => `<button class="${collectTable===id?"active":""}" onclick="setCollectTable('${escapeJsString(id)}')">${escapeHtml(label)}</button>`).join("");
-  document.getElementById("summary").innerHTML =
-    `<span>字典表：全部 ${names.rows.length} 条</span>
-     <span class="summary-controls"><button type="button" onclick="reloadNames()">刷新字典</button></span>`;
-  const currentInfo = names.table_info?.[collectTable] || {label: "全部", description: "按官方内置字码表实时解析当前 ROM 的名称和说明；这里不再提供字符校正写入。"};
+  document.getElementById("summary").textContent = "";
   let html = `
-    <div class="metrics">
-      <div class="metric"><b>${stats.rom.species}</b>宝可梦枚举</div>
-      <div class="metric"><b>${stats.rom.moves}</b>招式枚举</div>
-      <div class="metric"><b>${stats.rom.abilities}</b>特性枚举</div>
-      <div class="metric"><b>${stats.rom.items}</b>道具枚举</div>
-      <div class="metric"><b>${stats.party_count}</b>队伍宝可梦</div>
-      <div class="metric"><b>${stats.box_occupied}/${stats.box_slots}</b>盒子占用</div>
-      <div class="metric"><b>${stats.bag_filled}/${stats.bag_slots}</b>背包占用</div>
-      <div class="metric"><b>${stats.charmap.observed_keys}</b>存档引用字符码</div>
-      <div class="metric"><b>${stats.charmap.rom_used}</b>名称表字符码</div>
-      <div class="metric"><b>${stats.charmap.official}</b>内置官方映射</div>
-      <div class="metric ${stats.charmap.rom_unknown ? "clickable" : ""}" ${stats.charmap.rom_unknown ? `onclick="jumpToCharmapCodes('rom_unknown')"` : ""}><b>${stats.charmap.rom_unknown}</b>未知字符码</div>
-    </div>
-    <div class="filters">
-      <span class="badge">${escapeHtml(currentInfo.label || "全部")}</span>
-      <span>${escapeHtml(currentInfo.description || "")}</span>
-    </div>
     <div class="tabs subtabs dictionary-tabs">
       ${dictionaryTabButtons}
       <input value="${escapeHtml(collectSearch)}" onchange="setCollectSearch(this.value)" placeholder="按 ID、字码、名称、说明搜索">
       ${collectCodeFilter.length ? `<span class="badge">${escapeHtml(collectCodeLabel)} ${collectCodeFilter.length} 个 <button type="button" onclick="clearCollectCodeFilter()">清除</button></span>` : ""}
-      <span class="badge">当前 ${rows.length} 条</span>
+      <span class="badge">${rows.length}/${names.rows.length}</span>
+      <button type="button" onclick="reloadNames()">刷新</button>
     </div>
     <table><thead><tr><th>ID</th><th>名称</th><th>字码</th><th>说明</th><th>存档引用</th></tr></thead><tbody>`;
   rows.forEach(({r, idx}, viewIndex) => {
@@ -1685,7 +1782,7 @@ function renderNames() {
   });
   html += "</tbody></table>";
   document.getElementById("content").innerHTML = html;
-  document.getElementById("detail").textContent = "字典表来自当前 ROM 和内置官方字符映射，不再读取或写入 data/rom_text.json。字码是 ROM 文本编码单元，可能是 1 字节、多字节控制码或 2 字节汉字。";
+  setInspector("未选择字典项");
 }
 function filteredNameRows() {
   const q = collectSearch.trim().toLowerCase();
@@ -1733,25 +1830,23 @@ function nameIndex(table, id) {
 function selectNameRow(table, id) {
   const row = nameRow(table, id);
   if (!row) return;
-  document.getElementById("detail").textContent = [
-    `${table} #${id}`,
+  setInspector(`${table} #${id}`, [
     `当前解码：${row.decoded || row.name || ""}`,
     `字符码：${(row.tokens || []).join(" ")}`,
     ...detailLinesForDictionaryRow(row),
-  ].join("\n");
+  ].join("\n"));
 }
 function selectNameIndex(idx) {
   const row = names.rows[idx];
   if (!row) return;
   selected = {table: row.table, id: row.id};
-  document.getElementById("detail").textContent = [
-    `${row.table_label} #${row.id}`,
+  setInspector(`${row.table_label} #${row.id} ${row.decoded || row.name || ""}`, [
     `当前解码：${row.decoded || row.name || ""}`,
     `字符码：${(row.tokens || []).join(" ")}`,
     `原始字节：${row.raw_hex || ""}`,
     ...detailLinesForDictionaryRow(row),
     ...(row.locations?.length ? [`存档引用：${row.locations.join("；")}`] : []),
-  ].join("\n");
+  ].join("\n"));
 }
 function jumpToRom(table, id) {
   collectTable = table;
@@ -1809,6 +1904,11 @@ function val(id) { return document.getElementById(id).value; }
 function num(id) { return parseInt(val(id), 10); }
 function idNum(id) { return parseInt(String(val(id)).trim().replace(/^#/, "").split(/\s+/)[0], 10); }
 window.addEventListener("resize", () => syncPokemonFormTopSquare());
+window.addEventListener("beforeunload", event => {
+  if (!state?.dirty) return;
+  event.preventDefault();
+  event.returnValue = "";
+});
 refresh().catch(err => setStatus(err.message));
 </script>
 </body>
