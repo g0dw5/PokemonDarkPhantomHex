@@ -1420,18 +1420,17 @@ function renderParty() {
   renderSpritesIn(document.getElementById("content"));
 }
 function renderBoxes() {
-  const tabs = [["all", `全部 ${state.boxes.length}`], ...Array.from({length: 14}, (_, i) => {
-    const box = String(i + 1);
-    const s = (state.boxes_by_box || {})[box] || {filled: 0, total: 30};
-    return [box, `${box}号盒 ${s.filled}/${s.total}`];
-  })];
   const rows = state.boxes.filter(p => boxView === "all" || String(p.box) === boxView);
-  document.getElementById("summary").textContent = `盒子：${state.boxes.length} 只非空宝可梦`;
   if (boxView === "all") {
-    document.getElementById("content").innerHTML = renderSubtabs(tabs, boxView, "setBoxView") + renderBoxOverview();
+    document.getElementById("summary").textContent = `盒子：${state.boxes.length} 只非空宝可梦`;
+    document.getElementById("content").innerHTML = renderBoxOverview();
     renderSpritesIn(document.getElementById("content"));
     return;
   }
+  const boxStats = (state.boxes_by_box || {})[String(boxView)] || {filled: 0, total: 30};
+  document.getElementById("summary").innerHTML = `
+    <span>${boxView}号盒：${boxStats.filled}/${boxStats.total}</span>
+    <span class="summary-controls"><button type="button" onclick="setBoxView('all')">全部盒子</button></span>`;
   let html = "<table class='pokemon-table'><thead><tr><th class='sprite-col'>图</th><th>位置</th><th>种族</th><th>属性</th><th>等级</th><th>性格</th><th>性别</th><th>特性</th><th>球</th><th>携带</th><th>招式</th><th>合法性</th></tr></thead><tbody>";
   rows.forEach((p) => {
     const i = state.boxes.indexOf(p);
@@ -1439,7 +1438,7 @@ function renderBoxes() {
     const moves = p.moves.map((id, idx) => romLink("moves", id, p.move_names[idx])).join(" / ");
     html += `<tr id="save-box-${i}" class="${selected===i?"selected":""}" onclick="selectBox(${i})"><td class="sprite-col">${spriteCanvasTag(`box-${i}`, p.species, p.is_shiny, "pokemon-sprite")}</td><td>盒子 ${p.box}-${p.box_slot}</td><td>${displayName("species", p.species, p.species_name)} ${shinyBadge(p)}</td><td>${pokemonTypeBadges(p.types)}</td><td>${p.level || "未知"}</td><td>${p.nature_name}</td><td>${p.gender}</td><td>${displayName("abilities", p.ability_id, p.ability_name)}</td><td>${p.caught_ball_name}</td><td>${held}</td><td>${moves}</td><td>${legalityBadge(p)}</td></tr>`;
   });
-  document.getElementById("content").innerHTML = renderSubtabs(tabs, boxView, "setBoxView") + renderBoxGrid(Number(boxView), true) + html + "</tbody></table>";
+  document.getElementById("content").innerHTML = html + "</tbody></table>";
   renderSpritesIn(document.getElementById("content"));
 }
 function setBoxView(next) { boxView = next; selected = null; renderBoxes(); }
@@ -1455,7 +1454,8 @@ function renderBoxGrid(box, active) {
     const pokemon = state.boxes.find(p => Number(p.box) === Number(box) && Number(p.box_slot) === slot);
     if (!pokemon) return `<div class="box-slot"><span class="box-slot-index">${slot}</span></div>`;
     const index = state.boxes.indexOf(pokemon);
-    return `<div id="box-slot-${box}-${slot}" class="box-slot occupied ${selected===index?"selected":""}" title="${escapeHtml(pokemon.species_name)} · ${box}-${slot}" onclick="selectBoxFromGrid(${index}); event.stopPropagation();"><span class="box-slot-index">${slot}</span>${spriteCanvasTag(`box-grid-${box}-${slot}`, pokemon.species, pokemon.is_shiny, "box-mini-sprite")}</div>`;
+    const click = active ? ` onclick="selectBoxFromGrid(${index}); event.stopPropagation();"` : "";
+    return `<div id="box-slot-${box}-${slot}" class="box-slot occupied ${selected===index?"selected":""}" title="${escapeHtml(pokemon.species_name)} · ${box}-${slot}"${click}><span class="box-slot-index">${slot}</span>${spriteCanvasTag(`box-grid-${box}-${slot}`, pokemon.species, pokemon.is_shiny, "box-mini-sprite")}</div>`;
   }).join("");
   return `<div class="box-grid ${active ? "active" : ""}">${slots}</div>`;
 }
