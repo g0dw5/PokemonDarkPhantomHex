@@ -1058,10 +1058,11 @@ HTML = r"""<!doctype html>
     .party-storage { grid-row: span 2; }
     .box-card h3 { margin: 0 0 6px; font-size: 13px; display: flex; justify-content: space-between; gap: 6px; }
     .box-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; }
-    .party-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; height: calc(100% - 24px); }
+    .party-grid { display: grid; grid-template-columns: 1fr; grid-template-rows: repeat(6, minmax(28px, 1fr)); gap: 5px; height: calc(100% - 24px); }
     .box-grid.active { padding: 8px; border-bottom: 1px solid #e0e3dc; background: #fbfbf8; }
     .box-slot { aspect-ratio: 1 / 1; min-width: 0; border: 1px solid #d9ded6; border-radius: 4px; background: #eef1ea; display: flex; align-items: center; justify-content: center; position: relative; }
-    .party-slot { min-height: 42px; }
+    .party-grid .box-slot { aspect-ratio: auto; }
+    .party-slot { min-height: 30px; }
     .box-slot.occupied { background: #fff; cursor: pointer; }
     .box-slot.occupied:hover { border-color: #1f6f9f; background: #eef8ff; }
     .box-slot.occupied:hover::after { content: attr(data-name); position: absolute; left: 50%; bottom: calc(100% + 5px); transform: translateX(-50%); z-index: 12; min-width: max-content; max-width: 180px; padding: 4px 6px; border-radius: 4px; background: #1f2722; color: white; font-size: 12px; line-height: 1.3; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.2); pointer-events: none; }

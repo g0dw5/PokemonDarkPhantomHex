@@ -378,6 +378,8 @@ class WebEditorBrowserTest(unittest.TestCase):
             expect(self.page.locator("#summary")).to_contain_text("宝可梦：队伍 1/6，盒子 1/420")
             expect(self.page.locator(".storage-card")).to_have_count(15)
             expect(self.page.locator(".party-storage")).to_have_count(1)
+            expect(self.page.locator(".party-grid .party-slot")).to_have_count(6)
+            self.assertEqual(self.page.locator(".party-grid").evaluate("node => getComputedStyle(node).gridTemplateColumns.split(' ').length"), 1)
             expect(self.page.locator(".storage-card:not(.party-storage) .box-slot.occupied").first).to_have_attribute("data-name", re.compile("鲤鱼王"))
             expect(self.page.locator("#content .subtabs")).to_have_count(0)
             self.page.locator(".storage-card:not(.party-storage)").first.click()
