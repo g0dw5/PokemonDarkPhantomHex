@@ -481,7 +481,10 @@ class BackendEditorTest(unittest.TestCase):
                 self.assertTrue(editor.api_pick_save()["ok"])
 
             sample_raw = {
-                "species": {"25": {"name": "皮卡丘", "decoded": "皮卡丘", "tokens": ["01"], "detail": {"types": ["电"]}}},
+                "species": {
+                    "0": {"name": "空", "decoded": "空", "tokens": ["00"]},
+                    "25": {"name": "皮卡丘", "decoded": "皮卡丘", "tokens": ["01"], "detail": {"types": ["电"]}},
+                },
                 "moves": {"33": {"name": "撞击", "decoded": "{AA}", "tokens": ["AA"], "pp": 0, "description": "撞"}},
                 "abilities": {"1": {"name": "恶臭", "decoded": "恶臭", "tokens": ["02"]}},
                 "items": {
@@ -500,6 +503,7 @@ class BackendEditorTest(unittest.TestCase):
                 names = editor.api_names()
             self.assertEqual(names["stats"]["charmap"]["rom_unknown"], 1)
             self.assertEqual(names["moves"][0]["unknown_count"], 1)
+            self.assertNotIn(0, {row["id"] for row in names["species"]})
             item_rows = {row["id"]: row for row in names["items"]}
             self.assertEqual(item_rows[0]["name"], "空")
             self.assertEqual(item_rows[58]["name"], "道具 58")

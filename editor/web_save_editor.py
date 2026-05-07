@@ -352,6 +352,8 @@ def api_names():
         rows = []
         for key, entry in sorted(raw.get(name, {}).items(), key=lambda item: int(item[0])):
             item_id = int(key)
+            if name == "species" and item_id == 0:
+                continue
             tokens = entry.get("tokens") or []
             row_name = entry.get("name") or ""
             decoded = entry.get("decoded") or ""
