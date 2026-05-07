@@ -1473,10 +1473,10 @@ function renderPokemonStorageMap() {
 function renderPartyStorageGrid() {
   const slots = Array.from({length: 6}, (_, i) => i + 1).map(slot => {
     const pokemon = state.party.find(p => Number(p.slot) === slot);
-    if (!pokemon) return `<div class="box-slot party-slot"><span class="box-slot-index">${slot}</span></div>`;
+    if (!pokemon) return `<div id="party-slot-${slot}" class="box-slot party-slot"><span class="box-slot-index">${slot}</span></div>`;
     const index = state.party.indexOf(pokemon);
     const label = `${pokemon.species_name} · 队伍 ${slot}`;
-    return `<div class="box-slot party-slot occupied ${isPokemonSelected("party", index)?"selected":""}" title="${escapeHtml(label)}" data-name="${escapeHtml(label)}" onclick="selectPartyFromStorage(${index}); event.stopPropagation();"><span class="box-slot-index">${slot}</span>${spriteCanvasTag(`party-grid-${slot}`, pokemon.species, pokemon.is_shiny, "box-mini-sprite")}</div>`;
+    return `<div id="party-slot-${slot}" class="box-slot party-slot occupied ${isPokemonSelected("party", index)?"selected":""}" title="${escapeHtml(label)}" data-name="${escapeHtml(label)}" onclick="selectPartyFromStorage(${index}); event.stopPropagation();"><span class="box-slot-index">${slot}</span>${spriteCanvasTag(`party-grid-${slot}`, pokemon.species, pokemon.is_shiny, "box-mini-sprite")}</div>`;
   }).join("");
   return `<div class="party-grid">${slots}</div>`;
 }
@@ -1503,6 +1503,28 @@ function pokemonTableRow(kind, p, index) {
 }
 function isPokemonSelected(kind, index) {
   return selected && selected.kind === kind && selected.index === index;
+}
+function markPokemonSelection() {
+  document.querySelectorAll(".box-slot.selected, .pokemon-table tr.selected").forEach(node => node.classList.remove("selected"));
+  if (!selected) return;
+  const rowId = selected.kind === "party" ? `save-party-${selected.index}` : `save-box-${selected.index}`;
+  const row = document.getElementById(rowId);
+  if (row) row.classList.add("selected");
+  let slot = null;
+  if (selected.kind === "party") {
+    const pokemon = state.party[selected.index];
+    if (pokemon) slot = document.getElementById(`party-slot-${pokemon.slot}`);
+  } else {
+    const pokemon = state.boxes[selected.index];
+    if (pokemon) slot = document.getElementById(`box-slot-${pokemon.box}-${pokemon.box_slot}`);
+  }
+  if (slot) slot.classList.add("selected");
+}
+function pokemonFormMatches(location, pokemon) {
+  const locationInput = document.getElementById("location");
+  if (!locationInput || locationInput.value !== location) return false;
+  if (location === "party") return Number(val("slot")) === Number(pokemon.slot);
+  return Number(val("box")) === Number(pokemon.box) && Number(val("box_slot")) === Number(pokemon.box_slot);
 }
 function renderBoxGrid(box, active) {
   const slots = Array.from({length: 30}, (_, i) => i + 1).map(slot => {
@@ -1618,9 +1640,12 @@ function syncPokemonFormTopSquare() {
   spriteWrap.style.maxHeight = `${size}px`;
 }
 async function selectParty(i) {
+  const wasSelected = isPokemonSelected("party", i);
   selected = {kind: "party", index: i};
+  markPokemonSelection();
   const p = state.party[i];
   setInspector(`${p.species_name} · 队伍 ${p.slot}`, p.legality.join("\n"));
+  if (wasSelected && pokemonFormMatches("party", p)) return;
   pokemonFormConstraints = await loadPokemonConstraints(p.species, p.level);
   renderPokemonForm(p, pokemonFormConstraints, "party");
 }
@@ -1669,9 +1694,12 @@ function renderPokemonForm(p, constraints, location) {
   requestAnimationFrame(syncPokemonFormTopSquare);
 }
 async function selectBox(i) {
+  const wasSelected = isPokemonSelected("box", i);
   selected = {kind: "box", index: i};
+  markPokemonSelection();
   const p = state.boxes[i];
   setInspector(`${p.species_name} · 盒子 ${p.box}-${p.box_slot}`, p.legality.join("\n"));
+  if (wasSelected && pokemonFormMatches("box", p)) return;
   pokemonFormConstraints = await loadPokemonConstraints(p.species, p.level || 100);
   renderPokemonForm(p, pokemonFormConstraints, "box");
 }
