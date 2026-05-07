@@ -279,6 +279,10 @@ class WebEditorBrowserTest(unittest.TestCase):
             expect(self.page.locator("#form")).to_contain_text("写入宝可梦")
             expect(self.page.locator("#form-types")).to_contain_text("电")
             expect(self.page.locator("#form-encounters")).to_contain_text("地图 1-2 草丛 Lv3-6")
+            self.assertLess(
+                self.page.locator("#move-controls").evaluate("node => [...node.parentElement.children].indexOf(node)"),
+                self.page.locator("#form-encounters").evaluate("node => [...node.parentElement.children].indexOf(node)"),
+            )
 
             case_count = 0
             case_count += self.assert_input_cases("#species", ["#25 · 皮卡丘", "#133 · 伊布", "#129 · 鲤鱼王", "#25 · 皮卡丘"])

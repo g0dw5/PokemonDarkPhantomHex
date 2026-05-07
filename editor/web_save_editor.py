@@ -1617,7 +1617,6 @@ function renderPokemonForm(p, constraints, location) {
         </div>
         ${field("species","种族",idName(p.species, p.species_name),false,"species-list", "handleSpeciesChanged()")}
         <div id="form-types">${pokemonTypeBadges(speciesTypesForForm(p.species, p.types))}</div>
-        <div id="form-encounters">${pokemonEncounterPanel(p.species)}</div>
         ${field("held_item","携带道具",idName(p.held_item, p.held_item_name),false,"item-list")}
       </div>
       <div class="pokemon-form-sprite-wrap">
@@ -1642,6 +1641,7 @@ function renderPokemonForm(p, constraints, location) {
       ${statSpreadField("evs","努力值",p.evs.join(","))}
     </div>
     <div id="move-controls">${moveFields(p.moves, p.pps, constraints)}</div>
+    <div id="form-encounters">${pokemonEncounterPanel(p.species)}</div>
     <p><button type="button" class="primary" onclick="updatePokemon()">写入宝可梦</button></p>`;
   renderSpritesIn(document.getElementById("form"));
   syncPokemonFormTopSquare();

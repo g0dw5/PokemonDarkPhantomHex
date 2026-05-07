@@ -37,7 +37,6 @@
 ```
 
 ## 待处理
-- [ ] P1 宝可梦编辑页的encounter放到最下面
 - [ ] P1 队伍6只改成完全纵向排列
 - [ ] P1 宝可梦的盒子区锁定,不随页面滚动,下面的列表区自己单独滚动
 - [ ] P1 去除字典表里的0号宝可梦
@@ -123,6 +122,9 @@
   - 验证：`PYTHONPYCACHEPREFIX=.pycache python3 tests/run_browser_tests.py` 通过，总覆盖率 93.5%。
 - [x] P1 道具页的存档引用点击无响应
   - 结果：字典表道具存档引用支持真实背包引用格式 `口袋 #格位 x数量`，点击后会跳转到背包对应格并打开编辑表单。
+  - 验证：`PYTHONPYCACHEPREFIX=.pycache python3 tests/run_browser_tests.py` 通过，总覆盖率 93.5%。
+- [x] P1 宝可梦编辑页的encounter放到最下面
+  - 结果：宝可梦编辑表单里的 Encounter 面板移到招式区之后，种族切换时仍会同步刷新 Encounter 内容。
   - 验证：`PYTHONPYCACHEPREFIX=.pycache python3 tests/run_browser_tests.py` 通过，总覆盖率 93.5%。
 - [x] P0 使用真正的浏览器交互进行单元测试,覆盖显示/修改内容各种场景的测试用例,并在后续的每次任务确保单测通过,即可提交代码
   - 结果：新增后端/API/存档核心测试和 Playwright Chromium 浏览器测试，覆盖真实 `.sav` 加载、背包多轮写入/保存/重载/关闭、队伍和盒子宝可梦修改、超过 100 个宝可梦表单控件交互子用例。
