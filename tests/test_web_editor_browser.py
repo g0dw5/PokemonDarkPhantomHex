@@ -204,13 +204,13 @@ class WebEditorBrowserTest(unittest.TestCase):
             expect(self.page.locator("#detail .type-badge")).to_have_text("电")
 
             self.page.evaluate("""() => {
-                const row = {table: "items", table_label: "道具", id: 13, name: "伤药", decoded: "伤药", tokens: ["03"], locations: ["电脑道具 #1"], detail: {price: 300, pocket: "道具"}};
+                const row = {table: "items", table_label: "道具", id: 13, name: "伤药", decoded: "伤药", tokens: ["03"], locations: ["电脑道具 #1 x8"], detail: {price: 300, pocket: "道具"}};
                 names = {ok: true, rows: [row], items: [row], species: [], moves: [], abilities: [], stats: {rom: {}, charmap: {}}, table_info: {}};
                 tab = "names";
                 collectTable = "items";
                 render();
             }""")
-            self.page.get_by_role("button", name="电脑道具 #1").click()
+            self.page.get_by_role("button", name="电脑道具 #1 x8").click()
             expect(self.page.locator("#tab-bag")).to_have_class(re.compile("active"))
             expect(self.page.locator("#inspector-title")).to_have_text("电脑道具 #1")
             expect(self.page.locator("#item_id")).to_be_visible()

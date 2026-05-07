@@ -2100,7 +2100,7 @@ function dictionaryLocationButtons(locations, limit=0) {
 }
 async function jumpToSaveLocation(label) {
   if (!state?.ok) return;
-  const clean = String(label || "").replace(/\s+携带$/, "").trim();
+  const clean = String(label || "").replace(/\s+携带$/, "").replace(/\s+x\d+$/, "").trim();
   const party = clean.match(/^队伍 #?(\d+)$/);
   if (party) {
     const slot = Number(party[1]);
