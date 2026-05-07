@@ -2041,7 +2041,7 @@ function dictionaryCell(row, key) {
   if (key === "locations") return dictionaryLocationsCell(row);
   if (key === "summary") return escapeHtml(summaryForDictionaryRow(row) || row.description || "");
   if (key === "description") return escapeHtml(row.description || detail.description_note || "");
-  if (key === "types") return chipList(detail.types || [], "type-chip");
+  if (key === "types") return pokemonTypeBadges(detail.types || []);
   if (key === "baseStats") return baseStatsInline(detail.base_stats);
   if (key === "abilities") return chipList((detail.abilities || []).map(a => `#${a.id} ${a.name}`));
   if (key === "growth") return escapeHtml([detail.growth_rate, detail.gender_ratio].filter(Boolean).join(" / "));
@@ -2301,7 +2301,7 @@ function dictionaryInspectorHtml(row) {
     fields.push(["Secondary ID", detail.secondary_id]);
   }
   if (row.table === "species") {
-    fields.push(["属性", detail.types?.join(" / ") || ""]);
+    fields.push(["属性", detail.types?.length ? pokemonTypeBadges(detail.types) : "", false, true]);
     if (detail.base_stats) fields.push(["种族值", baseStatsInline(detail.base_stats), true, true]);
     fields.push(["特性", (detail.abilities || []).map(a => `#${a.id} ${a.name}`).join("；")]);
     fields.push(["性别比例", detail.gender_ratio || ""]);

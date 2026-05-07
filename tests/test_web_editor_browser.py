@@ -193,6 +193,17 @@ class WebEditorBrowserTest(unittest.TestCase):
                 expect(self.page.locator(".dictionary-table thead")).not_to_contain_text("描述来源")
 
             self.page.evaluate("""() => {
+                const species = {table: "species", table_label: "宝可梦", id: 25, name: "皮卡丘", decoded: "皮卡丘", detail: {types: ["电"]}};
+                names = {ok: true, rows: [species], species: [species], items: [], moves: [], abilities: [], stats: {rom: {}, charmap: {}}, table_info: {}};
+                tab = "names";
+                collectTable = "species";
+                render();
+            }""")
+            expect(self.page.locator(".dictionary-species .type-badge")).to_have_text("电")
+            self.page.locator(".dictionary-species tbody tr").first.click()
+            expect(self.page.locator("#detail .type-badge")).to_have_text("电")
+
+            self.page.evaluate("""() => {
                 const row = {table: "items", table_label: "道具", id: 13, name: "伤药", decoded: "伤药", tokens: ["03"], locations: ["电脑道具 #1"], detail: {price: 300, pocket: "道具"}};
                 names = {ok: true, rows: [row], items: [row], species: [], moves: [], abilities: [], stats: {rom: {}, charmap: {}}, table_info: {}};
                 tab = "names";
