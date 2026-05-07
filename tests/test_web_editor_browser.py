@@ -5,6 +5,7 @@ import tempfile
 import threading
 import unittest
 from pathlib import Path
+from urllib.parse import quote
 
 from playwright.sync_api import expect, sync_playwright
 
@@ -17,8 +18,85 @@ import pokemon_save_core as core  # noqa: E402
 import web_save_editor as editor  # noqa: E402
 
 
-def write_minimal_save(path: Path) -> None:
+def build_pokemon_raw(
+    *,
+    size: int,
+    personality: int,
+    ot_id: int,
+    species: int,
+    held_item: int = 0,
+    experience: int = 0,
+    friendship: int = 70,
+    moves: tuple[int, int, int, int] = (33, 45, 0, 0),
+    pps: tuple[int, int, int, int] = (35, 30, 0, 0),
+    evs: tuple[int, int, int, int, int, int] = (0, 0, 0, 0, 0, 0),
+    ivs: tuple[int, int, int, int, int, int] = (1, 2, 3, 4, 5, 6),
+    ability_bit: int = 0,
+    is_egg: bool = False,
+    level: int = 12,
+) -> bytes:
+    raw = bytearray(size)
+    _w32(raw, 0, personality)
+    _w32(raw, 4, ot_id)
+    parts = {name: bytearray(12) for name in "GAEM"}
+    _w16(parts["G"], 0, species)
+    _w16(parts["G"], 2, held_item)
+    _w32(parts["G"], 4, experience)
+    parts["G"][9] = friendship
+    for index, move_id in enumerate(moves):
+        _w16(parts["A"], index * 2, move_id)
+        parts["A"][8 + index] = pps[index]
+    for index, value in enumerate(evs):
+        parts["E"][index] = value
+    iv_word = 0
+    for index, value in enumerate(ivs):
+        iv_word |= (value & 0x1F) << (index * 5)
+    iv_word |= (1 if is_egg else 0) << 30
+    iv_word |= (ability_bit & 1) << 31
+    _w32(parts["M"], 4, iv_word)
+    decrypted = core.join_substructures(personality, parts)
+    _w16(raw, 0x1C, core.pokemon_checksum(decrypted))
+    raw[0x20:0x50] = core.encrypt_substructures(raw, decrypted)
+    if size >= core.PARTY_SIZE:
+        raw[0x54] = level
+        _w16(raw, 0x56, 30)
+        _w16(raw, 0x58, 30)
+        _w16(raw, 0x5A, 18)
+        _w16(raw, 0x5C, 17)
+        _w16(raw, 0x5E, 20)
+        _w16(raw, 0x60, 16)
+        _w16(raw, 0x62, 15)
+    parsed = core.parse_pokemon(bytes(raw))
+    assert parsed.checksum_stored == parsed.checksum_calculated
+    return bytes(raw)
+
+
+def write_save_fixture(path: Path) -> None:
+    core.SPECIES_NAMES.update({25: "皮卡丘", 129: "鲤鱼王", 130: "暴鲤龙", 133: "伊布"})
+    core.ITEM_NAMES.update({0: "空", 13: "伤药", 189: "神奇糖果"})
+    core.MOVE_NAMES.update({33: "撞击", 45: "叫声", 150: "跃起"})
     data = bytearray(0x20000)
+    party_raw = build_pokemon_raw(
+        size=core.PARTY_SIZE,
+        personality=0x12345678,
+        ot_id=0x87654321,
+        species=25,
+        held_item=13,
+        experience=1000,
+        friendship=80,
+        level=12,
+    )
+    box_raw = build_pokemon_raw(
+        size=core.BOX_POKEMON_SIZE,
+        personality=0x22223333,
+        ot_id=0x87654321,
+        species=129,
+        held_item=0,
+        experience=500,
+        friendship=50,
+        moves=(150, 0, 0, 0),
+        pps=(15, 0, 0, 0),
+    )
     for block_base, save_index in ((0, 2), (core.SAVE_BLOCK_SIZE, 1)):
         for section_id in range(14):
             section_start = block_base + section_id * core.SECTION_SIZE
@@ -29,7 +107,10 @@ def write_minimal_save(path: Path) -> None:
                 _w16(section, core.TRAINER_ID_OFFSET, 1234)
                 _w16(section, core.SECRET_ID_OFFSET, 5678)
             if section_id == 1:
-                _w32(section, core.PARTY_COUNT_OFFSET, 0)
+                _w32(section, core.PARTY_COUNT_OFFSET, 1)
+                section[core.PARTY_OFFSET : core.PARTY_OFFSET + core.PARTY_SIZE] = party_raw
+            if section_id == 5:
+                section[core.BOX_DATA_OFFSET : core.BOX_DATA_OFFSET + core.BOX_POKEMON_SIZE] = box_raw
             _w16(section, 0x0FF4, section_id)
             _w32(section, 0x0FF8, core.SIGNATURE)
             _w32(section, 0x0FFC, save_index)
@@ -49,6 +130,7 @@ def _w32(buf: bytearray, offset: int, value: int) -> None:
 class WebEditorBrowserTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
+        expect.set_options(timeout=60000)
         cls.playwright = sync_playwright().start()
         cls.browser = cls.playwright.chromium.launch(headless=True)
 
@@ -74,6 +156,10 @@ class WebEditorBrowserTest(unittest.TestCase):
         self.thread.join(timeout=2)
         editor.api_close()
 
+    def goto_loaded_save(self, save_path: Path) -> None:
+        self.page.goto(f"{self.url}?save={quote(str(save_path))}")
+        expect(self.page.locator("#file-name")).to_have_text(save_path.name)
+
     def test_unloaded_state_and_dictionary_layout(self) -> None:
         self.page.goto(self.url)
 
@@ -85,55 +171,194 @@ class WebEditorBrowserTest(unittest.TestCase):
         expect(self.page.locator("#close-btn")).to_be_disabled()
         expect(self.page.locator("#content")).to_contain_text("请选择存档文件")
 
-    def test_loaded_save_bag_edit_save_and_close(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            save_path = Path(tmp) / "sample.sav"
-            write_minimal_save(save_path)
-            editor.load_save(save_path)
-
-            self.page.goto(self.url)
-            expect(self.page.locator("#file-name")).to_have_text("sample.sav")
-            expect(self.page.locator("#dirty-pill")).to_have_text("已保存")
-            expect(self.page.locator("#rom-pill")).to_have_text("ROM 缺失")
-
-            self.page.get_by_role("button", name="背包").click()
-            expect(self.page.locator("#summary")).to_contain_text("背包：0 个非空格")
-            self.page.locator("tbody tr").first.click()
-            expect(self.page.locator("#inspector-title")).to_contain_text("电脑道具 #1")
-
-            self.page.locator("#item_id").fill("13")
-            self.page.locator("#quantity").fill("2")
-            self.page.get_by_role("button", name="写入该格").click()
-            expect(self.page.locator("#dirty-pill")).to_have_text("未保存")
-            expect(self.page.locator("#save-btn")).to_be_enabled()
-            expect(self.page.locator("#status")).to_contain_text("尚未保存到文件")
-
-            self.page.get_by_role("button", name="保存").click()
-            expect(self.page.locator("#dirty-pill")).to_have_text("已保存")
-            expect(self.page.locator("#save-btn")).to_be_disabled()
-            self.assertTrue(list(Path(tmp).glob("sample.bak-*.sav")))
-
-            saved = core.EmeraldSave(save_path)
-            item = next(entry for entry in saved.read_bag() if entry.pocket == "电脑道具" and entry.slot == 1)
-            self.assertEqual((item.item_id, item.quantity), (13, 2))
-
-            self.page.get_by_role("button", name="关闭").click()
-            expect(self.page.locator("#file-name")).to_have_text("未加载存档")
-            expect(self.page.locator("#content")).to_contain_text("请选择存档文件")
-
     def test_dictionary_tab_has_no_intro_blocks(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             save_path = Path(tmp) / "sample.sav"
-            write_minimal_save(save_path)
-            editor.load_save(save_path)
+            write_save_fixture(save_path)
+            self.goto_loaded_save(save_path)
 
-            self.page.goto(self.url)
             self.page.get_by_role("button", name="字典表").click()
 
             expect(self.page.locator(".dictionary-tabs")).to_be_visible()
             expect(self.page.locator(".dictionary-tabs input")).to_have_attribute("placeholder", "按 ID、字码、名称、说明搜索")
             expect(self.page.locator(".metric")).to_have_count(0)
             expect(self.page.locator("#inspector-title")).to_have_text("未选择字典项")
+
+    def test_bag_edit_save_reload_and_close_from_loaded_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            save_path = Path(tmp) / "sample.sav"
+            write_save_fixture(save_path)
+            self.goto_loaded_save(save_path)
+
+            expect(self.page.locator("#dirty-pill")).to_have_text("已保存")
+            expect(self.page.locator("#rom-pill")).to_have_text("ROM 缺失")
+            self.page.get_by_role("button", name="背包").click()
+            expect(self.page.locator("#summary")).to_contain_text("背包：0 个非空格")
+            self.page.locator("#content tbody tr").first.click()
+            expect(self.page.locator("#inspector-title")).to_contain_text("电脑道具 #1")
+            expect(self.page.locator("#item_id")).to_be_visible()
+
+            for quantity in (2, 5, 9):
+                self.page.locator("#content tbody tr").first.click()
+                expect(self.page.locator("#item_id")).to_be_visible()
+                self.page.locator("#item_id").fill("13")
+                self.page.locator("#quantity").fill(str(quantity))
+                self.page.locator("#form button.primary").evaluate("button => button.click()")
+                expect(self.page.locator("#dirty-pill")).to_have_text("未保存")
+                expect(self.page.locator("#status")).to_contain_text("尚未保存到文件")
+                self.page.get_by_role("button", name="保存").click()
+                expect(self.page.locator("#dirty-pill")).to_have_text("已保存")
+                self.page.get_by_role("button", name="重载").click()
+                self.assert_bag_entry(save_path, 13, quantity)
+
+            self.assertGreaterEqual(len(list(Path(tmp).glob("sample.bak-*.sav"))), 3)
+            self.page.get_by_role("button", name="关闭").click()
+            expect(self.page.locator("#file-name")).to_have_text("未加载存档")
+            expect(self.page.locator("#content")).to_contain_text("请选择存档文件")
+
+    def test_pokemon_form_control_matrix_and_persistence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            save_path = Path(tmp) / "sample.sav"
+            write_save_fixture(save_path)
+            self.goto_loaded_save(save_path)
+            self.page.get_by_role("button", name="队伍").click()
+            self.page.locator("#content tbody tr").first.click()
+            expect(self.page.locator("#inspector-title")).to_contain_text("皮卡丘")
+            expect(self.page.locator("#form")).to_contain_text("写入宝可梦")
+
+            case_count = 0
+            case_count += self.assert_input_cases("#species", ["#25 · 皮卡丘", "#133 · 伊布", "#129 · 鲤鱼王", "#25 · 皮卡丘"])
+            case_count += self.assert_input_cases("#held_item", ["#13 · 伤药", "#189 · 神奇糖果", "#0 · 空", "#13 · 伤药"])
+            case_count += self.assert_input_cases("#level", [str(value) for value in (1, 5, 12, 33, 50, 66, 75, 88, 99, 100, 12)])
+            case_count += self.assert_input_cases("#friendship", [str(value) for value in (0, 1, 10, 70, 100, 150, 200, 220, 250, 255, 80)])
+            case_count += self.assert_input_cases("#ivs", [
+                "0,0,0,0,0,0",
+                "31,31,31,31,31,31",
+                "1,2,3,4,5,6",
+                "6,5,4,3,2,1",
+                "10,11,12,13,14,15",
+                "20,21,22,23,24,25",
+                "30,29,28,27,26,25",
+                "7,8,9,10,11,12",
+                "13,14,15,16,17,18",
+                "1,2,3,4,5,6",
+            ])
+            case_count += self.assert_input_cases("#evs", [
+                "0,0,0,0,0,0",
+                "85,85,85,85,85,85",
+                "252,0,0,252,6,0",
+                "0,252,0,6,252,0",
+                "100,100,100,100,100,10",
+                "1,2,3,4,5,6",
+                "10,20,30,40,50,60",
+                "60,50,40,30,20,10",
+                "0,0,255,0,255,0",
+                "1,2,3,4,5,6",
+            ])
+            case_count += self.assert_select_cases("#nature_id", [str(value) for value in range(25)] + ["3"])
+            case_count += self.assert_select_cases("#caught_ball", [str(value) for value in range(16)] + ["4"])
+            case_count += self.assert_select_cases("#gender", ["雄", "雌", "无性别", "雄"])
+            case_count += self.assert_select_cases("#move_0", ["33", "45", "0", "33"])
+            case_count += self.assert_select_cases("#move_1", ["45", "33", "0", "45"])
+            case_count += self.assert_select_cases("#move_2", ["0"])
+            case_count += self.assert_select_cases("#move_3", ["0"])
+            for slot in range(4):
+                for value in range(4):
+                    with self.subTest(control=f"pp_up_{slot}", value=value):
+                        self.page.locator(f"#pp_up_{slot} + .pp-up-control button").nth(value).click()
+                        self.assertEqual(self.page.locator(f"#pp_up_{slot}").input_value(), str(value))
+                        case_count += 1
+            for toggle in ("is_egg", "is_shiny", "is_egg", "is_shiny", "is_egg", "is_shiny"):
+                with self.subTest(control=toggle):
+                    current = self.page.locator(f"#{toggle}").input_value()
+                    self.page.locator(f"#{toggle} + .single-toggle").click()
+                    self.assertNotEqual(self.page.locator(f"#{toggle}").input_value(), current)
+                    case_count += 1
+
+            self.assertGreaterEqual(case_count, 100)
+
+            self.page.get_by_role("button", name="队伍").click()
+            self.page.locator("#content tbody tr").first.click()
+            expect(self.page.locator("#form")).to_contain_text("写入宝可梦")
+            self.page.locator("#held_item").fill("#189 · 神奇糖果")
+            self.page.locator("#level").fill("50")
+            self.page.locator("#friendship").fill("220")
+            self.page.locator("#ivs").fill("31,30,29,28,27,26")
+            self.page.locator("#evs").fill("252,0,0,252,6,0")
+            self.page.locator("#nature_id").select_option("3")
+            self.page.locator("#gender").select_option("无性别")
+            self.page.locator("#caught_ball").select_option("4")
+            self.page.locator("#move_0").select_option("0")
+            self.page.locator("#move_1").select_option("0")
+            self.page.locator("#move_2").select_option("0")
+            self.page.locator("#move_3").select_option("0")
+            self.page.locator("#form button.primary").evaluate("button => button.click()")
+            expect(self.page.locator("#dirty-pill")).to_have_text("未保存")
+            self.page.get_by_role("button", name="保存").click()
+            expect(self.page.locator("#dirty-pill")).to_have_text("已保存")
+            self.page.get_by_role("button", name="重载").click()
+
+            saved = core.EmeraldSave(save_path)
+            party = saved.party()[0]
+            self.assertEqual(party.species, 25)
+            self.assertEqual(party.held_item, 189)
+            self.assertEqual(party.level, 50)
+            self.assertEqual(party.friendship, 220)
+            self.assertEqual(party.ivs, [31, 30, 29, 28, 27, 26])
+            self.assertEqual(party.evs, [252, 0, 0, 252, 6, 0])
+            self.assertEqual(party.moves, [0, 0, 0, 0])
+            self.assertEqual(party.checksum_stored, party.checksum_calculated)
+
+    def test_box_pokemon_edit_save_reload(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            save_path = Path(tmp) / "sample.sav"
+            write_save_fixture(save_path)
+            self.goto_loaded_save(save_path)
+
+            self.page.get_by_role("button", name="盒子").click()
+            expect(self.page.locator("#summary")).to_contain_text("盒子：1 只非空宝可梦")
+            self.page.locator("#content tbody tr").first.click()
+            expect(self.page.locator("#inspector-title")).to_contain_text("鲤鱼王")
+            self.page.locator("#species").fill("#130 · 暴鲤龙")
+            self.page.locator("#held_item").fill("#189 · 神奇糖果")
+            self.page.locator("#friendship").fill("100")
+            self.page.locator("#nature_id").select_option("4")
+            self.page.locator("#gender").select_option("无性别")
+            self.page.get_by_role("button", name="写入宝可梦").click()
+            expect(self.page.locator("#dirty-pill")).to_have_text("未保存")
+            self.page.get_by_role("button", name="保存").click()
+            self.page.get_by_role("button", name="重载").click()
+
+            saved = core.EmeraldSave(save_path)
+            box = saved.boxes()[0]
+            self.assertEqual(box.species, 130)
+            self.assertEqual(box.held_item, 189)
+            self.assertEqual(box.friendship, 100)
+            self.assertEqual((box.box, box.box_slot), (1, 1))
+            self.assertEqual(box.checksum_stored, box.checksum_calculated)
+
+    def assert_input_cases(self, selector: str, values: list[str]) -> int:
+        count = 0
+        for value in values:
+            with self.subTest(control=selector, value=value):
+                self.page.locator(selector).fill(value)
+                self.assertEqual(self.page.locator(selector).input_value(), value)
+                count += 1
+        return count
+
+    def assert_select_cases(self, selector: str, values: list[str]) -> int:
+        count = 0
+        for value in values:
+            with self.subTest(control=selector, value=value):
+                self.page.locator(selector).select_option(value)
+                self.assertEqual(self.page.locator(selector).input_value(), value)
+                count += 1
+        return count
+
+    def assert_bag_entry(self, save_path: Path, item_id: int, quantity: int) -> None:
+        saved = core.EmeraldSave(save_path)
+        item = next(entry for entry in saved.read_bag() if entry.pocket == "电脑道具" and entry.slot == 1)
+        self.assertEqual((item.item_id, item.quantity), (item_id, quantity))
 
 
 if __name__ == "__main__":

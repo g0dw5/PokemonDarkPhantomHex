@@ -737,7 +737,7 @@ class EmeraldSave:
         return messages
 
     def save(self) -> Path:
-        stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        stamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
         backup = self.path.with_name(f"{self.path.stem}.bak-{stamp}{self.path.suffix}")
         shutil.copy2(self.path, backup)
         self.path.write_bytes(self.data)

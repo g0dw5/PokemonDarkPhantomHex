@@ -124,6 +124,9 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
         if parsed.path == "/":
+            query = parse_qs(parsed.query)
+            if query.get("save", [""])[0]:
+                load_save(Path(query["save"][0]).expanduser())
             self.send(200, "text/html; charset=utf-8", HTML.encode("utf-8"))
             return
         if parsed.path == "/api/state":
@@ -219,7 +222,10 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
-        self.wfile.write(data)
+        try:
+            self.wfile.write(data)
+        except (BrokenPipeError, ConnectionResetError):
+            return
 
 
 def api_state():

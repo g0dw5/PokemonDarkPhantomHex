@@ -22,8 +22,10 @@ chmod +x run_editor.command
 
 ```bash
 python3 -m playwright install chromium
-python3 -m unittest discover -s tests
+PYTHONPYCACHEPREFIX=.pycache python3 tests/run_browser_tests.py
 ```
+
+测试入口会先运行后端/API/存档核心测试并统计 `editor/pokemon_save_core.py`、`editor/web_save_editor.py` 覆盖率，要求总覆盖率不低于 90%；随后运行真实 Chromium 浏览器交互测试。当前完整套件约 12 秒。
 
 ## 功能
 
