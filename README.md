@@ -138,7 +138,10 @@ chmod +x run_editor.command
 
 描述文本和字码记录：
 
-- 字码表已内置在 `editor/rom_data.py`，来源为 `Pokemon_GBA_Font_Patch/pokeE/PMRSEFRLG_charmap.txt`，并追加当前 ROM 的 `71=U+2009` 特例。
+- 当前 ROM 头为 `POKEMON EMER` / `BPEE`，文本使用 `Wokann/Pokemon_GBA_Font_Patch` 的宝可梦 GBA 中文字库编码。
+- 字码表已完整内置在 `editor/rom_data.py`，来源为上游 `Wokann/Pokemon_GBA_Font_Patch` 的 `pokeE/PMRSEFRLG_charmap.txt`，并追加当前 ROM 的 `71=U+2009` 特例。
+- 中文字符是 GB2312 顺序的双字节 token，范围从 `0100=啊` 到 `1E5D=齄`；中文标点为单字节，例如 `37=。`、`3B=，`、`3C=！`、`3D=？`。
+- 文本解析必须按最长 token 匹配；`0400=肤`、`0800=块`、`0A00=牛`、`0F00=野`、`1000=噪` 这类低字节为 `00` 的中文码，不能在尝试双字节匹配前把 `00` 当 padding。
 - Web 编辑器不再读取或写入 `data/rom_text.json`，也不再提供字符校正功能；字典表数据由当前 ROM + 内置字码表实时解析。
 - 招式描述表主指针表在 `0x1904A00`，按指针解析可覆盖 `move 1..471`，`move 472` 在当前 ROM 中是空指针。
 - 基础特性描述指针表在 `0x31BAD4`，可可靠覆盖 `ability 0..77`。扩展特性描述指针尚未可靠定位，字典表会明确标注只展示名称。
