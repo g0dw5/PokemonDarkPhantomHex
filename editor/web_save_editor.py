@@ -1455,8 +1455,8 @@ function renderPokemonPage() {
 }
 function setPokemonView(next) {
   pokemonView = next;
-  selected = null;
   renderPokemonPage();
+  clearPokemonEditor();
 }
 function renderPokemonStorageMap() {
   return `
@@ -1525,6 +1525,13 @@ function pokemonFormMatches(location, pokemon) {
   if (!locationInput || locationInput.value !== location) return false;
   if (location === "party") return Number(val("slot")) === Number(pokemon.slot);
   return Number(val("box")) === Number(pokemon.box) && Number(val("box_slot")) === Number(pokemon.box_slot);
+}
+function clearPokemonEditor() {
+  selected = null;
+  markPokemonSelection();
+  setInspector("未选择宝可梦");
+  const form = document.getElementById("form");
+  if (form) form.innerHTML = "";
 }
 function renderBoxGrid(box, active) {
   const slots = Array.from({length: 30}, (_, i) => i + 1).map(slot => {
