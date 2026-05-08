@@ -405,6 +405,10 @@ class PokemonView:
     gender: str
     is_shiny: bool
     caught_ball: int
+    met_location: int
+    met_level: int
+    origin_game: int
+    ot_gender: int
     checksum_stored: int
     checksum_calculated: int
     level: int
@@ -799,6 +803,10 @@ def parse_pokemon(raw: bytes, slot: int = 0) -> PokemonView:
         gender=gender_for_species(species, personality),
         is_shiny=is_shiny(personality, ot_id),
         caught_ball=(origin_word >> 11) & 0xF,
+        met_location=misc[1],
+        met_level=origin_word & 0x7F,
+        origin_game=(origin_word >> 7) & 0xF,
+        ot_gender=(origin_word >> 15) & 0x1,
         checksum_stored=checksum_stored,
         checksum_calculated=checksum_calculated,
         level=level,

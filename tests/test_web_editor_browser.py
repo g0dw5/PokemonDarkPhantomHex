@@ -35,6 +35,9 @@ def build_pokemon_raw(
     ability_bit: int = 0,
     is_egg: bool = False,
     level: int = 12,
+    met_location: int = 13,
+    met_level: int = 5,
+    caught_ball: int = 4,
 ) -> bytes:
     raw = bytearray(size)
     _w32(raw, 0, personality)
@@ -54,6 +57,9 @@ def build_pokemon_raw(
         iv_word |= (value & 0x1F) << (index * 5)
     iv_word |= (1 if is_egg else 0) << 30
     iv_word |= (ability_bit & 1) << 31
+    parts["M"][1] = met_location & 0xFF
+    origin_word = (met_level & 0x7F) | ((caught_ball & 0xF) << 11)
+    _w16(parts["M"], 2, origin_word)
     _w32(parts["M"], 4, iv_word)
     decrypted = core.join_substructures(personality, parts)
     _w16(raw, 0x1C, core.pokemon_checksum(decrypted))
@@ -302,8 +308,9 @@ class WebEditorBrowserTest(unittest.TestCase):
             expect(self.page.locator("#detail")).not_to_contain_text("合法性通过")
             expect(self.page.locator("#form")).to_contain_text("写入宝可梦")
             expect(self.page.locator("#form-types")).to_contain_text("电")
-            expect(self.page.locator("#form-encounters")).to_contain_text("103号道路 草丛 Lv3-6")
-            expect(self.page.locator("#form-encounters")).to_contain_text("几率 20%")
+            expect(self.page.locator("#form-encounters")).to_contain_text("地点 #13")
+            expect(self.page.locator("#form-encounters")).to_contain_text("初始 Lv5")
+            expect(self.page.locator("#form-encounters")).not_to_contain_text("几率 20%")
             expect(self.page.locator("#form-encounters")).not_to_contain_text("槽位")
             self.assertLess(
                 self.page.locator("#move-controls").evaluate("node => [...node.parentElement.children].indexOf(node)"),
@@ -367,7 +374,8 @@ class WebEditorBrowserTest(unittest.TestCase):
             expect(self.page.locator(".party-grid .box-slot.occupied.selected")).to_have_count(1)
             expect(self.page.locator(".pokemon-table tbody tr.selected")).to_have_count(1)
             expect(self.page.locator("#form")).to_contain_text("写入宝可梦")
-            expect(self.page.locator("#form-encounters")).to_contain_text("103号道路 草丛 Lv3-6")
+            expect(self.page.locator("#form-encounters")).to_contain_text("地点 #13")
+            expect(self.page.locator("#form-encounters")).to_contain_text("初始 Lv5")
             self.page.locator("#held_item").fill("#189 · 神奇糖果")
             self.page.locator("#level").fill("50")
             self.page.locator("#friendship").fill("220")

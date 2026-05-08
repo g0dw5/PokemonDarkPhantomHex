@@ -116,7 +116,7 @@ PYTHONPYCACHEPREFIX=.pycache python3 tests/run_browser_tests.py
 | Growth | `+0 species u16`，`+2 held_item u16`，`+4 experience u32`，`+9 friendship_or_egg_cycles u8` |
 | Attacks | `+0..+7 moves[4] u16`，`+8..+11 pps[4] u8` |
 | EVs/Condition | `+0..+5 evs[HP, Atk, Def, Speed, SpAtk, SpDef] u8`；华丽大赛状态当前保留 |
-| Misc | `+2 origin_word u16` 中 `bit 11..14` 为捕获球；`+4 iv_word u32` 中 6 项 IV 每项 5 bits，`bit 30` 为蛋标记，`bit 31` 为 `ability_bit` |
+| Misc | `+1 met_location u8` 为实际相遇地点；`+2 origin_word u16` 中 `bit 0..6` 为初始等级，`bit 7..10` 为来源版本，`bit 11..14` 为捕获球，`bit 15` 为训练家性别；`+4 iv_word u32` 中 6 项 IV 每项 5 bits，`bit 30` 为蛋标记，`bit 31` 为 `ability_bit` |
 
 派生字段和写入规则：
 

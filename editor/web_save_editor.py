@@ -7,6 +7,7 @@ import subprocess
 import sys
 import threading
 import webbrowser
+from functools import lru_cache
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -36,7 +37,7 @@ from pokemon_save_core import (
     is_shiny,
     adjust_personality,
 )
-from rom_data import extract_rom_text, is_placeholder_text, set_default_rom_path
+from rom_data import extract_rom_text, is_placeholder_text, region_map_name, set_default_rom_path
 
 
 DEFAULT_SAVE = None
@@ -63,6 +64,22 @@ class State:
 
 
 STATE = State()
+
+
+@lru_cache(maxsize=4096)
+def cached_region_map_name(rom_path: str, region_map_section_id: int) -> str:
+    return region_map_name(Path(rom_path).read_bytes(), region_map_section_id)
+
+
+def format_met_location(region_map_section_id: int) -> str:
+    if STATE.rom_path and STATE.rom_path.exists():
+        try:
+            name = cached_region_map_name(str(STATE.rom_path), int(region_map_section_id))
+        except (OSError, ValueError):
+            name = ""
+        if name:
+            return name
+    return f"地点 #{region_map_section_id}"
 
 
 def table_sort_rank(table: str) -> int:
@@ -312,6 +329,11 @@ def pokemon_payload(p, label: str):
         "is_shiny": p.is_shiny,
         "caught_ball": p.caught_ball,
         "caught_ball_name": p.caught_ball_name,
+        "met_location": p.met_location,
+        "met_location_name": format_met_location(p.met_location),
+        "met_level": p.met_level,
+        "origin_game": p.origin_game,
+        "ot_gender": p.ot_gender,
         "ability_id": p.ability_id,
         "ability_name": p.ability_name,
         "experience": p.experience,
@@ -1615,12 +1637,15 @@ function pokemonEncounterPanel(speciesId) {
   if (!encounters.length) return `<div class="detail-field encounter-panel"><span class="detail-label">Encounter</span><div class="detail-value muted">无 Encounter 数据</div></div>`;
   return `<div class="detail-field encounter-panel"><span class="detail-label">Encounter</span><div class="encounter-list">${encounters.slice(0, 6).map(encounter => `<span>${escapeHtml(encounterLabel(encounter))} · 几率 ${escapeHtml(encounterRateLabel(encounter))}</span>`).join("")}${encounters.length > 6 ? `<span class="muted">+${encounters.length - 6}</span>` : ""}</div></div>`;
 }
+function pokemonMetPanel(p) {
+  const location = p.met_location_name || `地点 #${Number(p.met_location) || 0}`;
+  const level = Number(p.met_level) > 0 ? `初始 Lv${Number(p.met_level)}` : "初始等级未知";
+  return `<div class="detail-field encounter-panel"><span class="detail-label">Encounter</span><div class="detail-value">${escapeHtml(location)} · ${escapeHtml(level)}</div></div>`;
+}
 function refreshFormSpeciesMeta() {
   const typeTarget = document.getElementById("form-types");
-  const encounterTarget = document.getElementById("form-encounters");
   const row = nameRow("species", idNum("species"));
   if (typeTarget) typeTarget.innerHTML = pokemonTypeBadges(row?.detail?.types || []);
-  if (encounterTarget) encounterTarget.innerHTML = pokemonEncounterPanel(idNum("species"));
 }
 function spriteCanvasTag(id, species, shiny, className) {
   return `<canvas id="sprite-${escapeHtml(id)}" class="${className}" width="64" height="64" data-species="${Number(species) || 0}" data-shiny="${shiny ? 1 : 0}"></canvas>`;
@@ -1727,7 +1752,7 @@ function renderPokemonForm(p, constraints, location) {
       ${statSpreadField("evs","努力值",p.evs.join(","))}
     </div>
     <div id="move-controls">${moveFields(p.moves, p.pps, constraints)}</div>
-    <div id="form-encounters">${pokemonEncounterPanel(p.species)}</div>
+    <div id="form-encounters">${pokemonMetPanel(p)}</div>
     <p><button type="button" class="primary" onclick="updatePokemon()">写入宝可梦</button></p>`;
   renderSpritesIn(document.getElementById("form"));
   syncPokemonFormTopSquare();
