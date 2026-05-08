@@ -344,9 +344,9 @@ class BackendEditorTest(unittest.TestCase):
             self.assertEqual(script_rows["1"][0]["method"], "赠送")
             static_rom[0x1A0 : 0x1C5] = bytes([
                 0x16, 0x01, 0x40, 1, 0,
-                0x4F, 0x00, 0x00, 0x00, 0x00,
+                0x68, 0x55, 0x00, 0x00,
                 rom_data.SCRIPT_CMD_GIVE_POKEMON, 385 & 0xFF, 385 >> 8, 25, 209, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0x21, 0, 0, 0, 0,
+                0x02,
                 rom_data.SCRIPT_CMD_GIVE_POKEMON, 386 & 0xFF, 386 >> 8, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0xFF,
             ])

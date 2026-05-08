@@ -82,6 +82,11 @@ SCRIPT_CMD_GIVE_POKEMON = 0x79
 SCRIPT_CMD_GIVE_EGG = 0x7A
 SCRIPT_CMD_SETVAR = 0x16
 SCRIPT_CMD_SPECIAL = 0x25
+SCRIPT_CMD_CALL = 0x04
+SCRIPT_CMD_GOTO = 0x05
+SCRIPT_CMD_GOTO_IF = 0x06
+SCRIPT_CMD_CALL_IF = 0x07
+SCRIPT_CMD_TRAINER_BATTLE = 0x5C
 SCRIPT_VAR_SPECIAL_BATTLE_SPECIES = 0x8004
 SCRIPT_VAR_SPECIAL_BATTLE_LEVEL = 0x8005
 SCRIPT_VAR_SPECIAL_BATTLE_ITEM = 0x8006
@@ -106,16 +111,29 @@ SCRIPT_COMMAND_LENGTHS = {
     0x27: 1,
     0x29: 3,
     0x2B: 3,
+    0x2A: 3,
+    0x35: 3,
+    0x45: 5,
+    0x47: 5,
+    0x4F: 7,
+    0x51: 3,
+    0x53: 3,
+    0x55: 3,
     0x2F: 3,
     0x31: 3,
     0x32: 1,
     0x5A: 1,
     0x5B: 1,
     0x66: 1,
+    0x64: 3,
     0x67: 5,
     0x68: 1,
     0x6A: 1,
     0x6C: 1,
+    0x80: 4,
+    0x97: 2,
+    0xB7: 1,
+    0xDC: 2,
     SCRIPT_CMD_GIVE_POKEMON: 15,
     SCRIPT_CMD_GIVE_EGG: 3,
     SCRIPT_CMD_SET_WILD_BATTLE: 6,
@@ -7967,32 +7985,81 @@ def map_script_pointers(rom: bytes, row: dict) -> list[dict]:
     return targets
 
 
-def script_command_offsets(script: bytes) -> set[int]:
-    offsets = set()
-    cursor = 0
-    for _step in range(256):
-        if cursor >= len(script):
-            break
-        offsets.add(cursor)
-        command = script[cursor]
-        length = SCRIPT_COMMAND_LENGTHS.get(command)
-        if length is None:
-            break
-        cursor += length
-        if command in {0x02, 0x03}:
-            break
+def script_relative_target(script: bytes, script_offset: int, pointer_offset: int) -> int | None:
+    if pointer_offset + 4 > len(script):
+        return None
+    pointer = int.from_bytes(script[pointer_offset : pointer_offset + 4], "little")
+    target = pointer - GBA_ROM_POINTER_BASE
+    local = target - script_offset
+    return local if 0 <= local < len(script) else None
+
+
+def trainerbattle_command_length_and_targets(script: bytes, cursor: int, script_offset: int) -> tuple[int | None, list[int]]:
+    if cursor + 2 > len(script):
+        return None, []
+    battle_type = script[cursor + 1]
+    lengths = {
+        0x00: 10,
+        0x01: 14,
+        0x02: 18,
+        0x03: 18,
+        0x04: 14,
+        0x05: 18,
+        0x06: 18,
+        0x07: 18,
+        0x08: 18,
+        0x09: 18,
+    }
+    length = lengths.get(battle_type)
+    if length is None or cursor + length > len(script):
+        return None, []
+    targets: list[int] = []
+    if battle_type in {0x02, 0x03, 0x05, 0x06, 0x07, 0x08, 0x09}:
+        target = script_relative_target(script, script_offset, cursor + length - 4)
+        if target is not None:
+            targets.append(target)
+    return length, targets
+
+
+def script_command_length_and_targets(script: bytes, cursor: int, script_offset: int) -> tuple[int | None, list[int], bool]:
+    command = script[cursor]
+    if command == SCRIPT_CMD_TRAINER_BATTLE:
+        length, targets = trainerbattle_command_length_and_targets(script, cursor, script_offset)
+        return length, targets, False
+    length = SCRIPT_COMMAND_LENGTHS.get(command)
+    if length is None or cursor + length > len(script):
+        return None, [], True
+    targets: list[int] = []
+    stops_fallthrough = command in {0x02, 0x03}
+    if command in {SCRIPT_CMD_CALL, SCRIPT_CMD_GOTO}:
+        target = script_relative_target(script, script_offset, cursor + 1)
+        if target is not None:
+            targets.append(target)
+        stops_fallthrough = command == SCRIPT_CMD_GOTO
+    elif command in {SCRIPT_CMD_GOTO_IF, SCRIPT_CMD_CALL_IF}:
+        target = script_relative_target(script, script_offset, cursor + 2)
+        if target is not None:
+            targets.append(target)
+    return length, targets, stops_fallthrough
+
+
+def script_command_offsets(script: bytes, script_offset: int = 0) -> set[int]:
+    offsets: set[int] = set()
+    pending = [0]
+    steps = 0
+    while pending and steps < 1024:
+        cursor = pending.pop()
+        while 0 <= cursor < len(script) and cursor not in offsets and steps < 1024:
+            steps += 1
+            offsets.add(cursor)
+            length, targets, stops_fallthrough = script_command_length_and_targets(script, cursor, script_offset)
+            for target in targets:
+                if target not in offsets:
+                    pending.append(target)
+            if length is None or stops_fallthrough:
+                break
+            cursor += length
     return offsets
-
-
-def plausible_give_pokemon_command(script: bytes, command_offset: int) -> bool:
-    end_offset = command_offset + SCRIPT_COMMAND_LENGTHS[SCRIPT_CMD_GIVE_POKEMON]
-    if end_offset > len(script):
-        return False
-    species = int.from_bytes(script[command_offset + 1 : command_offset + 3], "little")
-    level = script[command_offset + 3]
-    item = int.from_bytes(script[command_offset + 4 : command_offset + 6], "little")
-    next_command = script[end_offset] if end_offset < len(script) else 0x02
-    return 1 <= species < SPECIES_COUNT and 1 <= level <= 100 and 0 <= item < 1000 and next_command in SCRIPT_COMMAND_LENGTHS
 
 
 def global_script_offsets(rom: bytes, maps: list[dict]) -> list[int]:
@@ -8005,9 +8072,11 @@ def script_scan_end(rom: bytes, script_offset: int, global_offsets: list[int]) -
     return min(len(rom), script_offset + SCRIPT_STATIC_ENCOUNTER_SCAN_BYTES, next_offset)
 
 
-def extract_special_battle_commands(script: bytes) -> list[dict]:
+def extract_special_battle_commands(script: bytes, parsed_command_offsets: set[int]) -> list[dict]:
     rows = []
-    for command_offset in range(max(0, len(script) - 4)):
+    for command_offset in sorted(parsed_command_offsets):
+        if command_offset + 5 > len(script):
+            continue
         if script[command_offset] != SCRIPT_CMD_SETVAR:
             continue
         if int.from_bytes(script[command_offset + 1 : command_offset + 3], "little") != SCRIPT_VAR_SPECIAL_BATTLE_SPECIES:
@@ -8063,9 +8132,9 @@ def add_script_encounter(encounters: dict[str, list[dict]], seen: set[tuple[int,
     encounters.setdefault(str(species), []).append(encounter)
 
 
-def extract_setwildbattle_encounters(script: bytes, row: dict, detail: dict, script_target: dict, script_offset: int, encounters: dict[str, list[dict]], seen: set[tuple[int, str, int, int, str]]) -> None:
-    for command_offset, command in enumerate(script[:-5]):
-        if command != SCRIPT_CMD_SET_WILD_BATTLE:
+def extract_setwildbattle_encounters(script: bytes, row: dict, detail: dict, script_target: dict, script_offset: int, parsed_command_offsets: set[int], encounters: dict[str, list[dict]], seen: set[tuple[int, str, int, int, str]]) -> None:
+    for command_offset in sorted(parsed_command_offsets):
+        if command_offset + 6 > len(script) or script[command_offset] != SCRIPT_CMD_SET_WILD_BATTLE:
             continue
         species = int.from_bytes(script[command_offset + 1 : command_offset + 3], "little")
         level = script[command_offset + 3]
@@ -8085,10 +8154,8 @@ def extract_setwildbattle_encounters(script: bytes, row: dict, detail: dict, scr
 
 
 def extract_gift_encounters(script: bytes, row: dict, detail: dict, script_target: dict, script_offset: int, parsed_command_offsets: set[int], encounters: dict[str, list[dict]], seen: set[tuple[int, str, int, int, str]]) -> None:
-    for command_offset, command in enumerate(script[:-5]):
-        if command != SCRIPT_CMD_GIVE_POKEMON:
-            continue
-        if command_offset not in parsed_command_offsets and not plausible_give_pokemon_command(script, command_offset):
+    for command_offset in sorted(parsed_command_offsets):
+        if command_offset + SCRIPT_COMMAND_LENGTHS[SCRIPT_CMD_GIVE_POKEMON] > len(script) or script[command_offset] != SCRIPT_CMD_GIVE_POKEMON:
             continue
         species = int.from_bytes(script[command_offset + 1 : command_offset + 3], "little")
         level = script[command_offset + 3]
@@ -8107,8 +8174,8 @@ def extract_gift_encounters(script: bytes, row: dict, detail: dict, script_targe
         add_script_encounter(encounters, seen, species, row, level, "gift", encounter)
 
 
-def extract_script_special_battle_encounters(script: bytes, row: dict, detail: dict, script_target: dict, script_offset: int, encounters: dict[str, list[dict]], seen: set[tuple[int, str, int, int, str]]) -> None:
-    for special in extract_special_battle_commands(script):
+def extract_script_special_battle_encounters(script: bytes, row: dict, detail: dict, script_target: dict, script_offset: int, parsed_command_offsets: set[int], encounters: dict[str, list[dict]], seen: set[tuple[int, str, int, int, str]]) -> None:
+    for special in extract_special_battle_commands(script, parsed_command_offsets):
         species = special["species"]
         level = special["level"]
         command_offset = special["command_offset"]
@@ -8129,10 +8196,8 @@ def extract_script_special_battle_encounters(script: bytes, row: dict, detail: d
 
 
 def extract_egg_encounters(script: bytes, row: dict, detail: dict, script_target: dict, script_offset: int, parsed_command_offsets: set[int], encounters: dict[str, list[dict]], seen: set[tuple[int, str, int, int, str]]) -> None:
-    for command_offset, command in enumerate(script[:-2]):
-        if command != SCRIPT_CMD_GIVE_EGG:
-            continue
-        if command_offset not in parsed_command_offsets:
+    for command_offset in sorted(parsed_command_offsets):
+        if command_offset + SCRIPT_COMMAND_LENGTHS[SCRIPT_CMD_GIVE_EGG] > len(script) or script[command_offset] != SCRIPT_CMD_GIVE_EGG:
             continue
         species = int.from_bytes(script[command_offset + 1 : command_offset + 3], "little")
         next_command = script[command_offset + 3] if command_offset + 3 < len(script) else 0x02
@@ -8161,10 +8226,10 @@ def extract_script_encounters(rom: bytes, maps: list[dict]) -> dict[str, list[di
             script_offset = script_target["script_offset"]
             scan_end = script_scan_end(rom, script_offset, global_offsets)
             script = rom[script_offset:scan_end]
-            parsed_command_offsets = script_command_offsets(script)
-            extract_setwildbattle_encounters(script, row, detail, script_target, script_offset, encounters, seen)
+            parsed_command_offsets = script_command_offsets(script, script_offset)
+            extract_setwildbattle_encounters(script, row, detail, script_target, script_offset, parsed_command_offsets, encounters, seen)
             extract_gift_encounters(script, row, detail, script_target, script_offset, parsed_command_offsets, encounters, seen)
-            extract_script_special_battle_encounters(script, row, detail, script_target, script_offset, encounters, seen)
+            extract_script_special_battle_encounters(script, row, detail, script_target, script_offset, parsed_command_offsets, encounters, seen)
             extract_egg_encounters(script, row, detail, script_target, script_offset, parsed_command_offsets, encounters, seen)
     return {species: sorted(rows, key=lambda row: (str(row["map_id"]), row["min_level"], row["script_offset"])) for species, rows in encounters.items()}
 
