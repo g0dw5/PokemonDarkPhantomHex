@@ -37,13 +37,16 @@
 ```
 
 ## 待处理
-- [ ] P2 字典表中的Encounter列表好像有缺失,比如妙蛙种子,我是在游戏中抓到的,但显示Encounter为空
 
 ## 进行中
 
 ## 阻塞
 
 ## 已完成
+
+- [x] P2 字典表中的Encounter列表好像有缺失,比如妙蛙种子,我是在游戏中抓到的,但显示Encounter为空
+  - 结果：字典表宝可梦 Encounter 现在合并展示 ROM 野生 Encounter 和存档里已捕获宝可梦的实际相遇地点/初始 Lv；没有野生记录但存档中出现过的种族会显示“存档 …”记录，并可跳回对应队伍或盒子位置。
+  - 验证：`PYTHONPYCACHEPREFIX=.pycache python3 tests/run_browser_tests.py` 通过，总覆盖率 93.2%。
 
 - [x] P2 宝可梦修改页里的Encounter,是要展示宝可梦实际相遇的地点和初始等级,而不是宝可梦可以在哪里相遇的列表
   - 结果：解析 `met_location`、初始等级、来源版本和 OT 性别；宝可梦编辑表单底部 Encounter 改为展示这只宝可梦自身的实际相遇地点和初始 Lv，不再跟随种族输入刷新为野生 Encounter 列表。

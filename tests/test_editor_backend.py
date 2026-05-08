@@ -187,8 +187,11 @@ class BackendEditorTest(unittest.TestCase):
             state = editor.api_state()
             self.assertTrue(state["ok"])
             self.assertEqual(state["party"][0]["species"], 25)
+            self.assertEqual(state["party"][0]["met_level"], 5)
             self.assertTrue(editor.api_names()["ok"])
-            self.assertTrue(editor.observed_from_save()["species"])
+            observed = editor.observed_from_save()
+            self.assertTrue(observed["species"])
+            self.assertEqual(observed["encounters"][25][0]["met_level"], 5)
 
             bag = editor.api_update_bag({"pocket": "电脑道具", "slot": 1, "item_id": 13, "quantity": 8})
             self.assertIn("已写入背包", bag["message"])
@@ -251,6 +254,9 @@ class BackendEditorTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             rom_path = Path(tmp) / "sample.gba"
             fake_rom(rom_path)
+            save_path = Path(tmp) / "sample.sav"
+            write_save_fixture(save_path)
+            editor.load_save(save_path)
             core.set_rom_path(rom_path)
             editor.configure_rom(rom_path)
 
@@ -275,6 +281,9 @@ class BackendEditorTest(unittest.TestCase):
             self.assertEqual(encounters[0]["map_key"], "Route103")
             self.assertEqual(encounters[0]["method"], "草丛")
             self.assertEqual((encounters[0]["min_level"], encounters[0]["max_level"]), (3, 6))
+            names = editor.api_names()
+            species_row = next(row for row in names["species"] if row["id"] == 25)
+            self.assertEqual(species_row["detail"]["save_encounters"][0]["met_level"], 5)
 
             for growth_rate in range(6):
                 self.assertGreaterEqual(core.experience_for_level(growth_rate, 20), 0)
