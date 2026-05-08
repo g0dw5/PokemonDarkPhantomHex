@@ -2170,7 +2170,7 @@ function dictionaryColumns(table) {
     return [...common, {key:"types", label:"属性", className:"types-cell"}, {key:"baseStats", label:"种族值"}, {key:"abilities", label:"特性"}, {key:"growthRate", label:"经验曲线"}, {key:"genderRatio", label:"性别"}, {key:"encounters", label:"Encounter"}, {key:"locations", label:"存档引用"}];
   }
   if (table === "maps") {
-    return [{key:"mapId", label:"ID"}, {key:"name", label:"名称", className:"name-cell"}, {key:"mapSize", label:"尺寸"}, {key:"connections", label:"Connections", className:"description-cell"}, {key:"mapEncounters", label:"Encounters", className:"description-cell"}];
+    return [{key:"mapId", label:"ID"}, {key:"name", label:"名称", className:"name-cell"}, {key:"mapSize", label:"尺寸"}, {key:"mapEncounters", label:"Encounters", className:"description-cell"}];
   }
   if (table === "moves") {
     return [...common, {key:"pp", label:"PP"}, {key:"description", label:"描述", className:"description-cell"}, {key:"locations", label:"存档引用"}];
@@ -2199,7 +2199,6 @@ function dictionaryCell(row, key) {
   if (key === "growthRate") return escapeHtml(detail.growth_rate || "");
   if (key === "genderRatio") return escapeHtml(detail.gender_ratio || "");
   if (key === "encounters") return dictionarySpeciesEncounterLinks(detail.encounters || [], 3);
-  if (key === "connections") return dictionaryMapConnectionLinks(detail.connections || [], 4);
   if (key === "mapEncounters") return dictionaryMapEncounterLinks(detail.encounters || [], 4);
   if (key === "mapSize") return detail.layout ? `${escapeHtml(detail.layout.width)}x${escapeHtml(detail.layout.height)}` : "";
   if (key === "pp") return `<span class="num">${row.pp ?? detail.pp ?? ""}</span>`;
@@ -2223,15 +2222,6 @@ function dictionaryLocationButtons(locations, limit=0) {
   const visible = limit ? locations.slice(0, limit) : locations;
   const more = limit && locations.length > limit ? `<span class="muted">+${locations.length - limit}</span>` : "";
   return `<span class="chip-list">${visible.map(location => `<button type="button" class="data-chip location-link" onclick="jumpToSaveLocation('${escapeJsString(location)}'); event.stopPropagation();">${escapeHtml(location)}</button>`).join("")}${more}</span>`;
-}
-function dictionaryMapConnectionLinks(connections, limit=0) {
-  if (!connections.length) return `<span class="muted">无</span>`;
-  const visible = limit ? connections.slice(0, limit) : connections;
-  const more = limit && connections.length > limit ? `<span class="muted">+${connections.length - limit}</span>` : "";
-  return `<span class="chip-list">${visible.map(connection => {
-    const label = `${connection.direction_name || ""} ${connection.name || connection.map_id || ""}`.trim();
-    return `<button type="button" class="data-chip location-link" onclick="jumpToRom('maps', '${escapeJsString(connection.map_id)}'); event.stopPropagation();">${escapeHtml(label)}</button>`;
-  }).join("")}${more}</span>`;
 }
 function dictionaryMapEncounterLinks(encounters, limit=0) {
   if (!encounters.length) return `<span class="muted">无</span>`;
@@ -2544,7 +2534,6 @@ function dictionaryInspectorHtml(row) {
     fields.push(["Music", detail.music]);
     fields.push(["Map Type", detail.map_type]);
     fields.push(["Weather", detail.weather]);
-    fields.push(["Connections", dictionaryMapConnectionLinks(detail.connections || []), true, true]);
     fields.push(["Encounters", dictionaryMapEncounterLinks(detail.encounters || []), true, true]);
   }
   if (row.locations?.length) fields.push(["存档引用", dictionaryLocationButtons(row.locations), true, true]);
@@ -2584,7 +2573,6 @@ function detailLinesForDictionaryRow(row) {
   if (row.table === "maps") {
     if (detail.map_key) lines.push(`地图代号：${detail.map_key}`);
     if (detail.layout) lines.push(`尺寸：${detail.layout.width}x${detail.layout.height}`);
-    if (detail.connections?.length) lines.push(`连接：${detail.connections.map(connection => `${connection.direction_name} ${connection.name}`).join("；")}`);
     if (detail.encounters?.length) lines.push(`Encounter：${detail.encounters.map(encounter => `#${encounter.species_id} ${encounter.species_name} ${encounter.method} ${encounterLevelLabel(encounter)} ${encounterRateLabel(encounter)}`).join("；")}`);
   }
   return lines.filter(Boolean);

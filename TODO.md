@@ -44,6 +44,10 @@
 
 ## 已完成
 
+- [x] P2 把字典表-地图里的Connections去掉吧
+  - 结果：字典表地图子页移除 Connections 列，右侧详情和摘要也不再展示地图连接跳转。
+  - 验证：`PYTHONPYCACHEPREFIX=.pycache python3 tests/run_browser_tests.py` 通过，总覆盖率 93.2%。
+
 - [x] P2 字典表-宝可梦里的Encounter发现一些名称跟跳转后的地图对不上的情况,比如 比雕 地图35-2 战羽鹰 天空之柱 3F,前者是我不希望出现的,后者是我认为比较好的,这样能在地图页面也更有区分度
   - 结果：地图实体名改为优先展示可区分楼层/房间的 map key 名称；扩展地图没有 map key 时使用 ROM region map 名，例如 `35-2` 展示为“启程之路”。
   - 结果：野生 Encounter 在地图实体抽取后回填同一套显示名和 `map_id`，字典表宝可梦页与跳转后的地图页名称保持一致。
