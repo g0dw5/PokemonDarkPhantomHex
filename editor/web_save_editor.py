@@ -37,37 +37,38 @@ from pokemon_save_core import (
     is_shiny,
     adjust_personality,
 )
+from gen3_rom import (
+    GBA_ROM_POINTER_BASE,
+    decode_4bpp_tiled_pixels,
+    decode_bgr555,
+    decompress_lz77_10,
+    read_map_layout,
+    render_map_layout,
+)
 from rom_data import (
-    MAP_LAYOUT_SIZE,
     extract_rom_text,
-    gba_pointer_to_offset,
     is_placeholder_text,
     map_display_name,
     map_header_offset_for_group_number,
     read_pointer,
-    read_s32,
     region_map_name,
     set_default_rom_path,
     valid_rom_offset,
 )
+from rom_profiles import CURRENT_ROM_PROFILE
 
 
 DEFAULT_SAVE = None
 HOST = "127.0.0.1"
 PORT = 8765
-GBA_ROM_POINTER_BASE = 0x08000000
-FRONT_SPRITE_TABLE_OFFSET = 0x30A18C
-NORMAL_PALETTE_TABLE_OFFSET = 0x303678
-SHINY_PALETTE_TABLE_OFFSET = 0x304438
-SPRITE_TABLE_ENTRY_SIZE = 8
-SPRITE_TABLE_COUNT = 440
-SPRITE_WIDTH = 64
-SPRITE_HEIGHT = 64
+FRONT_SPRITE_TABLE_OFFSET = CURRENT_ROM_PROFILE.sprites.front_sprite_table_offset
+NORMAL_PALETTE_TABLE_OFFSET = CURRENT_ROM_PROFILE.sprites.normal_palette_table_offset
+SHINY_PALETTE_TABLE_OFFSET = CURRENT_ROM_PROFILE.sprites.shiny_palette_table_offset
+SPRITE_TABLE_ENTRY_SIZE = CURRENT_ROM_PROFILE.sprites.table_entry_size
+SPRITE_TABLE_COUNT = CURRENT_ROM_PROFILE.sprites.table_count
+SPRITE_WIDTH = CURRENT_ROM_PROFILE.sprites.width
+SPRITE_HEIGHT = CURRENT_ROM_PROFILE.sprites.height
 SPRITE_PIXEL_COUNT = SPRITE_WIDTH * SPRITE_HEIGHT
-MAP_TILE_SIZE = 8
-MAP_METATILE_SIZE = 16
-MAP_MAX_RENDER_PIXELS = 2048 * 2048
-TILESET_METATILE_COUNT = 512
 
 
 class State:
@@ -772,113 +773,16 @@ def render_map_rgba(rom: bytes, map_group: int, map_number: int) -> dict:
     header_offset = map_header_offset_for_group_number(rom, map_group, map_number)
     if not valid_rom_offset(header_offset, rom, 0x1C):
         raise ValueError(f"找不到地图 {map_group}-{map_number} 的 MapHeader")
-    layout_offset = gba_pointer_to_offset(read_pointer(rom, header_offset), len(rom))
-    if not valid_rom_offset(layout_offset, rom, MAP_LAYOUT_SIZE):
-        raise ValueError(f"地图 {map_group}-{map_number} 的 MapLayout 指针非法")
-    width_blocks = read_s32(rom, layout_offset)
-    height_blocks = read_s32(rom, layout_offset + 4)
-    if width_blocks <= 0 or height_blocks <= 0:
-        raise ValueError(f"地图 {map_group}-{map_number} 尺寸非法")
-    width = width_blocks * MAP_METATILE_SIZE
-    height = height_blocks * MAP_METATILE_SIZE
-    if width * height > MAP_MAX_RENDER_PIXELS:
-        raise ValueError(f"地图 {map_group}-{map_number} 过大，暂不渲染")
-    map_offset = gba_pointer_to_offset(read_pointer(rom, layout_offset + 12), len(rom))
-    primary_tileset_offset = gba_pointer_to_offset(read_pointer(rom, layout_offset + 16), len(rom))
-    secondary_tileset_offset = gba_pointer_to_offset(read_pointer(rom, layout_offset + 20), len(rom))
-    if not valid_rom_offset(map_offset, rom, width_blocks * height_blocks * 2):
-        raise ValueError(f"地图 {map_group}-{map_number} 的 map block 数据越界")
-    primary = read_map_tileset(rom, primary_tileset_offset)
-    secondary = read_map_tileset(rom, secondary_tileset_offset)
-    canvas = bytearray([0, 0, 0, 255] * (width * height))
-    for block_y in range(height_blocks):
-        for block_x in range(width_blocks):
-            block_offset = map_offset + (block_y * width_blocks + block_x) * 2
-            block_id = int.from_bytes(rom[block_offset : block_offset + 2], "little") & 0x03FF
-            draw_map_metatile(rom, canvas, width, height, primary, secondary, block_id, block_x, block_y)
+    layout_offset = read_pointer(rom, header_offset) - GBA_ROM_POINTER_BASE
+    layout = read_map_layout(rom, layout_offset, CURRENT_ROM_PROFILE.maps.layout_size)
+    rendered = render_map_layout(rom, layout)
     region_name = region_map_name(rom, rom[header_offset + 0x14])
     return {
         "name": map_display_name(map_group, map_number, region_name),
-        "width": width,
-        "height": height,
-        "rgba": bytes(canvas),
+        "width": rendered.width,
+        "height": rendered.height,
+        "rgba": rendered.rgba,
     }
-
-
-def read_map_tileset(rom: bytes, tileset_offset: int | None) -> dict:
-    if not valid_rom_offset(tileset_offset, rom, 24):
-        raise ValueError("地图 tileset 指针非法")
-    tiles_offset = gba_pointer_to_offset(read_pointer(rom, tileset_offset + 4), len(rom))
-    palette_offset = gba_pointer_to_offset(read_pointer(rom, tileset_offset + 8), len(rom))
-    metatile_offset = gba_pointer_to_offset(read_pointer(rom, tileset_offset + 12), len(rom))
-    if not valid_rom_offset(tiles_offset, rom) or not valid_rom_offset(palette_offset, rom, 16 * 16 * 2) or not valid_rom_offset(metatile_offset, rom, TILESET_METATILE_COUNT * 16):
-        raise ValueError("地图 tileset 资源指针非法")
-    tile_data = _gba_lz77_decompress(rom, tiles_offset) if rom[tileset_offset] else rom[tiles_offset : min(len(rom), tiles_offset + 0x4000)]
-    palettes = []
-    for bank in range(16):
-        colors = []
-        for color_index in range(16):
-            color_offset = palette_offset + (bank * 16 + color_index) * 2
-            colors.append(_decode_gba_color(int.from_bytes(rom[color_offset : color_offset + 2], "little")))
-        palettes.append(colors)
-    return {
-        "tiles": tile_data,
-        "palettes": palettes,
-        "metatiles": metatile_offset,
-    }
-
-
-def _decode_gba_color(color: int) -> tuple[int, int, int, int]:
-    r5 = color & 0x1F
-    g5 = (color >> 5) & 0x1F
-    b5 = (color >> 10) & 0x1F
-    return (r5 * 255 // 31, g5 * 255 // 31, b5 * 255 // 31, 255)
-
-
-def map_tile_color_index(tile_data: bytes, tile_id: int, x: int, y: int) -> int:
-    offset = tile_id * 32 + y * 4 + x // 2
-    if offset >= len(tile_data):
-        return 0
-    value = tile_data[offset]
-    return (value >> 4) & 0x0F if x & 1 else value & 0x0F
-
-
-def draw_map_pixel(canvas: bytearray, width: int, height: int, x: int, y: int, rgba: tuple[int, int, int, int]) -> None:
-    if not (0 <= x < width and 0 <= y < height):
-        return
-    offset = (y * width + x) * 4
-    canvas[offset : offset + 4] = bytes(rgba)
-
-
-def draw_map_tile(canvas: bytearray, width: int, height: int, primary: dict, secondary: dict, entry: int, dst_x: int, dst_y: int, upper_layer: bool) -> None:
-    tile_id = entry & 0x03FF
-    horizontal_flip = bool(entry & 0x0400)
-    vertical_flip = bool(entry & 0x0800)
-    palette_bank = (entry >> 12) & 0x0F
-    tileset = secondary if tile_id >= 512 else primary
-    local_tile = tile_id - 512 if tile_id >= 512 else tile_id
-    palette = tileset["palettes"][palette_bank]
-    for pixel_y in range(MAP_TILE_SIZE):
-        source_y = MAP_TILE_SIZE - 1 - pixel_y if vertical_flip else pixel_y
-        for pixel_x in range(MAP_TILE_SIZE):
-            source_x = MAP_TILE_SIZE - 1 - pixel_x if horizontal_flip else pixel_x
-            color_index = map_tile_color_index(tileset["tiles"], local_tile, source_x, source_y)
-            if upper_layer and color_index == 0:
-                continue
-            draw_map_pixel(canvas, width, height, dst_x + pixel_x, dst_y + pixel_y, palette[color_index])
-
-
-def draw_map_metatile(rom: bytes, canvas: bytearray, width: int, height: int, primary: dict, secondary: dict, block_id: int, block_x: int, block_y: int) -> None:
-    tileset = secondary if block_id >= TILESET_METATILE_COUNT else primary
-    local_id = block_id - TILESET_METATILE_COUNT if block_id >= TILESET_METATILE_COUNT else block_id
-    metatile_offset = tileset["metatiles"] + local_id * 16
-    entries = [int.from_bytes(rom[metatile_offset + index * 2 : metatile_offset + index * 2 + 2], "little") for index in range(8)]
-    positions = ((0, 0), (8, 0), (0, 8), (8, 8))
-    base_x = block_x * MAP_METATILE_SIZE
-    base_y = block_y * MAP_METATILE_SIZE
-    for layer in range(2):
-        for index, (offset_x, offset_y) in enumerate(positions):
-            draw_map_tile(canvas, width, height, primary, secondary, entries[layer * 4 + index], base_x + offset_x, base_y + offset_y, layer == 1)
 
 
 def _sprite_resource_offset(rom: bytes, table_offset: int, species: int) -> int:
@@ -893,65 +797,11 @@ def _sprite_resource_offset(rom: bytes, table_offset: int, species: int) -> int:
 
 
 def _gba_lz77_decompress(rom: bytes, offset: int) -> bytes:
-    if offset + 4 > len(rom):
-        raise ValueError(f"LZ77 头超出范围：0x{offset:08X}")
-    if rom[offset] != 0x10:
-        raise ValueError(f"LZ77 头标记错误：0x{offset:08X}")
-    output_size = rom[offset + 1] | (rom[offset + 2] << 8) | (rom[offset + 3] << 16)
-    src = offset + 4
-    out = bytearray()
-    while len(out) < output_size:
-        if src >= len(rom):
-            raise ValueError(f"LZ77 数据截断：0x{offset:08X}")
-        flags = rom[src]
-        src += 1
-        for _ in range(8):
-            if len(out) >= output_size:
-                break
-            if flags & 0x80:
-                if src + 1 >= len(rom):
-                    raise ValueError(f"LZ77 回溯块截断：0x{offset:08X}")
-                first = rom[src]
-                second = rom[src + 1]
-                src += 2
-                length = (first >> 4) + 3
-                displacement = ((first & 0x0F) << 8) | second
-                copy_from = len(out) - displacement - 1
-                if copy_from < 0:
-                    raise ValueError(f"LZ77 回溯位移无效：0x{offset:08X}")
-                for _ in range(length):
-                    out.append(out[copy_from])
-                    copy_from += 1
-                    if len(out) >= output_size:
-                        break
-            else:
-                if src >= len(rom):
-                    raise ValueError(f"LZ77 原样块截断：0x{offset:08X}")
-                out.append(rom[src])
-                src += 1
-            flags = (flags << 1) & 0xFF
-    return bytes(out)
+    return decompress_lz77_10(rom, offset)
 
 
 def _decode_4bpp_64x64(data: bytes) -> bytes:
-    tile_bytes = 32
-    tiles_per_row = SPRITE_WIDTH // 8
-    max_tiles = (SPRITE_WIDTH // 8) * (SPRITE_HEIGHT // 8)
-    tiles = min(len(data) // tile_bytes, max_tiles)
-    pixels = bytearray(SPRITE_PIXEL_COUNT)
-    for tile_index in range(tiles):
-        tile_base = tile_index * tile_bytes
-        tile_x = tile_index % tiles_per_row
-        tile_y = tile_index // tiles_per_row
-        for row in range(8):
-            row_base = tile_base + row * 4
-            y = tile_y * 8 + row
-            pixel_base = y * SPRITE_WIDTH + tile_x * 8
-            for col_pair in range(4):
-                value = data[row_base + col_pair]
-                pixels[pixel_base + col_pair * 2] = value & 0x0F
-                pixels[pixel_base + col_pair * 2 + 1] = (value >> 4) & 0x0F
-    return bytes(pixels)
+    return decode_4bpp_tiled_pixels(data, SPRITE_WIDTH, SPRITE_HEIGHT)
 
 
 def _decode_gba_palette_16(data: bytes) -> list[tuple[int, int, int]]:
@@ -960,12 +810,7 @@ def _decode_gba_palette_16(data: bytes) -> list[tuple[int, int, int]]:
     palette: list[tuple[int, int, int]] = []
     for index in range(16):
         color = int.from_bytes(data[index * 2 : index * 2 + 2], "little")
-        r5 = color & 0x1F
-        g5 = (color >> 5) & 0x1F
-        b5 = (color >> 10) & 0x1F
-        r = (r5 * 255) // 31
-        g = (g5 * 255) // 31
-        b = (b5 * 255) // 31
+        r, g, b, _alpha = decode_bgr555(color)
         palette.append((r, g, b))
     return palette
 

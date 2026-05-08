@@ -5,54 +5,70 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
+from gen3_rom import (
+    GBA_ROM_POINTER_BASE,
+    gba_pointer_to_offset as gen3_pointer_to_offset,
+    s32 as gen3_s32,
+    u16 as gen3_u16,
+    u32 as gen3_u32,
+    valid_offset as gen3_valid_offset,
+)
+from rom_profiles import CURRENT_ROM_PROFILE
+
 
 DEFAULT_ROM: Path | None = None
 ROOT = Path(__file__).resolve().parents[1]
+PROFILE = CURRENT_ROM_PROFILE
+CREATURE_PROFILE = PROFILE.creature_data
+ITEM_PROFILE = PROFILE.items
+MAP_PROFILE = PROFILE.maps
+SCRIPT_PROFILE = PROFILE.scripts
+WILD_PROFILE = PROFILE.wild_encounters
 
-SPECIES_NAMES_OFFSET = 0x3185C8
+SPECIES_NAMES_OFFSET = PROFILE.name_tables[0].offset
 SPECIES_NAME_SIZE = 11
-SPECIES_COUNT = 412
+SPECIES_COUNT = PROFILE.name_tables[0].count
 
-MOVE_NAMES_OFFSET = 0x31977C
-MOVE_NAMES_EXT_OFFSET = 0x1903207
-MOVE_EXT_START = 355
+MOVE_NAMES_OFFSET = PROFILE.name_tables[1].offset
+MOVE_NAMES_EXT_OFFSET = PROFILE.name_tables[1].extension_offset
+MOVE_EXT_START = PROFILE.name_tables[1].extension_start
 MOVE_NAME_SIZE = 13
-MOVE_COUNT = 472
-MOVE_DATA_OFFSET = 0x1900000
-MOVE_DATA_SIZE = 12
-MOVE_PP_OFFSET = 4
-MOVE_DESCRIPTION_POINTERS_OFFSET = 0x1904A00
+MOVE_COUNT = PROFILE.name_tables[1].count
+MOVE_DATA_OFFSET = CREATURE_PROFILE.move_data_offset
+MOVE_DATA_SIZE = CREATURE_PROFILE.move_data_size
+MOVE_PP_OFFSET = CREATURE_PROFILE.move_pp_offset
+MOVE_DESCRIPTION_POINTERS_OFFSET = CREATURE_PROFILE.move_description_pointers_offset
 
-ABILITY_NAMES_OFFSET = 0x31B6DB
-ABILITY_NAMES_EXT_OFFSET = 0x1C00000
-ABILITY_EXT_START = 78
+ABILITY_NAMES_OFFSET = PROFILE.name_tables[2].offset
+ABILITY_NAMES_EXT_OFFSET = PROFILE.name_tables[2].extension_offset
+ABILITY_EXT_START = PROFILE.name_tables[2].extension_start
 ABILITY_NAME_SIZE = 13
-ABILITY_COUNT = 151
-ABILITY_DESCRIPTION_POINTERS_OFFSET = 0x31BAD4
+ABILITY_COUNT = PROFILE.name_tables[2].count
+ABILITY_DESCRIPTION_POINTERS_OFFSET = CREATURE_PROFILE.ability_description_pointers_offset
 ABILITY_DESCRIPTION_COUNT = 78
-ABILITY_DESCRIPTION_EXT_POINTERS_OFFSET = 0x1BFFE00
+ABILITY_DESCRIPTION_EXT_POINTERS_OFFSET = CREATURE_PROFILE.ability_description_extension_pointers_offset
 ABILITY_DESCRIPTION_EXT_START = 78
 
-ITEMS_OFFSET = 0x5839A0
-ITEM_ENTRY_SIZE = 44
-ITEM_NAME_SIZE = 14
-ITEM_COUNT = 377
-ITEM_ID_OFFSET = 14
-ITEM_PRICE_OFFSET = 16
-ITEM_HOLD_EFFECT_OFFSET = 18
-ITEM_HOLD_PARAM_OFFSET = 19
-ITEM_DESCRIPTION_POINTER_OFFSET = 20
-ITEM_POCKET_OFFSET = 26
-ITEM_TYPE_OFFSET = 27
-ITEM_SECONDARY_ID_OFFSET = 40
+ITEMS_OFFSET = ITEM_PROFILE.offset
+ITEM_ENTRY_SIZE = ITEM_PROFILE.entry_size
+ITEM_NAME_SIZE = ITEM_PROFILE.name_size
+ITEM_COUNT = ITEM_PROFILE.count
+ITEM_ID_OFFSET = ITEM_PROFILE.id_offset
+ITEM_PRICE_OFFSET = ITEM_PROFILE.price_offset
+ITEM_HOLD_EFFECT_OFFSET = ITEM_PROFILE.hold_effect_offset
+ITEM_HOLD_PARAM_OFFSET = ITEM_PROFILE.hold_param_offset
+ITEM_DESCRIPTION_POINTER_OFFSET = ITEM_PROFILE.description_pointer_offset
+ITEM_POCKET_OFFSET = ITEM_PROFILE.pocket_offset
+ITEM_TYPE_OFFSET = ITEM_PROFILE.type_offset
+ITEM_SECONDARY_ID_OFFSET = ITEM_PROFILE.secondary_id_offset
 
-BASE_STATS_OFFSET = 0x3203CC
-BASE_STATS_SIZE = 28
-LEGACY_WILD_ENCOUNTER_HEADERS_OFFSET = 0x552D48
-ACTIVE_WILD_ENCOUNTER_HEADERS_OFFSET = 0xEA2D34
+BASE_STATS_OFFSET = CREATURE_PROFILE.base_stats_offset
+BASE_STATS_SIZE = CREATURE_PROFILE.base_stats_size
+LEGACY_WILD_ENCOUNTER_HEADERS_OFFSET = WILD_PROFILE.legacy_headers_offset
+ACTIVE_WILD_ENCOUNTER_HEADERS_OFFSET = WILD_PROFILE.active_headers_offset
 WILD_ENCOUNTER_HEADERS_OFFSET = ACTIVE_WILD_ENCOUNTER_HEADERS_OFFSET
-WILD_ENCOUNTER_HEADER_SIZE = 20
-WILD_ENCOUNTER_MAX_HEADERS = 600
+WILD_ENCOUNTER_HEADER_SIZE = WILD_PROFILE.header_size
+WILD_ENCOUNTER_MAX_HEADERS = WILD_PROFILE.max_headers
 WILD_ENCOUNTER_METHODS = (
     (4, "草丛", 12),
     (8, "冲浪", 5),
@@ -87,68 +103,13 @@ SCRIPT_CMD_GOTO = 0x05
 SCRIPT_CMD_GOTO_IF = 0x06
 SCRIPT_CMD_CALL_IF = 0x07
 SCRIPT_CMD_TRAINER_BATTLE = 0x5C
-SCRIPT_VAR_SPECIAL_BATTLE_SPECIES = 0x8004
-SCRIPT_VAR_SPECIAL_BATTLE_LEVEL = 0x8005
-SCRIPT_VAR_SPECIAL_BATTLE_ITEM = 0x8006
-SCRIPT_VAR_IN_GAME_TRADE_INDEX = 0x8008
-SCRIPT_SPECIAL_IN_GAME_TRADE = 0x00A2
-SCRIPT_SPECIAL_START_BATTLE = 0x01E2
-SCRIPT_COMMAND_LENGTHS = {
-    0x00: 1,
-    0x02: 1,
-    0x03: 1,
-    0x04: 5,
-    0x05: 5,
-    0x06: 6,
-    0x07: 6,
-    0x08: 2,
-    0x09: 2,
-    0x0F: 6,
-    0x16: 5,
-    0x19: 5,
-    0x1A: 5,
-    0x21: 5,
-    0x25: 3,
-    0x26: 5,
-    0x27: 1,
-    0x28: 3,
-    0x29: 3,
-    0x2B: 3,
-    0x2A: 3,
-    0x30: 6,
-    0x33: 4,
-    0x35: 3,
-    0x43: 6,
-    0x45: 5,
-    0x47: 5,
-    0x4F: 7,
-    0x51: 3,
-    0x53: 3,
-    0x55: 3,
-    0x2F: 3,
-    0x31: 3,
-    0x32: 1,
-    0x5A: 1,
-    0x5B: 1,
-    0x66: 1,
-    0x64: 3,
-    0x67: 5,
-    0x68: 1,
-    0x69: 1,
-    0x6A: 1,
-    0x6B: 1,
-    0x6C: 1,
-    0x80: 4,
-    0x97: 2,
-    0xA4: 3,
-    0xA5: 1,
-    0xB7: 1,
-    0xC5: 1,
-    0xDC: 2,
-    SCRIPT_CMD_GIVE_POKEMON: 15,
-    SCRIPT_CMD_GIVE_EGG: 3,
-    SCRIPT_CMD_SET_WILD_BATTLE: 6,
-}
+SCRIPT_VAR_SPECIAL_BATTLE_SPECIES = SCRIPT_PROFILE.var_special_battle_species
+SCRIPT_VAR_SPECIAL_BATTLE_LEVEL = SCRIPT_PROFILE.var_special_battle_level
+SCRIPT_VAR_SPECIAL_BATTLE_ITEM = SCRIPT_PROFILE.var_special_battle_item
+SCRIPT_VAR_IN_GAME_TRADE_INDEX = SCRIPT_PROFILE.var_in_game_trade_index
+SCRIPT_SPECIAL_IN_GAME_TRADE = SCRIPT_PROFILE.special_in_game_trade
+SCRIPT_SPECIAL_START_BATTLE = SCRIPT_PROFILE.special_start_battle
+SCRIPT_COMMAND_LENGTHS = dict(SCRIPT_PROFILE.command_lengths)
 SPECIAL_CASE_ENCOUNTER_SPECS = [
     {
         "species": 328,
@@ -161,21 +122,21 @@ SPECIAL_CASE_ENCOUNTER_SPECS = [
         "source_note": "119号道路笨笨鱼水格：钓鱼位于命中水格时绕过普通野生表。",
     },
 ]
-ACTIVE_MAP_GROUPS_OFFSET = 0xE8C020
-IN_GAME_TRADE_TABLE_OFFSET = 0x338EDC
-IN_GAME_TRADE_ENTRY_SIZE = 60
-IN_GAME_TRADE_RECEIVED_SPECIES_OFFSET = 0
-IN_GAME_TRADE_REQUESTED_SPECIES_OFFSET = 28
-IN_GAME_TRADE_MAX_ENTRIES = 16
-ORIGINAL_MAP_GROUPS_OFFSET = 0x486578
-REGION_MAP_ENTRIES_OFFSET = 0x5A1480
-REGION_MAP_ENTRY_SIZE = 8
-MAP_HEADER_SIZE = 0x1C
-MAP_LAYOUT_SIZE = 0x18
-MAP_EVENTS_SIZE = 0x14
-MAP_CONNECTION_SIZE = 0x0C
-MAX_MAP_GROUPS = 80
-MAX_MAPS_PER_GROUP = 300
+ACTIVE_MAP_GROUPS_OFFSET = MAP_PROFILE.active_map_groups_offset
+IN_GAME_TRADE_TABLE_OFFSET = SCRIPT_PROFILE.in_game_trade_table_offset
+IN_GAME_TRADE_ENTRY_SIZE = SCRIPT_PROFILE.in_game_trade_entry_size
+IN_GAME_TRADE_RECEIVED_SPECIES_OFFSET = SCRIPT_PROFILE.in_game_trade_received_species_offset
+IN_GAME_TRADE_REQUESTED_SPECIES_OFFSET = SCRIPT_PROFILE.in_game_trade_requested_species_offset
+IN_GAME_TRADE_MAX_ENTRIES = SCRIPT_PROFILE.in_game_trade_max_entries
+ORIGINAL_MAP_GROUPS_OFFSET = MAP_PROFILE.original_map_groups_offset
+REGION_MAP_ENTRIES_OFFSET = MAP_PROFILE.region_map_entries_offset
+REGION_MAP_ENTRY_SIZE = MAP_PROFILE.region_map_entry_size
+MAP_HEADER_SIZE = MAP_PROFILE.header_size
+MAP_LAYOUT_SIZE = MAP_PROFILE.layout_size
+MAP_EVENTS_SIZE = MAP_PROFILE.events_size
+MAP_CONNECTION_SIZE = MAP_PROFILE.connection_size
+MAX_MAP_GROUPS = MAP_PROFILE.max_groups
+MAX_MAPS_PER_GROUP = MAP_PROFILE.max_maps_per_group
 POKEEMERALD_MAP_GROUP_LENGTHS = (
     57, 5, 5, 6, 7, 8, 9, 7, 7, 14, 8, 17, 10, 23, 13, 15, 15,
     2, 2, 2, 3, 1, 1, 1, 108, 61, 89, 2, 1, 13, 1, 1, 3, 1,
@@ -299,7 +260,6 @@ MAP_NAME_PREFIXES = {
     "BattleFrontier": "对战开拓区",
     "WeatherInstitute": "天气研究所",
 }
-GBA_ROM_POINTER_BASE = 0x08000000
 TEXT_TERMINATOR = 0xFF
 CONTROL_TOKENS = {
     0xFA: "{滚行}",
@@ -7410,10 +7370,7 @@ def read_c_string(rom: bytes, offset: int, limit: int = 1000) -> bytes:
 
 
 def gba_pointer_to_offset(pointer: int, rom_size: int) -> int | None:
-    offset = pointer - GBA_ROM_POINTER_BASE
-    if 0 <= offset < rom_size:
-        return offset
-    return None
+    return gen3_pointer_to_offset(pointer, rom_size)
 
 
 def decode_c_string_at(rom: bytes, offset: int, limit: int = 1000) -> str:
@@ -7488,11 +7445,11 @@ def move_pp(rom: bytes, move_id: int) -> int:
 
 
 def u16(rom: bytes, offset: int) -> int:
-    return int.from_bytes(rom[offset : offset + 2], "little") if offset + 2 <= len(rom) else 0
+    return gen3_u16(rom, offset)
 
 
 def u32(rom: bytes, offset: int) -> int:
-    return int.from_bytes(rom[offset : offset + 4], "little") if offset + 4 <= len(rom) else 0
+    return gen3_u32(rom, offset)
 
 
 def type_name(type_id: int) -> str:
@@ -7555,15 +7512,15 @@ def map_display_name(map_group: int, map_number: int, region_name: str = "") -> 
 
 
 def read_pointer(rom: bytes, offset: int) -> int:
-    return u32(rom, offset)
+    return gen3_u32(rom, offset)
 
 
 def read_s32(rom: bytes, offset: int) -> int:
-    return int.from_bytes(rom[offset : offset + 4], "little", signed=True) if offset + 4 <= len(rom) else 0
+    return gen3_s32(rom, offset)
 
 
 def valid_rom_offset(offset: int | None, rom: bytes, size: int = 1) -> bool:
-    return offset is not None and 0 <= offset <= len(rom) - size
+    return gen3_valid_offset(offset, rom, size)
 
 
 def plausible_map_header(rom: bytes, offset: int | None) -> bool:
