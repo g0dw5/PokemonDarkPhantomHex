@@ -79,6 +79,40 @@ SCRIPT_STATIC_ENCOUNTER_SCAN_BYTES = 768
 SCRIPT_CMD_SET_WILD_BATTLE = 0xB6
 SCRIPT_CMD_GIVE_POKEMON = 0x79
 SCRIPT_CMD_GIVE_EGG = 0x7A
+SCRIPT_COMMAND_LENGTHS = {
+    0x00: 1,
+    0x02: 1,
+    0x03: 1,
+    0x04: 5,
+    0x05: 5,
+    0x06: 6,
+    0x07: 6,
+    0x08: 2,
+    0x09: 2,
+    0x0F: 6,
+    0x16: 5,
+    0x19: 5,
+    0x1A: 5,
+    0x21: 5,
+    0x25: 3,
+    0x26: 5,
+    0x27: 1,
+    0x29: 3,
+    0x2B: 3,
+    0x2F: 3,
+    0x31: 3,
+    0x32: 1,
+    0x5A: 1,
+    0x5B: 1,
+    0x66: 1,
+    0x67: 5,
+    0x68: 1,
+    0x6A: 1,
+    0x6C: 1,
+    SCRIPT_CMD_GIVE_POKEMON: 15,
+    SCRIPT_CMD_GIVE_EGG: 3,
+    SCRIPT_CMD_SET_WILD_BATTLE: 6,
+}
 ACTIVE_MAP_GROUPS_OFFSET = 0xE8C020
 ORIGINAL_MAP_GROUPS_OFFSET = 0x486578
 REGION_MAP_ENTRIES_OFFSET = 0x5A1480
@@ -7915,40 +7949,6 @@ def map_script_pointers(rom: bytes, row: dict) -> list[dict]:
 
 
 def script_command_offsets(script: bytes) -> set[int]:
-    command_lengths = {
-        0x00: 1,
-        0x02: 1,
-        0x03: 1,
-        0x04: 5,
-        0x05: 5,
-        0x06: 6,
-        0x07: 6,
-        0x08: 2,
-        0x09: 2,
-        0x0F: 6,
-        0x16: 5,
-        0x19: 5,
-        0x1A: 5,
-        0x21: 5,
-        0x25: 3,
-        0x26: 5,
-        0x27: 1,
-        0x29: 3,
-        0x2B: 3,
-        0x2F: 3,
-        0x31: 3,
-        0x32: 1,
-        0x5A: 1,
-        0x5B: 1,
-        0x66: 1,
-        0x67: 5,
-        0x68: 1,
-        0x6A: 1,
-        0x6C: 1,
-        SCRIPT_CMD_GIVE_POKEMON: 15,
-        SCRIPT_CMD_GIVE_EGG: 3,
-        SCRIPT_CMD_SET_WILD_BATTLE: 6,
-    }
     offsets = set()
     cursor = 0
     for _step in range(256):
@@ -7956,7 +7956,7 @@ def script_command_offsets(script: bytes) -> set[int]:
             break
         offsets.add(cursor)
         command = script[cursor]
-        length = command_lengths.get(command)
+        length = SCRIPT_COMMAND_LENGTHS.get(command)
         if length is None:
             break
         cursor += length
@@ -7987,6 +7987,8 @@ def extract_script_encounters(rom: bytes, maps: list[dict]) -> dict[str, list[di
             parsed_command_offsets = script_command_offsets(script)
             for command_offset, command in enumerate(script[:-5]):
                 if command not in commands:
+                    continue
+                if command_offset not in parsed_command_offsets:
                     continue
                 method, source_type = commands[command]
                 species = int.from_bytes(script[command_offset + 1 : command_offset + 3], "little")
@@ -8022,8 +8024,7 @@ def extract_script_encounters(rom: bytes, maps: list[dict]) -> dict[str, list[di
                     continue
                 species = int.from_bytes(script[command_offset + 1 : command_offset + 3], "little")
                 next_command = script[command_offset + 3] if command_offset + 3 < len(script) else 0x02
-                next_commands = {0x02, 0x03, 0x09, 0x0F, 0x16, 0x19, 0x21, 0x25, 0x26, 0x27, 0x5C, 0x66, 0x67, 0x6C}
-                if not (1 <= species < SPECIES_COUNT and next_command in next_commands):
+                if not (1 <= species < SPECIES_COUNT and next_command in SCRIPT_COMMAND_LENGTHS):
                     continue
                 level = 5
                 key = (species, str(row["id"]), level, script_offset + command_offset, "egg")

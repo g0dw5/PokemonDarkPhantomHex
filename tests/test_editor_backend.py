@@ -341,6 +341,9 @@ class BackendEditorTest(unittest.TestCase):
             script_rows = rom_data.extract_script_encounters(bytes(static_rom), static_maps)
             self.assertEqual(script_rows["172"][0]["method"], "蛋")
             self.assertEqual(script_rows["172"][0]["script_source"], "coord")
+            static_rom[0x140 : 0x144] = bytes([rom_data.SCRIPT_CMD_GIVE_EGG, 356 & 0xFF, 356 >> 8, 0x31])
+            script_rows = rom_data.extract_script_encounters(bytes(static_rom), static_maps)
+            self.assertEqual(script_rows["356"][0]["method"], "蛋")
             self.assertEqual(rom_data.map_display_name(24, 81, "天空之柱"), "天空之柱 3F")
             self.assertEqual(rom_data.map_display_name(35, 2, "启程之路"), "启程之路")
             named_encounters = {"18": [{"map_group": 35, "map_number": 2, "location": "地图 35-2"}]}

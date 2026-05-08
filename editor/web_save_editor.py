@@ -1643,7 +1643,7 @@ function pokemonEncounterPanel(speciesId) {
 }
 function pokemonMetPanel(p) {
   const location = p.met_location_name || `地点 #${Number(p.met_location) || 0}`;
-  const level = Number(p.met_level) > 0 ? `初始 Lv${Number(p.met_level)}` : "初始等级未知";
+  const level = Number(p.met_level) > 0 ? `初始 Lv${Number(p.met_level)}` : (p.is_egg ? "蛋" : "蛋孵化");
   return `<div class="detail-field encounter-panel"><span class="detail-label">Encounter</span><div class="detail-value">${escapeHtml(location)} · ${escapeHtml(level)}</div></div>`;
 }
 function refreshFormSpeciesMeta() {
