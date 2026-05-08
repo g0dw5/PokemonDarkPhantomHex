@@ -1651,7 +1651,7 @@ async function selectParty(i) {
   selected = {kind: "party", index: i};
   markPokemonSelection();
   const p = state.party[i];
-  setInspector(`${p.species_name} · 队伍 ${p.slot}`, p.legality.join("\n"));
+  setInspector(`${p.species_name} · 队伍 ${p.slot}`);
   if (wasSelected && pokemonFormMatches("party", p)) return;
   pokemonFormConstraints = await loadPokemonConstraints(p.species, p.level);
   renderPokemonForm(p, pokemonFormConstraints, "party");
@@ -1705,7 +1705,7 @@ async function selectBox(i) {
   selected = {kind: "box", index: i};
   markPokemonSelection();
   const p = state.boxes[i];
-  setInspector(`${p.species_name} · 盒子 ${p.box}-${p.box_slot}`, p.legality.join("\n"));
+  setInspector(`${p.species_name} · 盒子 ${p.box}-${p.box_slot}`);
   if (wasSelected && pokemonFormMatches("box", p)) return;
   pokemonFormConstraints = await loadPokemonConstraints(p.species, p.level || 100);
   renderPokemonForm(p, pokemonFormConstraints, "box");
