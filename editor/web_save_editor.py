@@ -37,7 +37,19 @@ from pokemon_save_core import (
     is_shiny,
     adjust_personality,
 )
-from rom_data import extract_rom_text, is_placeholder_text, region_map_name, set_default_rom_path
+from rom_data import (
+    MAP_LAYOUT_SIZE,
+    extract_rom_text,
+    gba_pointer_to_offset,
+    is_placeholder_text,
+    map_display_name,
+    map_header_offset_for_group_number,
+    read_pointer,
+    read_s32,
+    region_map_name,
+    set_default_rom_path,
+    valid_rom_offset,
+)
 
 
 DEFAULT_SAVE = None
@@ -52,6 +64,10 @@ SPRITE_TABLE_COUNT = 440
 SPRITE_WIDTH = 64
 SPRITE_HEIGHT = 64
 SPRITE_PIXEL_COUNT = SPRITE_WIDTH * SPRITE_HEIGHT
+MAP_TILE_SIZE = 8
+MAP_METATILE_SIZE = 16
+MAP_MAX_RENDER_PIXELS = 2048 * 2048
+TILESET_METATILE_COUNT = 512
 
 
 class State:
@@ -199,6 +215,14 @@ class Handler(BaseHTTPRequestHandler):
                 species = query_int(query, "species")
                 shiny = bool(query_int(query, "shiny", 0))
                 self.send(*response(api_pokemon_sprite(species, shiny)))
+            except ValueError as error:
+                self.send(*response({"ok": False, "error": str(error)}, 400))
+            return
+        if parsed.path == "/api/map_image":
+            try:
+                query = parse_qs(parsed.query)
+                map_id_value = query.get("map_id", [""])[0]
+                self.send(*response(api_map_image(map_id_value)))
             except ValueError as error:
                 self.send(*response({"ok": False, "error": str(error)}, 400))
             return
@@ -709,6 +733,154 @@ def api_pokemon_sprite(species: int, shiny: bool):
     }
 
 
+def parse_map_id(map_id: str) -> tuple[int, int]:
+    parts = str(map_id or "").split("-", 1)
+    if len(parts) != 2:
+        raise ValueError(f"地图 ID 格式错误：{map_id}")
+    try:
+        return int(parts[0]), int(parts[1])
+    except ValueError:
+        raise ValueError(f"地图 ID 格式错误：{map_id}")
+
+
+def api_map_image(map_id: str):
+    if STATE.rom_path is None or not STATE.rom_path.exists():
+        return {"ok": True, "available": False, "map_id": map_id, "message": "未加载同名 ROM，无法读取地图图像"}
+    map_group, map_number = parse_map_id(map_id)
+    try:
+        rom = STATE.rom_path.read_bytes()
+    except OSError as exc:
+        return {"ok": True, "available": False, "map_id": map_id, "message": f"读取 ROM 失败：{exc}"}
+    try:
+        rendered = render_map_rgba(rom, map_group, map_number)
+    except ValueError as exc:
+        return {"ok": True, "available": False, "map_id": map_id, "message": str(exc)}
+    return {
+        "ok": True,
+        "available": True,
+        "map_id": f"{map_group}-{map_number}",
+        "map_group": map_group,
+        "map_number": map_number,
+        "name": rendered["name"],
+        "width": rendered["width"],
+        "height": rendered["height"],
+        "rgba_base64": base64.b64encode(rendered["rgba"]).decode("ascii"),
+    }
+
+
+def render_map_rgba(rom: bytes, map_group: int, map_number: int) -> dict:
+    header_offset = map_header_offset_for_group_number(rom, map_group, map_number)
+    if not valid_rom_offset(header_offset, rom, 0x1C):
+        raise ValueError(f"找不到地图 {map_group}-{map_number} 的 MapHeader")
+    layout_offset = gba_pointer_to_offset(read_pointer(rom, header_offset), len(rom))
+    if not valid_rom_offset(layout_offset, rom, MAP_LAYOUT_SIZE):
+        raise ValueError(f"地图 {map_group}-{map_number} 的 MapLayout 指针非法")
+    width_blocks = read_s32(rom, layout_offset)
+    height_blocks = read_s32(rom, layout_offset + 4)
+    if width_blocks <= 0 or height_blocks <= 0:
+        raise ValueError(f"地图 {map_group}-{map_number} 尺寸非法")
+    width = width_blocks * MAP_METATILE_SIZE
+    height = height_blocks * MAP_METATILE_SIZE
+    if width * height > MAP_MAX_RENDER_PIXELS:
+        raise ValueError(f"地图 {map_group}-{map_number} 过大，暂不渲染")
+    map_offset = gba_pointer_to_offset(read_pointer(rom, layout_offset + 12), len(rom))
+    primary_tileset_offset = gba_pointer_to_offset(read_pointer(rom, layout_offset + 16), len(rom))
+    secondary_tileset_offset = gba_pointer_to_offset(read_pointer(rom, layout_offset + 20), len(rom))
+    if not valid_rom_offset(map_offset, rom, width_blocks * height_blocks * 2):
+        raise ValueError(f"地图 {map_group}-{map_number} 的 map block 数据越界")
+    primary = read_map_tileset(rom, primary_tileset_offset)
+    secondary = read_map_tileset(rom, secondary_tileset_offset)
+    canvas = bytearray([0, 0, 0, 255] * (width * height))
+    for block_y in range(height_blocks):
+        for block_x in range(width_blocks):
+            block_offset = map_offset + (block_y * width_blocks + block_x) * 2
+            block_id = int.from_bytes(rom[block_offset : block_offset + 2], "little") & 0x03FF
+            draw_map_metatile(rom, canvas, width, height, primary, secondary, block_id, block_x, block_y)
+    region_name = region_map_name(rom, rom[header_offset + 0x14])
+    return {
+        "name": map_display_name(map_group, map_number, region_name),
+        "width": width,
+        "height": height,
+        "rgba": bytes(canvas),
+    }
+
+
+def read_map_tileset(rom: bytes, tileset_offset: int | None) -> dict:
+    if not valid_rom_offset(tileset_offset, rom, 24):
+        raise ValueError("地图 tileset 指针非法")
+    tiles_offset = gba_pointer_to_offset(read_pointer(rom, tileset_offset + 4), len(rom))
+    palette_offset = gba_pointer_to_offset(read_pointer(rom, tileset_offset + 8), len(rom))
+    metatile_offset = gba_pointer_to_offset(read_pointer(rom, tileset_offset + 12), len(rom))
+    if not valid_rom_offset(tiles_offset, rom) or not valid_rom_offset(palette_offset, rom, 16 * 16 * 2) or not valid_rom_offset(metatile_offset, rom, TILESET_METATILE_COUNT * 16):
+        raise ValueError("地图 tileset 资源指针非法")
+    tile_data = _gba_lz77_decompress(rom, tiles_offset) if rom[tileset_offset] else rom[tiles_offset : min(len(rom), tiles_offset + 0x4000)]
+    palettes = []
+    for bank in range(16):
+        colors = []
+        for color_index in range(16):
+            color_offset = palette_offset + (bank * 16 + color_index) * 2
+            colors.append(_decode_gba_color(int.from_bytes(rom[color_offset : color_offset + 2], "little")))
+        palettes.append(colors)
+    return {
+        "tiles": tile_data,
+        "palettes": palettes,
+        "metatiles": metatile_offset,
+    }
+
+
+def _decode_gba_color(color: int) -> tuple[int, int, int, int]:
+    r5 = color & 0x1F
+    g5 = (color >> 5) & 0x1F
+    b5 = (color >> 10) & 0x1F
+    return (r5 * 255 // 31, g5 * 255 // 31, b5 * 255 // 31, 255)
+
+
+def map_tile_color_index(tile_data: bytes, tile_id: int, x: int, y: int) -> int:
+    offset = tile_id * 32 + y * 4 + x // 2
+    if offset >= len(tile_data):
+        return 0
+    value = tile_data[offset]
+    return (value >> 4) & 0x0F if x & 1 else value & 0x0F
+
+
+def draw_map_pixel(canvas: bytearray, width: int, height: int, x: int, y: int, rgba: tuple[int, int, int, int]) -> None:
+    if not (0 <= x < width and 0 <= y < height):
+        return
+    offset = (y * width + x) * 4
+    canvas[offset : offset + 4] = bytes(rgba)
+
+
+def draw_map_tile(canvas: bytearray, width: int, height: int, primary: dict, secondary: dict, entry: int, dst_x: int, dst_y: int, upper_layer: bool) -> None:
+    tile_id = entry & 0x03FF
+    horizontal_flip = bool(entry & 0x0400)
+    vertical_flip = bool(entry & 0x0800)
+    palette_bank = (entry >> 12) & 0x0F
+    tileset = secondary if tile_id >= 512 else primary
+    local_tile = tile_id - 512 if tile_id >= 512 else tile_id
+    palette = tileset["palettes"][palette_bank]
+    for pixel_y in range(MAP_TILE_SIZE):
+        source_y = MAP_TILE_SIZE - 1 - pixel_y if vertical_flip else pixel_y
+        for pixel_x in range(MAP_TILE_SIZE):
+            source_x = MAP_TILE_SIZE - 1 - pixel_x if horizontal_flip else pixel_x
+            color_index = map_tile_color_index(tileset["tiles"], local_tile, source_x, source_y)
+            if upper_layer and color_index == 0:
+                continue
+            draw_map_pixel(canvas, width, height, dst_x + pixel_x, dst_y + pixel_y, palette[color_index])
+
+
+def draw_map_metatile(rom: bytes, canvas: bytearray, width: int, height: int, primary: dict, secondary: dict, block_id: int, block_x: int, block_y: int) -> None:
+    tileset = secondary if block_id >= TILESET_METATILE_COUNT else primary
+    local_id = block_id - TILESET_METATILE_COUNT if block_id >= TILESET_METATILE_COUNT else block_id
+    metatile_offset = tileset["metatiles"] + local_id * 16
+    entries = [int.from_bytes(rom[metatile_offset + index * 2 : metatile_offset + index * 2 + 2], "little") for index in range(8)]
+    positions = ((0, 0), (8, 0), (0, 8), (8, 8))
+    base_x = block_x * MAP_METATILE_SIZE
+    base_y = block_y * MAP_METATILE_SIZE
+    for layer in range(2):
+        for index, (offset_x, offset_y) in enumerate(positions):
+            draw_map_tile(canvas, width, height, primary, secondary, entries[layer * 4 + index], base_x + offset_x, base_y + offset_y, layer == 1)
+
+
 def _sprite_resource_offset(rom: bytes, table_offset: int, species: int) -> int:
     entry_offset = table_offset + species * SPRITE_TABLE_ENTRY_SIZE
     if entry_offset + SPRITE_TABLE_ENTRY_SIZE > len(rom):
@@ -1069,6 +1241,11 @@ HTML = r"""<!doctype html>
     .detail-field.wide { grid-column: 1 / -1; }
     .detail-label { display: block; color: #626a61; font-size: 12px; margin-bottom: 3px; }
     .detail-value { overflow-wrap: anywhere; }
+    .map-preview-field { grid-column: 1 / -1; padding: 0; overflow: hidden; }
+    .map-preview-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px; border-bottom: 1px solid #d9ded6; }
+    .map-preview-wrap { overflow: auto; max-height: min(52vh, 520px); background: #dfe6d9; }
+    .map-preview { display: block; width: 100%; height: auto; image-rendering: pixelated; image-rendering: crisp-edges; }
+    .map-preview-message { padding: 7px; color: #6a7168; }
     .chip-list { display: flex; flex-wrap: wrap; gap: 4px; }
     .data-chip { display: inline-flex; align-items: center; min-height: 20px; border: 1px solid #cbd1c7; border-radius: 999px; padding: 1px 7px; background: #fff; color: #30372f; font-size: 12px; }
     .encounter-groups { display: grid; gap: 6px; min-width: 210px; }
@@ -2477,6 +2654,7 @@ function selectNameIndex(idx) {
   if (!row) return;
   selected = {table: row.table, id: row.id};
   setInspectorHtml(`${row.table_label} #${row.id} ${row.decoded || row.name || ""}`, dictionaryInspectorHtml(row));
+  renderMapCanvases(document.getElementById("detail"));
 }
 function jumpToRom(table, id) {
   collectTable = table;
@@ -2537,7 +2715,57 @@ function dictionaryInspectorHtml(row) {
     fields.push(["Encounters", dictionaryMapEncounterLinks(detail.encounters || []), true, true]);
   }
   if (row.locations?.length) fields.push(["存档引用", dictionaryLocationButtons(row.locations), true, true]);
-  return `<div class="detail-grid">${fields.filter(([, value]) => value !== undefined && value !== null && String(value) !== "").map(([label, value, wide, html]) => `<div class="detail-field ${wide ? "wide" : ""}"><span class="detail-label">${escapeHtml(label)}</span><div class="detail-value">${html ? value : escapeHtml(value)}</div></div>`).join("")}</div>`;
+  const mapPreview = row.table === "maps" ? mapPreviewHtml(row) : "";
+  return `<div class="detail-grid">${mapPreview}${fields.filter(([, value]) => value !== undefined && value !== null && String(value) !== "").map(([label, value, wide, html]) => `<div class="detail-field ${wide ? "wide" : ""}"><span class="detail-label">${escapeHtml(label)}</span><div class="detail-value">${html ? value : escapeHtml(value)}</div></div>`).join("")}</div>`;
+}
+function mapPreviewHtml(row) {
+  const layout = row.detail?.layout || {};
+  const width = Math.max(1, Number(layout.width || 1) * 16);
+  const height = Math.max(1, Number(layout.height || 1) * 16);
+  return `
+    <div class="detail-field map-preview-field">
+      <div class="map-preview-head">
+        <span class="detail-label">地图图像</span>
+        <span class="badge">${escapeHtml(`${width}x${height}`)}</span>
+      </div>
+      <div class="map-preview-wrap">
+        <canvas class="map-preview" width="${width}" height="${height}" data-map-id="${escapeHtml(row.id)}"></canvas>
+        <div class="map-preview-message muted">渲染中</div>
+      </div>
+    </div>`;
+}
+function renderMapCanvases(root) {
+  if (!root) return;
+  root.querySelectorAll("canvas[data-map-id]").forEach(canvas => {
+    void renderMapCanvas(canvas);
+  });
+}
+async function renderMapCanvas(canvas) {
+  const mapId = canvas.dataset.mapId || "";
+  const message = canvas.parentElement?.querySelector(".map-preview-message");
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  try {
+    const data = await request(`/api/map_image?map_id=${encodeURIComponent(mapId)}`);
+    if (!data.available || !data.rgba_base64) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (message) message.textContent = data.message || "无法渲染地图";
+      return;
+    }
+    const width = Number(data.width) || canvas.width;
+    const height = Number(data.height) || canvas.height;
+    if (canvas.width !== width) canvas.width = width;
+    if (canvas.height !== height) canvas.height = height;
+    const raw = atob(data.rgba_base64);
+    const rgba = new Uint8ClampedArray(raw.length);
+    for (let i = 0; i < raw.length; i++) rgba[i] = raw.charCodeAt(i);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.putImageData(new ImageData(rgba, width, height), 0, 0);
+    if (message) message.textContent = "";
+  } catch (error) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (message) message.textContent = error.message || "无法渲染地图";
+  }
 }
 function detailLinesForDictionaryRow(row) {
   const detail = row.detail || {};

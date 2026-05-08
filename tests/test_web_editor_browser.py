@@ -227,6 +227,8 @@ class WebEditorBrowserTest(unittest.TestCase):
             expect(self.page.locator(".dictionary-maps thead")).not_to_contain_text("Connections")
             expect(self.page.locator(".dictionary-maps thead")).to_contain_text("Encounters")
             expect(self.page.locator(".dictionary-maps .encounter-group-label")).to_contain_text(["草丛", "钓鱼", "冲浪"])
+            expect(self.page.locator("#detail canvas.map-preview")).to_have_attribute("data-map-id", "0-18")
+            expect(self.page.locator("#detail .map-preview-head")).to_contain_text("1280x352")
             expect(self.page.locator("#detail")).not_to_contain_text("Connections")
             expect(self.page.locator("#detail")).not_to_contain_text("右 104号道路")
             expect(self.page.locator("#detail .encounter-group-label")).to_contain_text(["草丛", "钓鱼", "冲浪"])

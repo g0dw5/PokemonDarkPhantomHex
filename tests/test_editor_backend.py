@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 import tempfile
+import base64
 import http.client
 import json
 import subprocess
@@ -472,7 +473,13 @@ class BackendEditorTest(unittest.TestCase):
         rom_path = Path("/Users/wang.song/Desktop/pokemon/漆黑的魅影 5.0EX BW.gba")
         if not rom_path.exists():
             self.skipTest("BW ROM fixture is not available on this machine")
+        editor.configure_rom(rom_path)
         rom_text = rom_data.extract_rom_text(rom_path)
+        route101 = editor.api_map_image("0-16")
+        self.assertTrue(route101["available"])
+        self.assertEqual((route101["map_id"], route101["name"]), ("0-16", "101号道路"))
+        self.assertEqual((route101["width"], route101["height"]), (320, 320))
+        self.assertEqual(len(base64.b64decode(route101["rgba_base64"])), 320 * 320 * 4)
 
         def assert_encounter(species: int, location: str, method: str, level: int, source_type: str) -> None:
             rows = rom_text["species"][str(species)]["detail"].get("encounters", [])
