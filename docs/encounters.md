@@ -61,10 +61,13 @@ UI 里的 `rate` 是按槽位权重聚合后的百分比，分母为 `100`。同
 | `gift` | 赠送 | `0x79 givepokemon species level item...` |
 | `egg` | 蛋 | `0x7A giveegg species` |
 | `script_special` | 特殊事件 | 同一 setvar 段内 `setvar 0x8004=species`、`setvar 0x8005=level`、可选 `setvar 0x8006=item`，然后 `special 0x01E2` |
+| `trade` | 交换 | 地图脚本 `setvar 0x8008=trade_index` 后调用 `special 0x00A2`，species 来自当前 ROM 的交换表 |
 
 脚本来源没有概率字段。
 
 脚本命令必须从 MapHeader 关联的脚本入口按控制流可达，才会被纳入 Encounter。解析器会跟随脚本内的 `call`、`goto`、条件跳转和已知 trainer battle 后续脚本指针，也会按固定长度跨过常见消息命令和 `specialvar` 检查；不会再把扫描窗口里“看起来像 `givepokemon`”的字节序列当作赠送来源。
+
+当前 ROM 还有少数对象脚本把完整的 encounter 子段放在同一脚本块后部，例如诞生之岛的迪奥西斯战斗段。对此只恢复能从 `setvar 0x8004/0x8005/0x8006` 按已知命令长度线性解析到 `special 0x01E2` 的本地段，不恢复任意 species 字节。
 
 `script_special` 必须满足两个约束：
 
@@ -94,7 +97,7 @@ UI 里的 `rate` 是按槽位权重聚合后的百分比，分母为 `100`。同
 | --- | --- | --- | --- |
 | `328 笨笨鱼` | 特殊垂钓 | `0-34 119号道路` | 笨笨鱼水格钓鱼，命中水格时绕过普通钓鱼列表；显示为 Lv20-25，50% |
 
-其他标准三代事件不能写入 `special_case`。如果要加入游走、交换、菜单或其他 native special，必须先逆向到当前 ROM 的表、脚本或 ARM/Thumb 代码证据。
+其他标准三代事件不能写入 `special_case`。如果要加入游走、菜单或其他 native special，必须先逆向到当前 ROM 的表、脚本或 ARM/Thumb 代码证据。交换来源已由脚本 `special 0x00A2` 和 ROM 交换表解析，不属于 `special_case`。
 
 ## Encounter 字段
 

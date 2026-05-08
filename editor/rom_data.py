@@ -90,6 +90,8 @@ SCRIPT_CMD_TRAINER_BATTLE = 0x5C
 SCRIPT_VAR_SPECIAL_BATTLE_SPECIES = 0x8004
 SCRIPT_VAR_SPECIAL_BATTLE_LEVEL = 0x8005
 SCRIPT_VAR_SPECIAL_BATTLE_ITEM = 0x8006
+SCRIPT_VAR_IN_GAME_TRADE_INDEX = 0x8008
+SCRIPT_SPECIAL_IN_GAME_TRADE = 0x00A2
 SCRIPT_SPECIAL_START_BATTLE = 0x01E2
 SCRIPT_COMMAND_LENGTHS = {
     0x00: 1,
@@ -109,9 +111,12 @@ SCRIPT_COMMAND_LENGTHS = {
     0x25: 3,
     0x26: 5,
     0x27: 1,
+    0x28: 3,
     0x29: 3,
     0x2B: 3,
     0x2A: 3,
+    0x30: 6,
+    0x33: 4,
     0x35: 3,
     0x43: 6,
     0x45: 5,
@@ -135,7 +140,10 @@ SCRIPT_COMMAND_LENGTHS = {
     0x6C: 1,
     0x80: 4,
     0x97: 2,
+    0xA4: 3,
+    0xA5: 1,
     0xB7: 1,
+    0xC5: 1,
     0xDC: 2,
     SCRIPT_CMD_GIVE_POKEMON: 15,
     SCRIPT_CMD_GIVE_EGG: 3,
@@ -154,6 +162,11 @@ SPECIAL_CASE_ENCOUNTER_SPECS = [
     },
 ]
 ACTIVE_MAP_GROUPS_OFFSET = 0xE8C020
+IN_GAME_TRADE_TABLE_OFFSET = 0x338EDC
+IN_GAME_TRADE_ENTRY_SIZE = 60
+IN_GAME_TRADE_RECEIVED_SPECIES_OFFSET = 0
+IN_GAME_TRADE_REQUESTED_SPECIES_OFFSET = 28
+IN_GAME_TRADE_MAX_ENTRIES = 16
 ORIGINAL_MAP_GROUPS_OFFSET = 0x486578
 REGION_MAP_ENTRIES_OFFSET = 0x5A1480
 REGION_MAP_ENTRY_SIZE = 8
@@ -7982,9 +7995,10 @@ def plausible_script_pointer(rom: bytes, pointer: int) -> int | None:
         return None
     first = rom[offset]
     common_script_commands = {
-        0x02, 0x03, 0x04, 0x05, 0x06, 0x09, 0x0F, 0x16, 0x19, 0x21, 0x25, 0x26, 0x27, 0x2B,
-        0x43,
+        0x02, 0x03, 0x04, 0x05, 0x06, 0x09, 0x0F, 0x16, 0x19, 0x21, 0x25, 0x26, 0x27, 0x28,
+        0x2B, 0x30, 0x33, 0x43,
         0x51, 0x53, 0x55, 0x5A, 0x5C, 0x66, 0x67, 0x68, 0x69, 0x6A, 0x6B, 0x6C,
+        0xA4, 0xA5, 0xC5,
         SCRIPT_CMD_GIVE_POKEMON, SCRIPT_CMD_GIVE_EGG,
         SCRIPT_CMD_SET_WILD_BATTLE,
     }
@@ -8147,40 +8161,68 @@ def script_scan_end(rom: bytes, script_offset: int, global_offsets: list[int]) -
     return min(len(rom), script_offset + SCRIPT_STATIC_ENCOUNTER_SCAN_BYTES, next_offset)
 
 
-def extract_special_battle_commands(script: bytes, parsed_command_offsets: set[int]) -> list[dict]:
-    rows = []
-    for command_offset in sorted(parsed_command_offsets):
-        if command_offset + 5 > len(script):
-            continue
+def special_battle_command_at(script: bytes, command_offset: int, script_offset: int) -> dict | None:
+    if command_offset + 5 > len(script) or script[command_offset] != SCRIPT_CMD_SETVAR:
+        return None
+    if int.from_bytes(script[command_offset + 1 : command_offset + 3], "little") != SCRIPT_VAR_SPECIAL_BATTLE_SPECIES:
+        return None
+    species = int.from_bytes(script[command_offset + 3 : command_offset + 5], "little")
+    level = None
+    item = 0
+    cursor = command_offset + SCRIPT_COMMAND_LENGTHS[SCRIPT_CMD_SETVAR]
+    scan_end = min(len(script), command_offset + 80)
+    steps = 0
+    while cursor < scan_end and steps < 32:
+        steps += 1
+        command = script[cursor]
+        length, _targets, stops_fallthrough = script_command_length_and_targets(script, cursor, script_offset)
+        if length is None:
+            return None
+        if command == SCRIPT_CMD_SETVAR and cursor + 5 <= len(script):
+            var_id = int.from_bytes(script[cursor + 1 : cursor + 3], "little")
+            value = int.from_bytes(script[cursor + 3 : cursor + 5], "little")
+            if var_id == SCRIPT_VAR_SPECIAL_BATTLE_SPECIES:
+                return None
+            if var_id == SCRIPT_VAR_SPECIAL_BATTLE_LEVEL:
+                level = value
+            elif var_id == SCRIPT_VAR_SPECIAL_BATTLE_ITEM:
+                item = value
+        elif command == SCRIPT_CMD_SPECIAL and cursor + 3 <= len(script):
+            special_id = int.from_bytes(script[cursor + 1 : cursor + 3], "little")
+            if special_id == SCRIPT_SPECIAL_START_BATTLE:
+                if not (1 <= species < SPECIES_COUNT and level is not None and 1 <= level <= 100 and 0 <= item < 1000):
+                    return None
+                return {
+                    "command_offset": command_offset,
+                    "species": species,
+                    "level": level,
+                    "item": item,
+                    "special_id": SCRIPT_SPECIAL_START_BATTLE,
+                }
+        if stops_fallthrough:
+            return None
+        cursor += length
+    return None
+
+
+def local_special_battle_offsets(script: bytes, script_offset: int, parsed_command_offsets: set[int]) -> set[int]:
+    offsets = set(parsed_command_offsets)
+    parsed_max = max(parsed_command_offsets, default=-1)
+    for command_offset in range(max(0, parsed_max + 1), len(script) - 4):
         if script[command_offset] != SCRIPT_CMD_SETVAR:
             continue
-        if int.from_bytes(script[command_offset + 1 : command_offset + 3], "little") != SCRIPT_VAR_SPECIAL_BATTLE_SPECIES:
+        if special_battle_command_at(script, command_offset, script_offset) is None:
             continue
-        species = int.from_bytes(script[command_offset + 3 : command_offset + 5], "little")
-        window = script[command_offset : min(len(script), command_offset + 80)]
-        level_pattern = bytes([SCRIPT_CMD_SETVAR]) + SCRIPT_VAR_SPECIAL_BATTLE_LEVEL.to_bytes(2, "little")
-        item_pattern = bytes([SCRIPT_CMD_SETVAR]) + SCRIPT_VAR_SPECIAL_BATTLE_ITEM.to_bytes(2, "little")
-        species_pattern = bytes([SCRIPT_CMD_SETVAR]) + SCRIPT_VAR_SPECIAL_BATTLE_SPECIES.to_bytes(2, "little")
-        battle_pattern = bytes([SCRIPT_CMD_SPECIAL]) + SCRIPT_SPECIAL_START_BATTLE.to_bytes(2, "little")
-        level_pos = window.find(level_pattern)
-        item_pos = window.find(item_pattern)
-        battle_pos = window.find(battle_pattern)
-        next_species_pos = window.find(species_pattern, 1)
-        if level_pos < 0 or battle_pos < 0 or level_pos > battle_pos:
-            continue
-        if next_species_pos >= 0 and next_species_pos < battle_pos:
-            continue
-        level = int.from_bytes(window[level_pos + 3 : level_pos + 5], "little")
-        item = int.from_bytes(window[item_pos + 3 : item_pos + 5], "little") if 0 <= item_pos < battle_pos else 0
-        if not (1 <= species < SPECIES_COUNT and 1 <= level <= 100 and 0 <= item < 1000):
-            continue
-        rows.append({
-            "command_offset": command_offset,
-            "species": species,
-            "level": level,
-            "item": item,
-            "special_id": SCRIPT_SPECIAL_START_BATTLE,
-        })
+        offsets.add(command_offset)
+    return offsets
+
+
+def extract_special_battle_commands(script: bytes, parsed_command_offsets: set[int], script_offset: int = 0) -> list[dict]:
+    rows = []
+    for command_offset in sorted(parsed_command_offsets):
+        row = special_battle_command_at(script, command_offset, script_offset)
+        if row:
+            rows.append(row)
     return rows
 
 
@@ -8250,7 +8292,7 @@ def extract_gift_encounters(script: bytes, row: dict, detail: dict, script_targe
 
 
 def extract_script_special_battle_encounters(script: bytes, row: dict, detail: dict, script_target: dict, script_offset: int, parsed_command_offsets: set[int], encounters: dict[str, list[dict]], seen: set[tuple[int, str, int, int, str]]) -> None:
-    for special in extract_special_battle_commands(script, parsed_command_offsets):
+    for special in extract_special_battle_commands(script, parsed_command_offsets, script_offset):
         species = special["species"]
         level = special["level"]
         command_offset = special["command_offset"]
@@ -8290,10 +8332,87 @@ def extract_egg_encounters(script: bytes, row: dict, detail: dict, script_target
         add_script_encounter(encounters, seen, species, row, level, "egg", encounter)
 
 
+def extract_in_game_trade_table(rom: bytes) -> dict[int, dict]:
+    trades: dict[int, dict] = {}
+    for trade_index in range(IN_GAME_TRADE_MAX_ENTRIES):
+        entry_offset = IN_GAME_TRADE_TABLE_OFFSET + trade_index * IN_GAME_TRADE_ENTRY_SIZE
+        if not valid_rom_offset(entry_offset, rom, IN_GAME_TRADE_ENTRY_SIZE):
+            break
+        received_species = u16(rom, entry_offset + IN_GAME_TRADE_RECEIVED_SPECIES_OFFSET)
+        requested_species = u16(rom, entry_offset + IN_GAME_TRADE_REQUESTED_SPECIES_OFFSET)
+        if not (1 <= received_species < SPECIES_COUNT and 1 <= requested_species < SPECIES_COUNT):
+            break
+        trades[trade_index] = {
+            "trade_index": trade_index,
+            "entry_offset": entry_offset,
+            "received_species": received_species,
+            "requested_species": requested_species,
+        }
+    return trades
+
+
+def extract_in_game_trade_commands(script: bytes, parsed_command_offsets: set[int], script_offset: int) -> list[dict]:
+    commands = []
+    for command_offset in sorted(parsed_command_offsets):
+        if command_offset + 5 > len(script) or script[command_offset] != SCRIPT_CMD_SETVAR:
+            continue
+        if int.from_bytes(script[command_offset + 1 : command_offset + 3], "little") != SCRIPT_VAR_IN_GAME_TRADE_INDEX:
+            continue
+        trade_index = int.from_bytes(script[command_offset + 3 : command_offset + 5], "little")
+        cursor = command_offset + SCRIPT_COMMAND_LENGTHS[SCRIPT_CMD_SETVAR]
+        scan_end = min(len(script), command_offset + 96)
+        steps = 0
+        while cursor < scan_end and steps < 32:
+            steps += 1
+            length, _targets, stops_fallthrough = script_command_length_and_targets(script, cursor, script_offset)
+            if length is None:
+                break
+            if script[cursor] == SCRIPT_CMD_SETVAR and cursor + 5 <= len(script):
+                var_id = int.from_bytes(script[cursor + 1 : cursor + 3], "little")
+                if var_id == SCRIPT_VAR_IN_GAME_TRADE_INDEX:
+                    break
+            if script[cursor] == SCRIPT_CMD_SPECIAL and cursor + 3 <= len(script):
+                special_id = int.from_bytes(script[cursor + 1 : cursor + 3], "little")
+                if special_id == SCRIPT_SPECIAL_IN_GAME_TRADE:
+                    commands.append({
+                        "command_offset": cursor,
+                        "trade_index": trade_index,
+                        "special_id": special_id,
+                    })
+                    break
+            if stops_fallthrough:
+                break
+            cursor += length
+    return commands
+
+
+def extract_trade_encounters(script: bytes, row: dict, detail: dict, script_target: dict, script_offset: int, parsed_command_offsets: set[int], trade_table: dict[int, dict], encounters: dict[str, list[dict]], seen: set[tuple[int, str, int, int, str]]) -> None:
+    for trade in extract_in_game_trade_commands(script, parsed_command_offsets, script_offset):
+        trade_spec = trade_table.get(trade["trade_index"])
+        if not trade_spec:
+            continue
+        species = trade_spec["received_species"]
+        encounter = {
+            **script_encounter_base(row, detail, script_target, script_offset, trade["command_offset"]),
+            "method": "交换",
+            "min_level": 1,
+            "max_level": 100,
+            "source_type": "trade",
+            "trade_index": trade["trade_index"],
+            "special_id": trade["special_id"],
+            "received_species": species,
+            "requested_species": trade_spec["requested_species"],
+            "trade_entry_offset": trade_spec["entry_offset"],
+            "source_note": "ROM 脚本 setvar 0x8008 后调用 special 0x00A2；species 来自当前 ROM 交换表，等级沿用玩家交出的宝可梦。",
+        }
+        add_script_encounter(encounters, seen, species, row, 0, "trade", encounter)
+
+
 def extract_script_encounters(rom: bytes, maps: list[dict]) -> dict[str, list[dict]]:
     encounters: dict[str, list[dict]] = {}
     seen: set[tuple[int, str, int, int, str]] = set()
     global_offsets = global_script_offsets(rom, maps)
+    trade_table = extract_in_game_trade_table(rom)
     for row in maps:
         detail = row.get("detail") or {}
         script_targets = sorted(map_script_pointers(rom, row), key=lambda item: item["script_offset"])
@@ -8302,10 +8421,12 @@ def extract_script_encounters(rom: bytes, maps: list[dict]) -> dict[str, list[di
             scan_end = script_scan_end(rom, script_offset, global_offsets)
             script = rom[script_offset:scan_end]
             parsed_command_offsets = script_command_offsets(script, script_offset)
+            special_command_offsets = local_special_battle_offsets(script, script_offset, parsed_command_offsets)
             extract_setwildbattle_encounters(script, row, detail, script_target, script_offset, parsed_command_offsets, encounters, seen)
             extract_gift_encounters(script, row, detail, script_target, script_offset, parsed_command_offsets, encounters, seen)
-            extract_script_special_battle_encounters(script, row, detail, script_target, script_offset, parsed_command_offsets, encounters, seen)
+            extract_script_special_battle_encounters(script, row, detail, script_target, script_offset, special_command_offsets, encounters, seen)
             extract_egg_encounters(script, row, detail, script_target, script_offset, parsed_command_offsets, encounters, seen)
+            extract_trade_encounters(script, row, detail, script_target, script_offset, parsed_command_offsets, trade_table, encounters, seen)
     return {species: sorted(rows, key=lambda row: (str(row["map_id"]), row["min_level"], row["script_offset"])) for species, rows in encounters.items()}
 
 
@@ -8366,7 +8487,11 @@ def merge_script_encounters(species_table: dict[str, dict], maps: list[dict], sc
                 "max_level": encounter["max_level"],
                 "source_type": encounter["source_type"],
             }
-            for key in ("rate", "encounter_rate", "script_offset", "object_id", "source_note", "special_id", "species_var", "level_var", "item_var"):
+            for key in (
+                "rate", "encounter_rate", "script_offset", "object_id", "source_note", "special_id",
+                "species_var", "level_var", "item_var", "trade_index", "received_species",
+                "requested_species", "trade_entry_offset",
+            ):
                 if key in encounter:
                     map_encounter[key] = encounter[key]
             map_row.setdefault("detail", {}).setdefault("encounters", []).append(map_encounter)

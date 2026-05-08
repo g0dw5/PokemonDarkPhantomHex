@@ -388,10 +388,34 @@ class BackendEditorTest(unittest.TestCase):
             script_rows = rom_data.extract_script_encounters(bytes(static_rom), static_maps)
             self.assertNotIn("3", script_rows)
             self.assertEqual(script_rows["250"][0]["method"], "特殊事件")
+            static_rom[0x160 : 0x182] = bytes([
+                0x02,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0x16, 0x04, 0x80, 410 & 0xFF, 410 >> 8,
+                0x16, 0x05, 0x80, 50, 0,
+                0x16, 0x06, 0x80, 0, 0,
+                0x25, 0xE2, 0x01,
+            ])
+            script_rows = rom_data.extract_script_encounters(bytes(static_rom), static_maps)
+            self.assertEqual(script_rows["410"][0]["method"], "特殊事件")
+            self.assertEqual(script_rows["410"][0]["script_offset"], 0x170)
             static_rom[0x180 : 0x189] = bytes([0x6A, 0xDC, 0x01, rom_data.SCRIPT_CMD_SET_WILD_BATTLE, 267 & 0xFF, 267 >> 8, 50, 0, 0])
             _w32(static_rom, 0x40 + rom_data.OBJECT_EVENT_SCRIPT_POINTER_OFFSET, core.GBA_ROM_POINTER_BASE + 0x180)
             script_rows = rom_data.extract_script_encounters(bytes(static_rom), static_maps)
             self.assertEqual(script_rows["267"][0]["method"], "定点")
+            static_rom[0x180 : 0x191] = bytes([0x69, 0x30, 0xA1, 0x96, 0x01, 0x02, 0x00, 0x28, 0x28, 0x00, 0xC5, rom_data.SCRIPT_CMD_SET_WILD_BATTLE, 406 & 0xFF, 406 >> 8, 70, 0, 0])
+            script_rows = rom_data.extract_script_encounters(bytes(static_rom), static_maps)
+            self.assertEqual(script_rows["406"][0]["method"], "定点")
+            trade_rom = bytearray(rom_data.IN_GAME_TRADE_TABLE_OFFSET + rom_data.IN_GAME_TRADE_ENTRY_SIZE + 0x200)
+            trade_rom[0x10] = 1
+            _w32(trade_rom, 0x14, core.GBA_ROM_POINTER_BASE + 0x40)
+            _w32(trade_rom, 0x40 + rom_data.OBJECT_EVENT_SCRIPT_POINTER_OFFSET, core.GBA_ROM_POINTER_BASE + 0x120)
+            _w16(trade_rom, rom_data.IN_GAME_TRADE_TABLE_OFFSET + rom_data.IN_GAME_TRADE_RECEIVED_SPECIES_OFFSET, 298)
+            _w16(trade_rom, rom_data.IN_GAME_TRADE_TABLE_OFFSET + rom_data.IN_GAME_TRADE_REQUESTED_SPECIES_OFFSET, 134)
+            trade_rom[0x120 : 0x12B] = bytes([0x16, 0x08, 0x80, 0, 0, 0x25, 0xA2, 0x00, 0x27, 0x02, 0])
+            trade_rows = rom_data.extract_script_encounters(bytes(trade_rom), static_maps)
+            self.assertEqual(trade_rows["298"][0]["method"], "交换")
+            self.assertEqual(trade_rows["298"][0]["requested_species"], 134)
             self.assertEqual(rom_data.map_display_name(24, 81, "天空之柱"), "天空之柱 3F")
             self.assertEqual(rom_data.map_display_name(35, 2, "启程之路"), "启程之路")
             self.assertEqual(rom_data.map_display_name(32, 1, "119号道路"), "天气研究所 2F")
@@ -408,6 +432,7 @@ class BackendEditorTest(unittest.TestCase):
 
             for growth_rate in range(6):
                 self.assertGreaterEqual(core.experience_for_level(growth_rate, 20), 0)
+
             self.assertEqual(core.level_for_experience(25, core.experience_for_level(0, 20)), 20)
             personality = 0x12345678
             preview = editor.api_personality_preview(25, personality, 0x87654321)
@@ -442,6 +467,57 @@ class BackendEditorTest(unittest.TestCase):
             self.assertEqual(len(rgba), 12)
             with self.assertRaises(ValueError):
                 editor._decode_gba_palette_16(b"\0")
+
+    def test_bw_rom_script_legendaries_and_trades(self) -> None:
+        rom_path = Path("/Users/wang.song/Desktop/pokemon/漆黑的魅影 5.0EX BW.gba")
+        if not rom_path.exists():
+            self.skipTest("BW ROM fixture is not available on this machine")
+        rom_text = rom_data.extract_rom_text(rom_path)
+
+        def assert_encounter(species: int, location: str, method: str, level: int, source_type: str) -> None:
+            rows = rom_text["species"][str(species)]["detail"].get("encounters", [])
+            self.assertTrue(any(
+                row.get("location") == location
+                and row.get("method") == method
+                and row.get("min_level") == level
+                and row.get("max_level") == level
+                and row.get("source_type") == source_type
+                for row in rows
+            ), f"missing {species} {location} {method} Lv{level}")
+
+        for species, location, method, level, source_type in [
+            (151, "遥远的孤岛", "特殊事件", 30, "script_special"),
+            (249, "神之领域", "特殊事件", 70, "script_special"),
+            (250, "神之领域", "特殊事件", 70, "script_special"),
+            (267, "新月岛", "定点", 50, "static"),
+            (268, "满月岛", "定点", 50, "static"),
+            (401, "沙漠遗迹", "定点", 40, "static"),
+            (402, "小岛横穴", "定点", 40, "static"),
+            (403, "古代坟墓", "定点", 40, "static"),
+            (404, "海之窟 End", "定点", 70, "static"),
+            (405, "陆之窟 End", "定点", 70, "static"),
+            (406, "天空之柱 Top", "定点", 70, "static"),
+            (407, "南方小岛 Interior", "特殊事件", 50, "script_special"),
+            (408, "南方小岛 Interior", "特殊事件", 50, "script_special"),
+            (410, "诞生之岛", "特殊事件", 50, "script_special"),
+        ]:
+            assert_encounter(species, location, method, level, source_type)
+
+        for species, location, trade_index, requested_species in [
+            (298, "卡那兹市", 0, 134),
+            (353, "茵郁市", 1, 125),
+            (116, "暮水镇", 2, 126),
+            (52, "对战开拓区", 3, 132),
+        ]:
+            rows = rom_text["species"][str(species)]["detail"].get("encounters", [])
+            self.assertTrue(any(
+                row.get("location") == location
+                and row.get("method") == "交换"
+                and row.get("source_type") == "trade"
+                and row.get("trade_index") == trade_index
+                and row.get("requested_species") == requested_species
+                for row in rows
+            ), f"missing trade {trade_index} for species {species}")
 
     def test_pokemon_crypto_validation_and_format_helpers(self) -> None:
         raw = build_pokemon_raw(size=core.PARTY_SIZE, personality=0x12345678, ot_id=0x87654321, species=25)
