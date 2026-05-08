@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
-from typing import Iterable
 
 from gen3_rom import GBA_ROM_POINTER_BASE
 from rom_profiles import CURRENT_ROM_PROFILE
@@ -1420,7 +1419,3 @@ def _w32(buf: bytearray, offset: int, value: int) -> None:
 
 def _clamp_int(value: int, low: int, high: int) -> int:
     return max(low, min(high, value))
-
-
-def compact_nonempty(entries: Iterable[BagEntry]) -> list[BagEntry]:
-    return [entry for entry in entries if entry.item_id or entry.quantity]

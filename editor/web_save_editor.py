@@ -68,7 +68,6 @@ SPRITE_TABLE_ENTRY_SIZE = CURRENT_ROM_PROFILE.sprites.table_entry_size
 SPRITE_TABLE_COUNT = CURRENT_ROM_PROFILE.sprites.table_count
 SPRITE_WIDTH = CURRENT_ROM_PROFILE.sprites.width
 SPRITE_HEIGHT = CURRENT_ROM_PROFILE.sprites.height
-SPRITE_PIXEL_COUNT = SPRITE_WIDTH * SPRITE_HEIGHT
 
 
 class State:
@@ -1657,12 +1656,6 @@ function speciesTypesForForm(speciesId, payloadTypes=[]) {
   if (payloadTypes?.length) return payloadTypes;
   return nameRow("species", speciesId)?.detail?.types || [];
 }
-function pokemonEncounterPanel(speciesId) {
-  const row = nameRow("species", speciesId);
-  const encounters = row?.detail?.encounters || [];
-  if (!encounters.length) return `<div class="detail-field encounter-panel"><span class="detail-label">Encounter</span><div class="detail-value muted">无 Encounter 数据</div></div>`;
-  return `<div class="detail-field encounter-panel"><span class="detail-label">Encounter</span><div class="encounter-list">${encounters.slice(0, 6).map(encounter => `<span>${escapeHtml(encounterLabel(encounter))} · 几率 ${escapeHtml(encounterRateLabel(encounter))}</span>`).join("")}${encounters.length > 6 ? `<span class="muted">+${encounters.length - 6}</span>` : ""}</div></div>`;
-}
 function pokemonMetPanel(p) {
   const location = p.met_location_name || `地点 #${Number(p.met_location) || 0}`;
   const level = Number(p.met_level) > 0 ? `初始 Lv${Number(p.met_level)}` : (p.is_egg ? "蛋" : "蛋孵化");
@@ -2452,29 +2445,6 @@ function filteredNameRows() {
 function setCollectTable(next) { collectTable = next; renderNames(); }
 function setCollectSearch(next) { collectSearch = next; collectCodeFilter = []; collectCodeLabel = ""; renderNames(); }
 function clearCollectCodeFilter() { collectCodeFilter = []; collectCodeLabel = ""; renderNames(); }
-function jumpToCharmapCodes(kind) {
-  const charmap = names?.stats?.charmap || {};
-  const codes = charmap.rom_unknown_codes || [];
-  collectSearch = "";
-  collectCodeFilter = codes.map(code => String(code).toUpperCase()).filter(Boolean);
-  collectCodeLabel = "未知字符";
-  const rows = (names?.rows || [])
-    .map((r, idx) => ({r, idx}))
-    .filter(({r}) => (r.tokens || []).some(token => collectCodeFilter.includes(String(token).toUpperCase())));
-  if (!rows.length) {
-    collectTable = "species";
-    renderNames();
-    setStatus(`${collectCodeLabel} 没有匹配到当前字典行`);
-    return;
-  }
-  const first = rows[0];
-  collectTable = first.r.table;
-  selected = {table: first.r.table, id: first.r.id};
-  renderNames();
-  const target = document.getElementById(`rom-${first.r.table}-${first.r.id}`);
-  if (target) target.scrollIntoView({block: "center"});
-  selectNameIndex(first.idx);
-}
 async function reloadNames() {
   names = await request("/api/names");
   renderNames();
@@ -2485,14 +2455,6 @@ function nameRow(table, id) {
 }
 function nameIndex(table, id) {
   return (names?.rows || []).findIndex(row => row.table === table && String(row.id) === String(id));
-}
-function selectNameRow(table, id) {
-  const row = nameRow(table, id);
-  if (!row) return;
-  setInspector(`${table} #${id}`, [
-    `当前解码：${row.decoded || row.name || ""}`,
-    ...detailLinesForDictionaryRow(row),
-  ].join("\n"));
 }
 function selectNameIndex(idx) {
   const row = names.rows[idx];
