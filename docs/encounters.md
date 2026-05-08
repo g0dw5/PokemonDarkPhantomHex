@@ -47,6 +47,8 @@ UI 里的 `rate` 是按槽位权重聚合后的百分比，分母为 `100`。同
 | 好钓竿 | `60,20,20`，对应钓鱼槽位 `3..5` |
 | 超级钓竿 | `40,40,15,4,1`，对应钓鱼槽位 `6..10` |
 
+普通野生表的 land/water 指针会按当前地图头修正 UI 方式名：`MapHeader +0x17 map_type == 4` 的 land 表显示为“山洞”；水下 map key 或 `map_type == 5` 的 water 表显示为“潜水”。这些只是展示名修正，原始槽位权重仍按 ROM 表类型解析。
+
 ### ROM 脚本来源
 
 脚本来源来自 MapHeader 关联的 object event、coord event、bg event 和 map script 指针。扫描边界使用所有地图脚本 target 的全局偏移：单个脚本最多扫描 `768` bytes，并在遇到下一个脚本 target 前截断，避免把连续脚本里的命令误归属到前一个对象。

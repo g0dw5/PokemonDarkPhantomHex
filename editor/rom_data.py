@@ -7536,10 +7536,13 @@ def plausible_map_header(rom: bytes, offset: int | None) -> bool:
     if not valid_rom_offset(offset, rom, MAP_HEADER_SIZE):
         return False
     layout_offset = gba_pointer_to_offset(read_pointer(rom, offset), len(rom))
-    events_offset = gba_pointer_to_offset(read_pointer(rom, offset + 4), len(rom))
+    events_pointer = read_pointer(rom, offset + 4)
+    events_offset = gba_pointer_to_offset(events_pointer, len(rom))
     scripts_pointer = read_pointer(rom, offset + 8)
     connections_pointer = read_pointer(rom, offset + 12)
-    if not valid_rom_offset(layout_offset, rom, MAP_LAYOUT_SIZE) or not valid_rom_offset(events_offset, rom, MAP_EVENTS_SIZE):
+    if not valid_rom_offset(layout_offset, rom, MAP_LAYOUT_SIZE):
+        return False
+    if events_pointer and not valid_rom_offset(events_offset, rom, MAP_EVENTS_SIZE):
         return False
     if scripts_pointer and not valid_rom_offset(gba_pointer_to_offset(scripts_pointer, len(rom)), rom):
         return False
@@ -7597,6 +7600,46 @@ def map_count_limit_for_group(rom: bytes, group_offsets: list[int], group_index:
         if next_offset > group_offset and (next_offset - group_offset) % 4 == 0:
             return min(MAX_MAPS_PER_GROUP, (next_offset - group_offset) // 4)
     return MAX_MAPS_PER_GROUP
+
+
+@lru_cache(maxsize=4)
+def map_header_contexts(rom: bytes) -> dict[tuple[int, int], dict]:
+    contexts: dict[tuple[int, int], dict] = {}
+    table_offset = active_map_groups_offset(rom)
+    if table_offset is None:
+        return contexts
+    group_offsets = map_group_pointer_offsets(rom, table_offset)
+    for map_group, group_offset in enumerate(group_offsets):
+        for map_number in range(map_count_limit_for_group(rom, group_offsets, map_group)):
+            entry_offset = group_offset + map_number * 4
+            if not valid_rom_offset(entry_offset, rom, 4):
+                break
+            header_offset = gba_pointer_to_offset(read_pointer(rom, entry_offset), len(rom))
+            if not plausible_map_header(rom, header_offset):
+                break
+            region_id = rom[header_offset + 0x14]
+            contexts[(map_group, map_number)] = {
+                "header_offset": header_offset,
+                "map_type": rom[header_offset + 0x17],
+                "region_map_section_id": region_id,
+                "region_name": region_map_name(rom, region_id),
+            }
+    return contexts
+
+
+def map_header_offset_for_group_number(rom: bytes, map_group: int, map_number: int) -> int | None:
+    context = map_header_contexts(rom).get((map_group, map_number))
+    return context.get("header_offset") if context else None
+
+
+def wild_method_for_map(rom: bytes, map_group: int, map_number: int, method: str) -> str:
+    context = map_header_contexts(rom).get((map_group, map_number)) or {}
+    map_type = context.get("map_type")
+    if method == "草丛" and map_type == 4:
+        return "山洞"
+    if method == "冲浪" and (map_type == 5 or encounter_map_key(map_group, map_number).startswith("Underwater_")):
+        return "潜水"
+    return method
 
 
 def region_map_name(rom: bytes, region_map_section_id: int) -> str:
@@ -7689,6 +7732,19 @@ def extract_map_entities(rom: bytes, encounters: dict[str, list[dict]], species_
             width = read_s32(rom, layout_offset)
             height = read_s32(rom, layout_offset + 4)
             flags = rom[header_offset + 0x1A]
+            event_counts = {
+                "object_count": 0,
+                "warp_count": 0,
+                "coord_count": 0,
+                "bg_count": 0,
+            }
+            if valid_rom_offset(events_offset, rom, MAP_EVENTS_SIZE):
+                event_counts = {
+                    "object_count": rom[events_offset],
+                    "warp_count": rom[events_offset + 1],
+                    "coord_count": rom[events_offset + 2],
+                    "bg_count": rom[events_offset + 3],
+                }
             row = {
                 "table": "maps",
                 "table_label": "地图",
@@ -7727,12 +7783,7 @@ def extract_map_entities(rom: bytes, encounters: dict[str, list[dict]], species_
                         "primary_tileset_offset": gba_pointer_to_offset(read_pointer(rom, layout_offset + 16), len(rom)),
                         "secondary_tileset_offset": gba_pointer_to_offset(read_pointer(rom, layout_offset + 20), len(rom)),
                     },
-                    "events": {
-                        "object_count": rom[events_offset],
-                        "warp_count": rom[events_offset + 1],
-                        "coord_count": rom[events_offset + 2],
-                        "bg_count": rom[events_offset + 3],
-                    },
+                    "events": event_counts,
                     "connections": [],
                     "encounters": encounters_by_location.get((map_group, map_number), []),
                 },
@@ -7828,7 +7879,8 @@ def extract_wild_encounters(rom: bytes) -> dict[str, list[dict]]:
             list_offset = gba_pointer_to_offset(u32(rom, info_offset + 4), len(rom))
             if encounter_rate > 100 or list_offset is None or list_offset + count * 4 > len(rom):
                 continue
-            slot_groups = WILD_FISHING_SLOT_GROUPS if method == "钓鱼" else ((0, method, WILD_ENCOUNTER_SLOT_WEIGHTS[method]),)
+            display_method = wild_method_for_map(rom, map_group, map_number, method)
+            slot_groups = WILD_FISHING_SLOT_GROUPS if method == "钓鱼" else ((0, display_method, WILD_ENCOUNTER_SLOT_WEIGHTS[method]),)
             for slot_start, slot_method, weights in slot_groups:
                 for local_slot, slot_weight in enumerate(weights):
                     slot = slot_start + local_slot
