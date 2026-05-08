@@ -427,7 +427,7 @@ land/water 指针的 UI 方式名会按当前地图头修正：`MapHeader +0x17 
 | `0x7A giveegg` | `method = 蛋` |
 | `setvar 0x8004/0x8005` + `special 0x01E2` | `method = 特殊事件` |
 
-脚本 Encounter 只接收从地图脚本入口按控制流可达的命令。解析器会跟随 `call`、`goto`、条件跳转和已知 trainer battle 后续脚本指针，并识别常见消息命令作为脚本入口/中间命令；不会再把扫描窗口里“看起来像 `givepokemon`”的字节序列当作赠送来源。例如 `天气研究所 2F` 的 `漂浮泡泡 Lv25` 来自 ROM `0x27005A` 的可达 `givepokemon`，`绿岭市 大吾家` 的 `铁哑铃 Lv5` 来自 ROM `0x22286A` 的可达 `givepokemon`。
+脚本 Encounter 只接收从地图脚本入口按控制流可达的命令。解析器会跟随 `call`、`goto`、条件跳转和已知 trainer battle 后续脚本指针，并识别常见消息命令和 `specialvar` 检查作为脚本入口/中间命令；不会再把扫描窗口里“看起来像 `givepokemon`”的字节序列当作赠送来源。例如 `天气研究所 2F` 的 `漂浮泡泡 Lv25` 来自 ROM `0x27005A` 的可达 `givepokemon`，`绿岭市 大吾家` 的 `铁哑铃 Lv5` 来自 ROM `0x22286A` 的可达 `givepokemon`。
 
 脚本来源没有概率字段；例如雷公在当前 ROM 中通过 `setwildbattle` 机制定位。进化来源不并入 Encounter 显示；需要由额外 runtime 状态决定的菜单/交换类 special 不展示，除非已经逆向到当前 ROM 的直接证据。
 
