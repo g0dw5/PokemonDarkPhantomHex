@@ -37,6 +37,8 @@
 ```
 
 ## 待处理
+- [ ] P2 地图视角的encounter列表做下分类,草丛/钓鱼/冲浪,在列表内的展示想象怎么能做好分组或者块展示
+- [ ] P2 字典表-宝可梦里的Encounter发现一些名称跟跳转后的地图对不上的情况,比如 比雕 地图35-2 战羽鹰 天空之柱 3F,前者是我不希望出现的,后者是我认为比较好的,这样能在地图页面也更有区分度
 
 ## 进行中
 
@@ -81,7 +83,7 @@
   - 验证：`PYTHONPYCACHEPREFIX=.pycache python3 tests/run_browser_tests.py` 通过，总覆盖率 93.4%。
 - [x] P2 在字典表的宝可梦页面添加所有Encounter,需要逆向rom得到信息,逆向的内容记得
   - 结果：逆向并实现当前 ROM 野生 Encounter 表解析，species 字典会展示地图组/地图号、遭遇方式、等级范围、遭遇率和槽位。
-  - 记忆：Encounter header table `0x552D5C`，header `20` bytes，方式指针指向 `rate u32 + wild_list pointer`，wild list 每项 `min_level u8 / max_level u8 / species u16`。
+  - 记忆：活动 Encounter header table `0xEA2D34`，旧表 `0x552D48`；header `20` bytes，方式指针指向 `rate u32 + wild_list pointer`，wild list 每项 `min_level u8 / max_level u8 / species u16`；地图脚本/object/coord/bg script 中 `0xB6 setwildbattle` 为定点 Encounter 来源，`0x79 givepokemon` 为赠送来源，`0x7A giveegg` 为蛋来源；进化来源不并入 Encounter 显示。
   - 验证：`PYTHONPYCACHEPREFIX=.pycache python3 tests/run_browser_tests.py` 通过，总覆盖率 93.4%。
 - [x] P2 在宝可梦相关的位置展示宝可梦的属性(第一/第二),渲染成与游戏相同的模式,而非文本
   - 结果：后端按当前 ROM base stats 推导 species 属性，队伍/盒子列表和宝可梦编辑表单用彩色属性徽章展示。

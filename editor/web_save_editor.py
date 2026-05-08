@@ -382,8 +382,6 @@ def api_names():
             decoded = entry.get("decoded") or ""
             description = entry.get("description") or ""
             detail = dict(entry.get("detail") or {})
-            if name == "species":
-                detail["save_encounters"] = observed["encounters"].get(item_id, [])
             if name == "items":
                 if is_placeholder_text(row_name or decoded):
                     row_name = format_item(item_id)
@@ -813,8 +811,8 @@ def _pixels_to_rgba(pixels: bytes, palette: list[tuple[int, int, int]]) -> bytes
     return bytes(rgba)
 
 
-def observed_from_save() -> dict[str, dict]:
-    observed: dict[str, dict] = {"species": {}, "items": {}, "moves": {}, "abilities": {}, "natures": {}, "balls": {}, "encounters": {}}
+def observed_from_save() -> dict[str, dict[int, list[str]]]:
+    observed: dict[str, dict[int, list[str]]] = {"species": {}, "items": {}, "moves": {}, "abilities": {}, "natures": {}, "balls": {}}
     save = STATE.save
     if not save:
         return observed
@@ -825,12 +823,6 @@ def observed_from_save() -> dict[str, dict]:
         location = f"队伍 #{pokemon.slot}" if not pokemon.box else f"盒子 {pokemon.box}-{pokemon.box_slot}"
         if pokemon.species:
             add_observed(observed["species"], pokemon.species, location)
-            add_save_encounter(observed["encounters"], pokemon.species, {
-                "location": format_met_location(pokemon.met_location),
-                "met_location": pokemon.met_location,
-                "met_level": pokemon.met_level,
-                "source": location,
-            })
         if pokemon.held_item:
             add_observed(observed["items"], pokemon.held_item, f"{location} 携带")
         if pokemon.ability_id:
@@ -847,13 +839,6 @@ def add_observed(bucket: dict[int, list[str]], item_id: int, location: str) -> N
     locations = bucket.setdefault(item_id, [])
     if location not in locations:
         locations.append(location)
-
-
-def add_save_encounter(bucket: dict[int, list[dict]], species: int, encounter: dict) -> None:
-    encounters = bucket.setdefault(species, [])
-    key = (encounter["met_location"], encounter["met_level"], encounter["source"])
-    if not any((old["met_location"], old["met_level"], old["source"]) == key for old in encounters):
-        encounters.append(encounter)
 
 
 def count_observed_charmap_keys(rows: list[dict]) -> int:
@@ -2209,7 +2194,7 @@ function dictionaryCell(row, key) {
   if (key === "abilities") return chipList((detail.abilities || []).map(a => `#${a.id} ${a.name}`));
   if (key === "growthRate") return escapeHtml(detail.growth_rate || "");
   if (key === "genderRatio") return escapeHtml(detail.gender_ratio || "");
-  if (key === "encounters") return dictionarySpeciesEncounterLinks(detail.encounters || [], 3, detail.save_encounters || []);
+  if (key === "encounters") return dictionarySpeciesEncounterLinks(detail.encounters || [], 3);
   if (key === "connections") return dictionaryMapConnectionLinks(detail.connections || [], 4);
   if (key === "mapEncounters") return dictionaryMapEncounterLinks(detail.encounters || [], 4);
   if (key === "mapSize") return detail.layout ? `${escapeHtml(detail.layout.width)}x${escapeHtml(detail.layout.height)}` : "";
@@ -2253,17 +2238,12 @@ function dictionaryMapEncounterLinks(encounters, limit=0) {
     return `<button type="button" class="data-chip location-link" onclick="jumpToRom('species', '${escapeJsString(String(encounter.species_id))}'); event.stopPropagation();">${escapeHtml(label)}</button>`;
   }).join("")}${more}</span>`;
 }
-function dictionarySpeciesEncounterLinks(encounters, limit=0, saveEncounters=[]) {
-  const wildItems = encounters.map(encounter => {
+function dictionarySpeciesEncounterLinks(encounters, limit=0) {
+  const items = encounters.map(encounter => {
     const mapId = `${encounter.map_group}-${encounter.map_number}`;
     const label = `${encounter.location} ${encounter.method} ${encounterLevelLabel(encounter)} ${encounterRateLabel(encounter)}`;
     return `<button type="button" class="data-chip location-link" onclick="jumpToRom('maps', '${escapeJsString(mapId)}'); event.stopPropagation();">${escapeHtml(label)}</button>`;
   });
-  const saveItems = saveEncounters.map(encounter => {
-    const label = `存档 ${encounter.location} ${saveEncounterLevelLabel(encounter)}`;
-    return `<button type="button" class="data-chip location-link" onclick="jumpToSaveLocation('${escapeJsString(encounter.source || "")}'); event.stopPropagation();">${escapeHtml(label)}</button>`;
-  });
-  const items = [...wildItems, ...saveItems];
   if (!items.length) return `<span class="muted">无</span>`;
   const visible = limit ? items.slice(0, limit) : items;
   const more = limit && items.length > limit ? `<span class="muted">+${items.length - limit}</span>` : "";
@@ -2340,16 +2320,6 @@ function encounterSummary(encounters) {
   const first = encounters.slice(0, 3).map(encounterLabel).join("；");
   return encounters.length > 3 ? `${first}；+${encounters.length - 3}` : first;
 }
-function speciesEncounterSummary(detail) {
-  const encounters = detail.encounters || [];
-  const saveEncounters = detail.save_encounters || [];
-  const labels = [
-    ...encounters.map(encounterLabel),
-    ...saveEncounters.map(encounter => `存档 ${encounter.location} ${saveEncounterLevelLabel(encounter)}`),
-  ];
-  const first = labels.slice(0, 3).join("；");
-  return labels.length > 3 ? `${first}；+${labels.length - 3}` : first;
-}
 function encounterLabel(encounter) {
   return `${encounter.location} ${encounter.method} ${encounterLevelLabel(encounter)}`;
 }
@@ -2360,10 +2330,6 @@ function encounterRateLabel(encounter) {
   const rate = Number(encounter.rate);
   if (!Number.isFinite(rate)) return "";
   return `${rate}%`;
-}
-function saveEncounterLevelLabel(encounter) {
-  const level = Number(encounter.met_level);
-  return level > 0 ? `初始 Lv${level}` : "初始等级未知";
 }
 function renderTypeChart() {
   const profile = typeDefenseProfile(typeDefenseA, typeDefenseB);
@@ -2536,7 +2502,7 @@ function dictionaryInspectorHtml(row) {
     fields.push(["捕获率", detail.catch_rate]);
     fields.push(["击败经验", detail.exp_yield]);
     fields.push(["野生携带", (detail.wild_items || []).map(item => `#${item.id} ${item.name}`).join("；")]);
-    fields.push(["Encounter", dictionarySpeciesEncounterLinks(detail.encounters || [], 0, detail.save_encounters || []), true, true]);
+    fields.push(["Encounter", dictionarySpeciesEncounterLinks(detail.encounters || []), true, true]);
   }
   if (row.table === "maps") {
     fields.push(["地图编号", row.id]);
@@ -2583,7 +2549,7 @@ function detailLinesForDictionaryRow(row) {
     if (detail.catch_rate !== undefined) lines.push(`捕获率：${detail.catch_rate}`);
     if (detail.exp_yield !== undefined) lines.push(`击败经验：${detail.exp_yield}`);
     if (detail.wild_items?.length) lines.push(`野生携带：${detail.wild_items.map(item => `#${item.id} ${item.name}`).join("；")}`);
-    if (detail.encounters?.length || detail.save_encounters?.length) lines.push(`Encounter：${speciesEncounterSummary(detail)}`);
+    if (detail.encounters?.length) lines.push(`Encounter：${encounterSummary(detail.encounters)}`);
   }
   if (row.table === "maps") {
     if (detail.map_key) lines.push(`地图代号：${detail.map_key}`);

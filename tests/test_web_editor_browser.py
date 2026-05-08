@@ -200,10 +200,11 @@ class WebEditorBrowserTest(unittest.TestCase):
 
             self.page.evaluate("""() => {
                 const species = {table: "species", table_label: "宝可梦", id: 25, name: "皮卡丘", decoded: "皮卡丘", detail: {types: ["电", "飞行"], base_stats: {hp: 35, attack: 55, defense: 40, speed: 90, sp_attack: 50, sp_defense: 50}, growth_rate: "中速", gender_ratio: "雌雄各半", encounters: [{map_group: 0, map_number: 18, location: "103号道路", method: "草丛", min_level: 3, max_level: 6, rate: 20}]}};
-                const bulbasaur = {table: "species", table_label: "宝可梦", id: 1, name: "妙蛙种子", decoded: "妙蛙种子", detail: {types: ["草"], encounters: [], save_encounters: [{location: "生命之殿", met_location: 88, met_level: 7, source: "队伍 #1"}]}};
+                const bulbasaur = {table: "species", table_label: "宝可梦", id: 1, name: "妙蛙种子", decoded: "妙蛙种子", detail: {types: ["草"], encounters: [{map_group: 0, map_number: 20, location: "105号水路", method: "草丛", min_level: 7, max_level: 7, rate: 20, encounter_rate: 15}]}};
+                const raikou = {table: "species", table_label: "宝可梦", id: 243, name: "雷公", decoded: "雷公", detail: {types: ["电"], encounters: [{map_group: 34, map_number: 12, location: "冥想之窟", method: "定点", min_level: 40, max_level: 40, source_type: "static"}]}};
                 const map103 = {table: "maps", table_label: "地图", id: "0-18", sort_id: 18, name: "103号道路", decoded: "103号道路", detail: {map_group: 0, map_number: 18, map_key: "Route103", region_map_section_id: 18, layout: {width: 80, height: 22}, connections: [{direction_name: "右", map_id: "0-19", name: "104号道路"}], encounters: [{species_id: 25, species_name: "皮卡丘", method: "草丛", min_level: 3, max_level: 6, rate: 20}]}};
                 const map104 = {table: "maps", table_label: "地图", id: "0-19", sort_id: 19, name: "104号道路", decoded: "104号道路", detail: {map_group: 0, map_number: 19, map_key: "Route104", region_map_section_id: 19, layout: {width: 90, height: 30}, connections: [{direction_name: "左", map_id: "0-18", name: "103号道路"}], encounters: []}};
-                names = {ok: true, rows: [species, bulbasaur, map103, map104], species: [species, bulbasaur], maps: [map103, map104], items: [], moves: [], abilities: [], stats: {rom: {}, charmap: {}}, table_info: {}};
+                names = {ok: true, rows: [species, bulbasaur, raikou, map103, map104], species: [species, bulbasaur, raikou], maps: [map103, map104], items: [], moves: [], abilities: [], stats: {rom: {}, charmap: {}}, table_info: {}};
                 tab = "names";
                 collectTable = "species";
                 render();
@@ -216,7 +217,8 @@ class WebEditorBrowserTest(unittest.TestCase):
             expect(self.page.locator(".dictionary-species .base-stat")).to_have_count(6)
             expect(self.page.locator(".dictionary-species .base-stat-value").first).to_have_text("35")
             expect(self.page.locator(".dictionary-species")).to_contain_text("妙蛙种子")
-            expect(self.page.locator(".dictionary-species")).to_contain_text("存档 生命之殿 初始 Lv7")
+            expect(self.page.locator(".dictionary-species")).to_contain_text("105号水路 草丛 Lv7 20%")
+            expect(self.page.locator(".dictionary-species")).to_contain_text("冥想之窟 定点 Lv40")
             self.page.locator(".dictionary-species tbody tr").first.click()
             expect(self.page.locator("#detail .type-badge")).to_have_count(2)
             self.page.locator("#detail").get_by_role("button", name=re.compile("103号道路 草丛")).click()

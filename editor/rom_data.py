@@ -47,7 +47,9 @@ ITEM_SECONDARY_ID_OFFSET = 40
 
 BASE_STATS_OFFSET = 0x3203CC
 BASE_STATS_SIZE = 28
-WILD_ENCOUNTER_HEADERS_OFFSET = 0x552D5C
+LEGACY_WILD_ENCOUNTER_HEADERS_OFFSET = 0x552D48
+ACTIVE_WILD_ENCOUNTER_HEADERS_OFFSET = 0xEA2D34
+WILD_ENCOUNTER_HEADERS_OFFSET = ACTIVE_WILD_ENCOUNTER_HEADERS_OFFSET
 WILD_ENCOUNTER_HEADER_SIZE = 20
 WILD_ENCOUNTER_MAX_HEADERS = 600
 WILD_ENCOUNTER_METHODS = (
@@ -56,6 +58,27 @@ WILD_ENCOUNTER_METHODS = (
     (12, "碎岩", 5),
     (16, "钓鱼", 10),
 )
+WILD_ENCOUNTER_SLOT_WEIGHTS = {
+    "草丛": [20, 20, 10, 10, 10, 10, 5, 5, 4, 4, 1, 1],
+    "冲浪": [60, 30, 5, 4, 1],
+    "碎岩": [60, 30, 5, 4, 1],
+}
+WILD_FISHING_SLOT_GROUPS = (
+    (0, "旧钓竿", [70, 30]),
+    (2, "好钓竿", [60, 20, 20]),
+    (5, "超级钓竿", [40, 40, 15, 4, 1]),
+)
+OBJECT_EVENT_TEMPLATE_SIZE = 24
+OBJECT_EVENT_SCRIPT_POINTER_OFFSET = 16
+COORD_EVENT_TEMPLATE_SIZE = 16
+COORD_EVENT_SCRIPT_POINTER_OFFSET = 12
+BG_EVENT_TEMPLATE_SIZE = 12
+BG_EVENT_SCRIPT_POINTER_OFFSET = 8
+MAP_SCRIPT_SCAN_BYTES = 256
+SCRIPT_STATIC_ENCOUNTER_SCAN_BYTES = 768
+SCRIPT_CMD_SET_WILD_BATTLE = 0xB6
+SCRIPT_CMD_GIVE_POKEMON = 0x79
+SCRIPT_CMD_GIVE_EGG = 0x7A
 ACTIVE_MAP_GROUPS_OFFSET = 0xE8C020
 ORIGINAL_MAP_GROUPS_OFFSET = 0x486578
 REGION_MAP_ENTRIES_OFFSET = 0x5A1480
@@ -7543,13 +7566,18 @@ def map_encounters_by_location(encounters: dict[str, list[dict]], species_table:
                 "species_name": species_name,
                 "method": encounter["method"],
                 "rate": encounter["rate"],
+                "encounter_rate": encounter.get("encounter_rate", encounter["rate"]),
                 "min_level": encounter["min_level"],
                 "max_level": encounter["max_level"],
+                "slots": encounter.get("slots", []),
+                "source_type": encounter.get("source_type", "wild"),
+                "script_offset": encounter.get("script_offset"),
+                "object_id": encounter.get("object_id"),
             }
             key = (int(encounter["map_group"]), int(encounter["map_number"]))
             by_location.setdefault(key, []).append(entry)
     for rows in by_location.values():
-        rows.sort(key=lambda row: (row["species_id"], row["method"], row["min_level"], row["max_level"]))
+        rows.sort(key=lambda row: (row["method"], min(row.get("slots") or [99]), row["species_id"], row["min_level"], row["max_level"]))
     return by_location
 
 
@@ -7658,18 +7686,40 @@ def extract_map_entities(rom: bytes, encounters: dict[str, list[dict]], species_
 
 def extract_wild_encounters(rom: bytes) -> dict[str, list[dict]]:
     encounters: dict[str, dict[tuple[int, int, str], dict]] = {}
+
+    def add_encounter(map_group: int, map_number: int, method: str, encounter_rate: int, slot: int, slot_weight: int, min_level: int, max_level: int, species: int) -> None:
+        aggregate_key = (map_group, map_number, method)
+        row = encounters.setdefault(str(species), {}).setdefault(aggregate_key, {
+            "map_group": map_group,
+            "map_number": map_number,
+            "map_key": encounter_map_key(map_group, map_number),
+            "location_id": f"地图 {map_group}-{map_number}",
+            "location": encounter_map_name(map_group, map_number),
+            "method": method,
+            "rate": 0,
+            "encounter_rate": encounter_rate,
+            "min_level": min_level,
+            "max_level": max_level,
+            "slots": [],
+        })
+        row["rate"] += slot_weight
+        row["min_level"] = min(row["min_level"], min_level)
+        row["max_level"] = max(row["max_level"], max_level)
+        row["slots"].append(slot + 1)
+
+    table_offset = active_wild_encounter_headers_offset(rom)
     for index in range(WILD_ENCOUNTER_MAX_HEADERS):
-        header = WILD_ENCOUNTER_HEADERS_OFFSET + index * WILD_ENCOUNTER_HEADER_SIZE
+        header = table_offset + index * WILD_ENCOUNTER_HEADER_SIZE
         if header + WILD_ENCOUNTER_HEADER_SIZE > len(rom):
             break
         map_group = rom[header]
         map_number = rom[header + 1]
         if map_group == 0xFF and map_number == 0xFF:
             break
-        if map_group > 60 or map_number > 200:
-            break
+        if map_group >= MAX_MAP_GROUPS or map_number >= MAX_MAPS_PER_GROUP:
+            continue
         if not any(u32(rom, header + pointer_offset) for pointer_offset, _method, _count in WILD_ENCOUNTER_METHODS):
-            break
+            continue
         for pointer_offset, method, count in WILD_ENCOUNTER_METHODS:
             info_offset = gba_pointer_to_offset(u32(rom, header + pointer_offset), len(rom))
             if info_offset is None or info_offset + 8 > len(rom):
@@ -7678,30 +7728,335 @@ def extract_wild_encounters(rom: bytes) -> dict[str, list[dict]]:
             list_offset = gba_pointer_to_offset(u32(rom, info_offset + 4), len(rom))
             if encounter_rate > 100 or list_offset is None or list_offset + count * 4 > len(rom):
                 continue
-            for slot in range(count):
-                entry = list_offset + slot * 4
-                min_level = rom[entry]
-                max_level = rom[entry + 1]
-                species = u16(rom, entry + 2)
-                if not (1 <= min_level <= max_level <= 100 and 1 <= species < 1000):
-                    continue
-                aggregate_key = (map_group, map_number, method)
-                row = encounters.setdefault(str(species), {}).setdefault(aggregate_key, {
-                    "map_group": map_group,
-                    "map_number": map_number,
-                    "map_key": encounter_map_key(map_group, map_number),
-                    "location_id": f"地图 {map_group}-{map_number}",
-                    "location": encounter_map_name(map_group, map_number),
-                    "method": method,
-                    "rate": encounter_rate,
-                    "min_level": min_level,
-                    "max_level": max_level,
-                    "slots": [],
-                })
-                row["min_level"] = min(row["min_level"], min_level)
-                row["max_level"] = max(row["max_level"], max_level)
-                row["slots"].append(slot + 1)
+            slot_groups = WILD_FISHING_SLOT_GROUPS if method == "钓鱼" else ((0, method, WILD_ENCOUNTER_SLOT_WEIGHTS[method]),)
+            for slot_start, slot_method, weights in slot_groups:
+                for local_slot, slot_weight in enumerate(weights):
+                    slot = slot_start + local_slot
+                    entry = list_offset + slot * 4
+                    min_level = rom[entry]
+                    max_level = rom[entry + 1]
+                    species = u16(rom, entry + 2)
+                    if not (1 <= min_level <= max_level <= 100 and 1 <= species < 1000):
+                        continue
+                    add_encounter(map_group, map_number, slot_method, encounter_rate, slot, slot_weight, min_level, max_level, species)
     return {species: sorted(rows.values(), key=lambda row: (row["map_group"], row["map_number"], row["method"], row["min_level"])) for species, rows in encounters.items()}
+
+
+def wild_encounter_info_valid(rom: bytes, info_offset: int | None, count: int) -> bool:
+    if info_offset is None or info_offset + 8 > len(rom):
+        return False
+    encounter_rate = u32(rom, info_offset)
+    list_offset = gba_pointer_to_offset(u32(rom, info_offset + 4), len(rom))
+    if encounter_rate > 100 or list_offset is None or list_offset + count * 4 > len(rom):
+        return False
+    for slot in range(count):
+        entry = list_offset + slot * 4
+        min_level = rom[entry]
+        max_level = rom[entry + 1]
+        species = u16(rom, entry + 2)
+        if not (1 <= min_level <= max_level <= 100 and 1 <= species < 1000):
+            return False
+    return True
+
+
+def wild_encounter_header_valid(rom: bytes, header: int) -> bool:
+    if header + WILD_ENCOUNTER_HEADER_SIZE > len(rom):
+        return False
+    map_group = rom[header]
+    map_number = rom[header + 1]
+    if map_group == 0xFF and map_number == 0xFF:
+        return True
+    if map_group >= MAX_MAP_GROUPS or map_number >= MAX_MAPS_PER_GROUP:
+        return False
+    saw_method = False
+    for pointer_offset, _method, count in WILD_ENCOUNTER_METHODS:
+        pointer = u32(rom, header + pointer_offset)
+        if not pointer:
+            continue
+        saw_method = True
+        info_offset = gba_pointer_to_offset(pointer, len(rom))
+        if not wild_encounter_info_valid(rom, info_offset, count):
+            return False
+    return saw_method
+
+
+def score_wild_encounter_header_table(rom: bytes, table_offset: int) -> int:
+    score = 0
+    for index in range(WILD_ENCOUNTER_MAX_HEADERS):
+        header = table_offset + index * WILD_ENCOUNTER_HEADER_SIZE
+        if header + WILD_ENCOUNTER_HEADER_SIZE > len(rom):
+            break
+        map_group = rom[header]
+        map_number = rom[header + 1]
+        if map_group == 0xFF and map_number == 0xFF:
+            break
+        if not wild_encounter_header_valid(rom, header):
+            break
+        score += 1
+    return score
+
+
+def active_wild_encounter_headers_offset(rom: bytes) -> int:
+    candidates = [ACTIVE_WILD_ENCOUNTER_HEADERS_OFFSET, LEGACY_WILD_ENCOUNTER_HEADERS_OFFSET]
+    scored = [(score_wild_encounter_header_table(rom, offset), offset) for offset in candidates]
+    score, offset = max(scored, default=(0, LEGACY_WILD_ENCOUNTER_HEADERS_OFFSET))
+    return offset if score else LEGACY_WILD_ENCOUNTER_HEADERS_OFFSET
+
+
+def plausible_script_pointer(rom: bytes, pointer: int) -> int | None:
+    offset = gba_pointer_to_offset(pointer, len(rom))
+    if offset is None or offset >= len(rom):
+        return None
+    first = rom[offset]
+    common_script_commands = {
+        0x02, 0x03, 0x04, 0x05, 0x06, 0x09, 0x0F, 0x16, 0x19, 0x21, 0x25, 0x26, 0x27, 0x2B,
+        0x5A, 0x5C, 0x66, 0x67, 0x68, 0x6A, 0x6C, SCRIPT_CMD_GIVE_POKEMON, SCRIPT_CMD_GIVE_EGG,
+        SCRIPT_CMD_SET_WILD_BATTLE,
+    }
+    return offset if first in common_script_commands else None
+
+
+def add_script_pointer(targets: list[dict], seen: set[int], offset: int | None, source_type: str, source_index: int | None = None) -> None:
+    if offset is None or offset in seen:
+        return
+    seen.add(offset)
+    targets.append({"script_offset": offset, "script_source": source_type, "script_source_index": source_index})
+
+
+def map_script_pointers(rom: bytes, row: dict) -> list[dict]:
+    detail = row.get("detail") or {}
+    events_offset = detail.get("events_offset")
+    events = detail.get("events") or {}
+    targets: list[dict] = []
+    seen: set[int] = set()
+    if valid_rom_offset(events_offset, rom, MAP_EVENTS_SIZE):
+        objects_offset = gba_pointer_to_offset(read_pointer(rom, events_offset + 4), len(rom))
+        object_count = int(events.get("object_count", 0))
+        if objects_offset is not None:
+            for object_index in range(object_count):
+                object_offset = objects_offset + object_index * OBJECT_EVENT_TEMPLATE_SIZE
+                if not valid_rom_offset(object_offset, rom, OBJECT_EVENT_TEMPLATE_SIZE):
+                    continue
+                script_offset = plausible_script_pointer(rom, read_pointer(rom, object_offset + OBJECT_EVENT_SCRIPT_POINTER_OFFSET))
+                add_script_pointer(targets, seen, script_offset, "object", object_index + 1)
+
+        coord_offset = gba_pointer_to_offset(read_pointer(rom, events_offset + 12), len(rom))
+        coord_count = int(events.get("coord_count", 0))
+        if coord_offset is not None:
+            for coord_index in range(coord_count):
+                item_offset = coord_offset + coord_index * COORD_EVENT_TEMPLATE_SIZE
+                if not valid_rom_offset(item_offset, rom, COORD_EVENT_TEMPLATE_SIZE):
+                    continue
+                script_offset = plausible_script_pointer(rom, read_pointer(rom, item_offset + COORD_EVENT_SCRIPT_POINTER_OFFSET))
+                add_script_pointer(targets, seen, script_offset, "coord", coord_index + 1)
+
+        bg_offset = gba_pointer_to_offset(read_pointer(rom, events_offset + 16), len(rom))
+        bg_count = int(events.get("bg_count", 0))
+        if bg_offset is not None:
+            for bg_index in range(bg_count):
+                item_offset = bg_offset + bg_index * BG_EVENT_TEMPLATE_SIZE
+                if not valid_rom_offset(item_offset, rom, BG_EVENT_TEMPLATE_SIZE):
+                    continue
+                script_offset = plausible_script_pointer(rom, read_pointer(rom, item_offset + BG_EVENT_SCRIPT_POINTER_OFFSET))
+                add_script_pointer(targets, seen, script_offset, "bg", bg_index + 1)
+
+    scripts_offset = detail.get("scripts_offset")
+    if valid_rom_offset(scripts_offset, rom):
+        cursor = scripts_offset
+        scan_end = min(len(rom), scripts_offset + MAP_SCRIPT_SCAN_BYTES)
+        script_index = 1
+        while cursor < scan_end:
+            script_type = rom[cursor]
+            if script_type == 0:
+                break
+            if script_type in {2, 4}:
+                if not valid_rom_offset(cursor, rom, 9):
+                    break
+                pointer_offset = cursor + 5
+                cursor += 9
+            else:
+                if not valid_rom_offset(cursor, rom, 5):
+                    break
+                pointer_offset = cursor + 1
+                cursor += 5
+            script_offset = plausible_script_pointer(rom, read_pointer(rom, pointer_offset))
+            add_script_pointer(targets, seen, script_offset, "map_script", script_index)
+            script_index += 1
+    return targets
+
+
+def script_command_offsets(script: bytes) -> set[int]:
+    command_lengths = {
+        0x00: 1,
+        0x02: 1,
+        0x03: 1,
+        0x04: 5,
+        0x05: 5,
+        0x06: 6,
+        0x07: 6,
+        0x08: 2,
+        0x09: 2,
+        0x0F: 6,
+        0x16: 5,
+        0x19: 5,
+        0x1A: 5,
+        0x21: 5,
+        0x25: 3,
+        0x26: 5,
+        0x27: 1,
+        0x29: 3,
+        0x2B: 3,
+        0x2F: 3,
+        0x31: 3,
+        0x32: 1,
+        0x5A: 1,
+        0x5B: 1,
+        0x66: 1,
+        0x67: 5,
+        0x68: 1,
+        0x6A: 1,
+        0x6C: 1,
+        SCRIPT_CMD_GIVE_POKEMON: 15,
+        SCRIPT_CMD_GIVE_EGG: 3,
+        SCRIPT_CMD_SET_WILD_BATTLE: 6,
+    }
+    offsets = set()
+    cursor = 0
+    for _step in range(256):
+        if cursor >= len(script):
+            break
+        offsets.add(cursor)
+        command = script[cursor]
+        length = command_lengths.get(command)
+        if length is None:
+            break
+        cursor += length
+        if command in {0x02, 0x03}:
+            break
+    return offsets
+
+
+def extract_script_encounters(rom: bytes, maps: list[dict]) -> dict[str, list[dict]]:
+    encounters: dict[str, list[dict]] = {}
+    seen: set[tuple[int, str, int, int, str]] = set()
+    commands = {
+        SCRIPT_CMD_SET_WILD_BATTLE: ("定点", "static"),
+        SCRIPT_CMD_GIVE_POKEMON: ("赠送", "gift"),
+    }
+    for row in maps:
+        detail = row.get("detail") or {}
+        script_targets = sorted(map_script_pointers(rom, row), key=lambda item: item["script_offset"])
+        for target_index, script_target in enumerate(script_targets):
+            script_offset = script_target["script_offset"]
+            scan_end = min(len(rom), script_offset + SCRIPT_STATIC_ENCOUNTER_SCAN_BYTES)
+            for next_target in script_targets[target_index + 1 :]:
+                next_offset = next_target["script_offset"]
+                if next_offset > script_offset:
+                    scan_end = min(scan_end, next_offset)
+                    break
+            script = rom[script_offset:scan_end]
+            parsed_command_offsets = script_command_offsets(script)
+            for command_offset, command in enumerate(script[:-5]):
+                if command not in commands:
+                    continue
+                method, source_type = commands[command]
+                species = int.from_bytes(script[command_offset + 1 : command_offset + 3], "little")
+                level = script[command_offset + 3]
+                item = int.from_bytes(script[command_offset + 4 : command_offset + 6], "little")
+                if not (1 <= species < SPECIES_COUNT and 1 <= level <= 100 and 0 <= item < 1000):
+                    continue
+                key = (species, str(row["id"]), level, script_offset + command_offset, source_type)
+                if key in seen:
+                    continue
+                seen.add(key)
+                encounters.setdefault(str(species), []).append({
+                    "map_group": detail.get("map_group"),
+                    "map_number": detail.get("map_number"),
+                    "map_key": detail.get("map_key"),
+                    "map_id": row.get("id"),
+                    "location_id": f"地图 {row.get('id')}",
+                    "location": row.get("name") or row.get("decoded") or f"地图 {row.get('id')}",
+                    "method": method,
+                    "min_level": level,
+                    "max_level": level,
+                    "source_type": source_type,
+                    "script_offset": script_offset + command_offset,
+                    "script_source": script_target.get("script_source"),
+                    "script_source_index": script_target.get("script_source_index"),
+                    "object_id": script_target.get("script_source_index") if script_target.get("script_source") == "object" else None,
+                    "item": item,
+                })
+            for command_offset, command in enumerate(script[:-2]):
+                if command != SCRIPT_CMD_GIVE_EGG:
+                    continue
+                if command_offset not in parsed_command_offsets:
+                    continue
+                species = int.from_bytes(script[command_offset + 1 : command_offset + 3], "little")
+                next_command = script[command_offset + 3] if command_offset + 3 < len(script) else 0x02
+                next_commands = {0x02, 0x03, 0x09, 0x0F, 0x16, 0x19, 0x21, 0x25, 0x26, 0x27, 0x5C, 0x66, 0x67, 0x6C}
+                if not (1 <= species < SPECIES_COUNT and next_command in next_commands):
+                    continue
+                level = 5
+                key = (species, str(row["id"]), level, script_offset + command_offset, "egg")
+                if key in seen:
+                    continue
+                seen.add(key)
+                encounters.setdefault(str(species), []).append({
+                    "map_group": detail.get("map_group"),
+                    "map_number": detail.get("map_number"),
+                    "map_key": detail.get("map_key"),
+                    "map_id": row.get("id"),
+                    "location_id": f"地图 {row.get('id')}",
+                    "location": row.get("name") or row.get("decoded") or f"地图 {row.get('id')}",
+                    "method": "蛋",
+                    "min_level": level,
+                    "max_level": level,
+                    "source_type": "egg",
+                    "script_offset": script_offset + command_offset,
+                    "script_source": script_target.get("script_source"),
+                    "script_source_index": script_target.get("script_source_index"),
+                    "object_id": script_target.get("script_source_index") if script_target.get("script_source") == "object" else None,
+                })
+    return {species: sorted(rows, key=lambda row: (str(row["map_id"]), row["min_level"], row["script_offset"])) for species, rows in encounters.items()}
+
+
+def extract_static_script_encounters(rom: bytes, maps: list[dict]) -> dict[str, list[dict]]:
+    return {
+        species: [row for row in rows if row.get("source_type") == "static"]
+        for species, rows in extract_script_encounters(rom, maps).items()
+        if any(row.get("source_type") == "static" for row in rows)
+    }
+
+
+def merge_script_encounters(species_table: dict[str, dict], maps: list[dict], script_encounters: dict[str, list[dict]]) -> None:
+    maps_by_id = {str(row.get("id")): row for row in maps}
+    for species_id, rows in script_encounters.items():
+        species_row = species_table.get(str(species_id))
+        if species_row is not None:
+            species_row.setdefault("detail", {}).setdefault("encounters", []).extend(rows)
+        species_name = species_row.get("name") if species_row else f"species {species_id}"
+        for encounter in rows:
+            map_row = maps_by_id.get(str(encounter.get("map_id")))
+            if not map_row:
+                continue
+            map_row.setdefault("detail", {}).setdefault("encounters", []).append({
+                "species_id": int(species_id),
+                "species_name": species_name,
+                "method": encounter["method"],
+                "min_level": encounter["min_level"],
+                "max_level": encounter["max_level"],
+                "source_type": encounter["source_type"],
+                "script_offset": encounter["script_offset"],
+                "object_id": encounter["object_id"],
+            })
+    for row in species_table.values():
+        encounters = row.get("detail", {}).get("encounters")
+        if encounters:
+            encounters.sort(key=lambda item: (item.get("source_type", "wild"), item.get("map_group") or 999, item.get("map_number") or 999, item.get("method", ""), item.get("min_level", 0)))
+    for row in maps:
+        encounters = row.get("detail", {}).get("encounters")
+        if encounters:
+            encounters.sort(key=lambda item: (item.get("method", ""), min(item.get("slots") or [99]), item.get("species_id", 0), item.get("min_level", 0)))
 
 
 def enrich_species(table: dict[str, dict], rom: bytes, ability_names: dict[str, dict], item_names: dict[str, dict], encounters: dict[str, list[dict]]) -> None:
@@ -7817,6 +8172,8 @@ def extract_rom_text(rom_path: Path | None = DEFAULT_ROM) -> dict:
     encounters = extract_wild_encounters(rom)
     enrich_species(tables["species"], rom, tables["abilities"], tables["items"], encounters)
     maps = extract_map_entities(rom, encounters, tables["species"])
+    script_encounters = extract_script_encounters(rom, maps)
+    merge_script_encounters(tables["species"], maps, script_encounters)
     used_keys = collect_used_charmap_keys(tables)
     charmap = official_charmap()
     return {
@@ -7843,9 +8200,11 @@ def extract_rom_text(rom_path: Path | None = DEFAULT_ROM) -> dict:
             for spec in TABLES
         },
         "wild_encounters": {
-            "header_offset": WILD_ENCOUNTER_HEADERS_OFFSET,
+            "header_offset": active_wild_encounter_headers_offset(rom),
             "record_count": sum(1 for rows in encounters.values() for _row in rows),
             "species_count": len(encounters),
+            "script_record_count": sum(1 for rows in script_encounters.values() for _row in rows),
+            "script_species_count": len(script_encounters),
         },
         "maps_summary": {
             "active_groups_offset": active_map_groups_offset(rom),

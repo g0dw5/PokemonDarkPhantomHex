@@ -27,6 +27,7 @@ def fake_rom(path: Path) -> None:
         core.MOVE_DATA_OFFSET + core.ROM_MOVE_COUNT * core.MOVE_DATA_SIZE,
         core.TMHM_MOVES_OFFSET + core.TMHM_COUNT * 2,
         core.TUTOR_COMPATIBILITY_OFFSET + core.ROM_SPECIES_COUNT * core.TUTOR_COMPATIBILITY_SIZE,
+        rom_data.WILD_ENCOUNTER_HEADERS_OFFSET + rom_data.WILD_ENCOUNTER_HEADER_SIZE * 4,
     ) + 0x1000
     rom = bytearray(rom_size)
     species = 25
@@ -94,8 +95,6 @@ def fake_rom(path: Path) -> None:
     rom[wild_header] = 0
     rom[wild_header + 1] = 18
     _w32(rom, wild_header + 4, core.GBA_ROM_POINTER_BASE + wild_info)
-    rom[wild_header + rom_data.WILD_ENCOUNTER_HEADER_SIZE] = 0xFF
-    rom[wild_header + rom_data.WILD_ENCOUNTER_HEADER_SIZE + 1] = 0xFF
     _w32(rom, wild_info, 20)
     _w32(rom, wild_info + 4, core.GBA_ROM_POINTER_BASE + wild_list)
     for slot in range(12):
@@ -103,6 +102,25 @@ def fake_rom(path: Path) -> None:
         rom[entry] = 3 + slot
         rom[entry + 1] = 5 + slot
         _w16(rom, entry + 2, species if slot < 2 else 26)
+    empty_header = wild_header + rom_data.WILD_ENCOUNTER_HEADER_SIZE
+    rom[empty_header] = 0
+    rom[empty_header + 1] = 19
+    bulbasaur_header = wild_header + rom_data.WILD_ENCOUNTER_HEADER_SIZE * 2
+    bulbasaur_info = 0x613200
+    bulbasaur_list = 0x613300
+    rom[bulbasaur_header] = 0
+    rom[bulbasaur_header + 1] = 20
+    _w32(rom, bulbasaur_header + 4, core.GBA_ROM_POINTER_BASE + bulbasaur_info)
+    _w32(rom, bulbasaur_info, 15)
+    _w32(rom, bulbasaur_info + 4, core.GBA_ROM_POINTER_BASE + bulbasaur_list)
+    for slot in range(12):
+        entry = bulbasaur_list + slot * 4
+        rom[entry] = 7
+        rom[entry + 1] = 7
+        _w16(rom, entry + 2, 1 if slot == 0 else 25)
+    sentinel = wild_header + rom_data.WILD_ENCOUNTER_HEADER_SIZE * 3
+    rom[sentinel] = 0xFF
+    rom[sentinel + 1] = 0xFF
     path.write_bytes(rom)
 
 
@@ -191,7 +209,6 @@ class BackendEditorTest(unittest.TestCase):
             self.assertTrue(editor.api_names()["ok"])
             observed = editor.observed_from_save()
             self.assertTrue(observed["species"])
-            self.assertEqual(observed["encounters"][25][0]["met_level"], 5)
 
             bag = editor.api_update_bag({"pocket": "电脑道具", "slot": 1, "item_id": 13, "quantity": 8})
             self.assertIn("已写入背包", bag["message"])
@@ -260,6 +277,7 @@ class BackendEditorTest(unittest.TestCase):
             core.set_rom_path(rom_path)
             editor.configure_rom(rom_path)
 
+            self.assertEqual(rom_data.WILD_ENCOUNTER_HEADERS_OFFSET, 0xEA2D34)
             constraints = core.constraints_for_species(25)
             self.assertIsNotNone(constraints)
             self.assertEqual(core.default_pp_for_move(33), 35)
@@ -281,9 +299,48 @@ class BackendEditorTest(unittest.TestCase):
             self.assertEqual(encounters[0]["map_key"], "Route103")
             self.assertEqual(encounters[0]["method"], "草丛")
             self.assertEqual((encounters[0]["min_level"], encounters[0]["max_level"]), (3, 6))
+            self.assertEqual(encounters[0]["rate"], 40)
+            self.assertEqual(encounters[0]["encounter_rate"], 20)
+            grass_018 = [
+                encounter
+                for species_entry in rom_text["species"].values()
+                for encounter in species_entry["detail"].get("encounters", [])
+                if (encounter["map_group"], encounter["map_number"], encounter["method"]) == (0, 18, "草丛")
+            ]
+            self.assertEqual(sum(encounter["rate"] for encounter in grass_018), 100)
             names = editor.api_names()
             species_row = next(row for row in names["species"] if row["id"] == 25)
-            self.assertEqual(species_row["detail"]["save_encounters"][0]["met_level"], 5)
+            self.assertNotIn("save_encounters", species_row["detail"])
+            self.assertIn("1", rom_text["species"])
+            bulbasaur_encounters = rom_text["species"]["1"]["detail"]["encounters"]
+            self.assertTrue(bulbasaur_encounters)
+            self.assertEqual(bulbasaur_encounters[0]["rate"], 20)
+            self.assertEqual(rom_text["wild_encounters"]["header_offset"], 0xEA2D34)
+
+            static_rom = bytearray(0x400)
+            _w32(static_rom, 0x14, core.GBA_ROM_POINTER_BASE + 0x40)
+            _w32(static_rom, 0x40 + rom_data.OBJECT_EVENT_SCRIPT_POINTER_OFFSET, core.GBA_ROM_POINTER_BASE + 0x120)
+            static_rom[0x120 : 0x126] = bytes([rom_data.SCRIPT_CMD_SET_WILD_BATTLE, 243, 0, 40, 0, 0])
+            static_maps = [{
+                "id": "34-12",
+                "name": "冥想之窟",
+                "detail": {"map_group": 34, "map_number": 12, "map_key": "group34_map12", "events_offset": 0x10, "events": {"object_count": 1}},
+            }]
+            static_rows = rom_data.extract_static_script_encounters(bytes(static_rom), static_maps)
+            self.assertEqual(static_rows["243"][0]["location"], "冥想之窟")
+            self.assertEqual(static_rows["243"][0]["method"], "定点")
+            static_rom[0x130 : 0x136] = bytes([rom_data.SCRIPT_CMD_GIVE_POKEMON, 1, 0, 5, 0, 0])
+            _w32(static_rom, 0x40 + rom_data.OBJECT_EVENT_SCRIPT_POINTER_OFFSET, core.GBA_ROM_POINTER_BASE + 0x130)
+            script_rows = rom_data.extract_script_encounters(bytes(static_rom), static_maps)
+            self.assertEqual(script_rows["1"][0]["method"], "赠送")
+            static_rom[0x10 + 2] = 1
+            _w32(static_rom, 0x10 + 12, core.GBA_ROM_POINTER_BASE + 0x80)
+            _w32(static_rom, 0x80 + rom_data.COORD_EVENT_SCRIPT_POINTER_OFFSET, core.GBA_ROM_POINTER_BASE + 0x140)
+            static_rom[0x140 : 0x144] = bytes([rom_data.SCRIPT_CMD_GIVE_EGG, 172, 0, 0x02])
+            static_maps[0]["detail"]["events"]["coord_count"] = 1
+            script_rows = rom_data.extract_script_encounters(bytes(static_rom), static_maps)
+            self.assertEqual(script_rows["172"][0]["method"], "蛋")
+            self.assertEqual(script_rows["172"][0]["script_source"], "coord")
 
             for growth_rate in range(6):
                 self.assertGreaterEqual(core.experience_for_level(growth_rate, 20), 0)
