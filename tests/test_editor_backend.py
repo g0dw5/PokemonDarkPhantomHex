@@ -341,6 +341,16 @@ class BackendEditorTest(unittest.TestCase):
             script_rows = rom_data.extract_script_encounters(bytes(static_rom), static_maps)
             self.assertEqual(script_rows["172"][0]["method"], "蛋")
             self.assertEqual(script_rows["172"][0]["script_source"], "coord")
+            self.assertEqual(rom_data.map_display_name(24, 81, "天空之柱"), "天空之柱 3F")
+            self.assertEqual(rom_data.map_display_name(35, 2, "启程之路"), "启程之路")
+            named_encounters = {"18": [{"map_group": 35, "map_number": 2, "location": "地图 35-2"}]}
+            rom_data.apply_map_display_names_to_encounters(named_encounters, [{
+                "id": "35-2",
+                "name": "启程之路",
+                "detail": {"map_group": 35, "map_number": 2, "map_key": "group35_map2"},
+            }])
+            self.assertEqual(named_encounters["18"][0]["location"], "启程之路")
+            self.assertEqual(named_encounters["18"][0]["map_id"], "35-2")
 
             for growth_rate in range(6):
                 self.assertGreaterEqual(core.experience_for_level(growth_rate, 20), 0)

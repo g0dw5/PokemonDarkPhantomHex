@@ -7438,6 +7438,17 @@ def encounter_map_name_from_key(key: str) -> str:
     return key.replace("_", " ")
 
 
+def map_display_name(map_group: int, map_number: int, region_name: str = "") -> str:
+    key_name = encounter_map_name(map_group, map_number)
+    if key_name.startswith("地图 "):
+        return region_name or key_name
+    if region_name and key_name == encounter_map_key(map_group, map_number).replace("_", " "):
+        return region_name
+    if region_name and (key_name == region_name or key_name.startswith(f"{region_name} ")):
+        return key_name
+    return region_name or key_name
+
+
 def read_pointer(rom: bytes, offset: int) -> int:
     return u32(rom, offset)
 
@@ -7603,6 +7614,7 @@ def extract_map_entities(rom: bytes, encounters: dict[str, list[dict]], species_
             connections_offset = gba_pointer_to_offset(read_pointer(rom, header_offset + 12), len(rom))
             region_id = rom[header_offset + 0x14]
             region_entry = region_map_entry(rom, region_id)
+            display_name = map_display_name(map_group, map_number, region_entry.get("name") or "")
             width = read_s32(rom, layout_offset)
             height = read_s32(rom, layout_offset + 4)
             flags = rom[header_offset + 0x1A]
@@ -7611,8 +7623,8 @@ def extract_map_entities(rom: bytes, encounters: dict[str, list[dict]], species_
                 "table_label": "地图",
                 "id": map_id(map_group, map_number),
                 "sort_id": map_sort_id(map_group, map_number),
-                "name": region_entry.get("name") or encounter_map_name(map_group, map_number),
-                "decoded": region_entry.get("name") or encounter_map_name(map_group, map_number),
+                "name": display_name,
+                "decoded": display_name,
                 "tokens": [],
                 "description": "",
                 "detail": {
@@ -7682,6 +7694,23 @@ def extract_map_entities(rom: bytes, encounters: dict[str, list[dict]], species_
                     })
         detail["connections"] = connections
     return maps
+
+
+def apply_map_display_names_to_encounters(encounters: dict[str, list[dict]], maps: list[dict]) -> None:
+    maps_by_group_number = {
+        (row.get("detail", {}).get("map_group"), row.get("detail", {}).get("map_number")): row
+        for row in maps
+    }
+    for rows in encounters.values():
+        for encounter in rows:
+            key = (encounter.get("map_group"), encounter.get("map_number"))
+            map_row = maps_by_group_number.get(key)
+            if not map_row:
+                continue
+            detail = map_row.get("detail") or {}
+            encounter["location"] = map_row.get("name") or map_row.get("decoded") or encounter.get("location")
+            encounter["map_id"] = map_row.get("id")
+            encounter["map_key"] = detail.get("map_key") or encounter.get("map_key")
 
 
 def extract_wild_encounters(rom: bytes) -> dict[str, list[dict]]:
@@ -8172,6 +8201,7 @@ def extract_rom_text(rom_path: Path | None = DEFAULT_ROM) -> dict:
     encounters = extract_wild_encounters(rom)
     enrich_species(tables["species"], rom, tables["abilities"], tables["items"], encounters)
     maps = extract_map_entities(rom, encounters, tables["species"])
+    apply_map_display_names_to_encounters(encounters, maps)
     script_encounters = extract_script_encounters(rom, maps)
     merge_script_encounters(tables["species"], maps, script_encounters)
     used_keys = collect_used_charmap_keys(tables)
