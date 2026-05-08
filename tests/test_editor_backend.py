@@ -388,6 +388,7 @@ class BackendEditorTest(unittest.TestCase):
             self.assertEqual(script_rows["267"][0]["method"], "定点")
             self.assertEqual(rom_data.map_display_name(24, 81, "天空之柱"), "天空之柱 3F")
             self.assertEqual(rom_data.map_display_name(35, 2, "启程之路"), "启程之路")
+            self.assertEqual(rom_data.map_display_name(32, 1, "119号道路"), "天气研究所 2F")
             named_encounters = {"18": [{"map_group": 35, "map_number": 2, "location": "地图 35-2"}]}
             rom_data.apply_map_display_names_to_encounters(named_encounters, [{
                 "id": "35-2",

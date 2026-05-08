@@ -220,6 +220,9 @@ POKEEMERALD_ENCOUNTER_MAP_GROUPS = {
         "SouthernIsland_Interior", "SafariZone_RestHouse", "SafariZone_Northeast", "SafariZone_Southeast",
         "BattleFrontier_OutsideEast",
     ),
+    32: (
+        "WeatherInstitute_1F", "WeatherInstitute_2F", "Route119_House",
+    ),
 }
 MAP_NAME_PREFIXES = {
     "PetalburgCity": "橙华市",
@@ -269,6 +272,7 @@ MAP_NAME_PREFIXES = {
     "SafariZone": "狩猎地带",
     "SouthernIsland": "南方小岛",
     "BattleFrontier": "对战开拓区",
+    "WeatherInstitute": "天气研究所",
 }
 GBA_ROM_POINTER_BASE = 0x08000000
 TEXT_TERMINATOR = 0xFF
@@ -7510,12 +7514,15 @@ def encounter_map_name_from_key(key: str) -> str:
 
 
 def map_display_name(map_group: int, map_number: int, region_name: str = "") -> str:
+    key = encounter_map_key(map_group, map_number)
     key_name = encounter_map_name(map_group, map_number)
     if key_name.startswith("地图 "):
         return region_name or key_name
-    if region_name and key_name == encounter_map_key(map_group, map_number).replace("_", " "):
+    if region_name and key_name == key.replace("_", " "):
         return region_name
     if region_name and (key_name == region_name or key_name.startswith(f"{region_name} ")):
+        return key_name
+    if key and key_name != key.replace("_", " "):
         return key_name
     return region_name or key_name
 
