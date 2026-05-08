@@ -202,7 +202,7 @@ class WebEditorBrowserTest(unittest.TestCase):
                 const species = {table: "species", table_label: "宝可梦", id: 25, name: "皮卡丘", decoded: "皮卡丘", detail: {types: ["电", "飞行"], base_stats: {hp: 35, attack: 55, defense: 40, speed: 90, sp_attack: 50, sp_defense: 50}, growth_rate: "中速", gender_ratio: "雌雄各半", encounters: [{map_group: 0, map_number: 18, location: "103号道路", method: "草丛", min_level: 3, max_level: 6, rate: 20}]}};
                 const bulbasaur = {table: "species", table_label: "宝可梦", id: 1, name: "妙蛙种子", decoded: "妙蛙种子", detail: {types: ["草"], encounters: [{map_group: 0, map_number: 20, location: "105号水路", method: "草丛", min_level: 7, max_level: 7, rate: 20, encounter_rate: 15}]}};
                 const raikou = {table: "species", table_label: "宝可梦", id: 243, name: "雷公", decoded: "雷公", detail: {types: ["电"], encounters: [{map_group: 34, map_number: 12, location: "冥想之窟", method: "定点", min_level: 40, max_level: 40, source_type: "static"}]}};
-                const map103 = {table: "maps", table_label: "地图", id: "0-18", sort_id: 18, name: "103号道路", decoded: "103号道路", detail: {map_group: 0, map_number: 18, map_key: "Route103", region_map_section_id: 18, layout: {width: 80, height: 22}, connections: [{direction_name: "右", map_id: "0-19", name: "104号道路"}], encounters: [{species_id: 25, species_name: "皮卡丘", method: "草丛", min_level: 3, max_level: 6, rate: 20}]}};
+                const map103 = {table: "maps", table_label: "地图", id: "0-18", sort_id: 18, name: "103号道路", decoded: "103号道路", detail: {map_group: 0, map_number: 18, map_key: "Route103", region_map_section_id: 18, layout: {width: 80, height: 22}, connections: [{direction_name: "右", map_id: "0-19", name: "104号道路"}], encounters: [{species_id: 25, species_name: "皮卡丘", method: "草丛", min_level: 3, max_level: 6, rate: 20}, {species_id: 129, species_name: "鲤鱼王", method: "旧钓竿", min_level: 5, max_level: 5, rate: 70}, {species_id: 183, species_name: "玛力露", method: "冲浪", min_level: 20, max_level: 25, rate: 60}]}};
                 const map104 = {table: "maps", table_label: "地图", id: "0-19", sort_id: 19, name: "104号道路", decoded: "104号道路", detail: {map_group: 0, map_number: 19, map_key: "Route104", region_map_section_id: 19, layout: {width: 90, height: 30}, connections: [{direction_name: "左", map_id: "0-18", name: "103号道路"}], encounters: []}};
                 names = {ok: true, rows: [species, bulbasaur, raikou, map103, map104], species: [species, bulbasaur, raikou], maps: [map103, map104], items: [], moves: [], abilities: [], stats: {rom: {}, charmap: {}}, table_info: {}};
                 tab = "names";
@@ -226,10 +226,12 @@ class WebEditorBrowserTest(unittest.TestCase):
             expect(self.page.locator(".dictionary-maps")).to_be_visible()
             expect(self.page.locator(".dictionary-maps thead")).to_contain_text("Connections")
             expect(self.page.locator(".dictionary-maps thead")).to_contain_text("Encounters")
+            expect(self.page.locator(".dictionary-maps .encounter-group-label")).to_contain_text(["草丛", "钓鱼", "冲浪"])
             self.page.locator("#detail").get_by_role("button", name=re.compile("右 104号道路")).click()
             expect(self.page.locator("#inspector-title")).to_contain_text("地图 #0-19")
             self.page.locator("#detail").get_by_role("button", name=re.compile("左 103号道路")).click()
             expect(self.page.locator("#inspector-title")).to_contain_text("地图 #0-18")
+            expect(self.page.locator("#detail .encounter-group-label")).to_contain_text(["草丛", "钓鱼", "冲浪"])
             self.page.locator("#detail").get_by_role("button", name=re.compile("皮卡丘 草丛")).click()
             expect(self.page.locator("#inspector-title")).to_contain_text("宝可梦 #25")
 

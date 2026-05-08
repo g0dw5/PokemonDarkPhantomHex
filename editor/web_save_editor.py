@@ -1071,6 +1071,10 @@ HTML = r"""<!doctype html>
     .detail-value { overflow-wrap: anywhere; }
     .chip-list { display: flex; flex-wrap: wrap; gap: 4px; }
     .data-chip { display: inline-flex; align-items: center; min-height: 20px; border: 1px solid #cbd1c7; border-radius: 999px; padding: 1px 7px; background: #fff; color: #30372f; font-size: 12px; }
+    .encounter-groups { display: grid; gap: 6px; min-width: 210px; }
+    .encounter-group { display: grid; grid-template-columns: 46px minmax(0, 1fr); gap: 5px; align-items: start; }
+    .encounter-group-label { min-height: 20px; border-left: 3px solid #6f8d78; padding-left: 5px; color: #394038; font-size: 12px; font-weight: 700; line-height: 20px; white-space: nowrap; }
+    .encounter-group-items { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
     .type-chip { border-color: #aeb5aa; background: #edf4ef; color: #24352d; font-weight: 600; }
     .pokemon-type-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
     .type-badge { display: inline-flex; min-width: 42px; justify-content: center; align-items: center; min-height: 18px; border-radius: 3px; border: 1px solid rgba(0,0,0,.22); padding: 1px 6px; color: white; font-size: 12px; font-weight: 700; text-shadow: 0 1px 0 rgba(0,0,0,.35); box-shadow: inset 0 1px 0 rgba(255,255,255,.25); }
@@ -2231,12 +2235,35 @@ function dictionaryMapConnectionLinks(connections, limit=0) {
 }
 function dictionaryMapEncounterLinks(encounters, limit=0) {
   if (!encounters.length) return `<span class="muted">无</span>`;
-  const visible = limit ? encounters.slice(0, limit) : encounters;
-  const more = limit && encounters.length > limit ? `<span class="muted">+${encounters.length - limit}</span>` : "";
-  return `<span class="chip-list">${visible.map(encounter => {
-    const label = `#${encounter.species_id} ${encounter.species_name} ${encounter.method} ${encounterLevelLabel(encounter)} ${encounterRateLabel(encounter)}`;
-    return `<button type="button" class="data-chip location-link" onclick="jumpToRom('species', '${escapeJsString(String(encounter.species_id))}'); event.stopPropagation();">${escapeHtml(label)}</button>`;
-  }).join("")}${more}</span>`;
+  const grouped = groupMapEncounters(encounters);
+  let shown = 0;
+  const groups = grouped.map(group => {
+    const room = limit ? Math.max(0, limit - shown) : group.items.length;
+    if (!room) return "";
+    const visible = group.items.slice(0, room);
+    shown += visible.length;
+    return `<span class="encounter-group"><span class="encounter-group-label">${escapeHtml(group.label)}</span><span class="encounter-group-items">${visible.map(encounter => {
+      const label = `#${encounter.species_id} ${encounter.species_name} ${encounter.method} ${encounterLevelLabel(encounter)} ${encounterRateLabel(encounter)}`.trim();
+      return `<button type="button" class="data-chip location-link" onclick="jumpToRom('species', '${escapeJsString(String(encounter.species_id))}'); event.stopPropagation();">${escapeHtml(label)}</button>`;
+    }).join("")}</span></span>`;
+  }).join("");
+  const more = limit && encounters.length > shown ? `<span class="muted">+${encounters.length - shown}</span>` : "";
+  return `<span class="encounter-groups">${groups}${more}</span>`;
+}
+function groupMapEncounters(encounters) {
+  const order = ["草丛", "钓鱼", "冲浪", "碎岩", "定点", "赠送", "蛋", "其他"];
+  const buckets = new Map();
+  for (const encounter of encounters || []) {
+    const label = encounterMethodGroup(encounter.method);
+    if (!buckets.has(label)) buckets.set(label, []);
+    buckets.get(label).push(encounter);
+  }
+  return order.filter(label => buckets.has(label)).map(label => ({label, items: buckets.get(label)}));
+}
+function encounterMethodGroup(method) {
+  if (["旧钓竿", "好钓竿", "超级钓竿", "钓鱼"].includes(method)) return "钓鱼";
+  if (["草丛", "冲浪", "碎岩", "定点", "赠送", "蛋"].includes(method)) return method;
+  return "其他";
 }
 function dictionarySpeciesEncounterLinks(encounters, limit=0) {
   const items = encounters.map(encounter => {
