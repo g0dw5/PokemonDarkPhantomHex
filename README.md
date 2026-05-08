@@ -425,6 +425,8 @@ wild list 每项 4 bytes：`min_level u8`、`max_level u8`、`species u16`。槽
 | `0x7A giveegg` | `method = 蛋` |
 | `setvar 0x8004/0x8005` + `special 0x01E2` | `method = 特殊事件` |
 
+`0x79 givepokemon` 会额外做结构校验，以覆盖当前 ROM 中位于复杂流程脚本后半段的赠送命令；例如 `119号道路` 的 `漂浮泡泡 Lv25` 来自 ROM `0x27005A` 的 `givepokemon`。
+
 脚本来源没有概率字段；例如雷公在当前 ROM 中通过 `setwildbattle` 机制定位。进化来源不并入 Encounter 显示；需要由额外 runtime 状态决定的菜单/交换类 special 不展示，除非已经逆向到当前 ROM 的直接证据。
 
 ### ROM 特性描述表

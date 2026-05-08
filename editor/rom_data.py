@@ -7984,6 +7984,17 @@ def script_command_offsets(script: bytes) -> set[int]:
     return offsets
 
 
+def plausible_give_pokemon_command(script: bytes, command_offset: int) -> bool:
+    end_offset = command_offset + SCRIPT_COMMAND_LENGTHS[SCRIPT_CMD_GIVE_POKEMON]
+    if end_offset > len(script):
+        return False
+    species = int.from_bytes(script[command_offset + 1 : command_offset + 3], "little")
+    level = script[command_offset + 3]
+    item = int.from_bytes(script[command_offset + 4 : command_offset + 6], "little")
+    next_command = script[end_offset] if end_offset < len(script) else 0x02
+    return 1 <= species < SPECIES_COUNT and 1 <= level <= 100 and 0 <= item < 1000 and next_command in SCRIPT_COMMAND_LENGTHS
+
+
 def global_script_offsets(rom: bytes, maps: list[dict]) -> list[int]:
     return sorted({target["script_offset"] for row in maps for target in map_script_pointers(rom, row)})
 
@@ -8075,7 +8086,9 @@ def extract_setwildbattle_encounters(script: bytes, row: dict, detail: dict, scr
 
 def extract_gift_encounters(script: bytes, row: dict, detail: dict, script_target: dict, script_offset: int, parsed_command_offsets: set[int], encounters: dict[str, list[dict]], seen: set[tuple[int, str, int, int, str]]) -> None:
     for command_offset, command in enumerate(script[:-5]):
-        if command != SCRIPT_CMD_GIVE_POKEMON or command_offset not in parsed_command_offsets:
+        if command != SCRIPT_CMD_GIVE_POKEMON:
+            continue
+        if command_offset not in parsed_command_offsets and not plausible_give_pokemon_command(script, command_offset):
             continue
         species = int.from_bytes(script[command_offset + 1 : command_offset + 3], "little")
         level = script[command_offset + 3]

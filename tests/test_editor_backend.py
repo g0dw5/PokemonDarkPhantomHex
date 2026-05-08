@@ -342,6 +342,19 @@ class BackendEditorTest(unittest.TestCase):
             _w32(static_rom, 0x40 + rom_data.OBJECT_EVENT_SCRIPT_POINTER_OFFSET, core.GBA_ROM_POINTER_BASE + 0x130)
             script_rows = rom_data.extract_script_encounters(bytes(static_rom), static_maps)
             self.assertEqual(script_rows["1"][0]["method"], "赠送")
+            static_rom[0x1A0 : 0x1C5] = bytes([
+                0x16, 0x01, 0x40, 1, 0,
+                0x4F, 0x00, 0x00, 0x00, 0x00,
+                rom_data.SCRIPT_CMD_GIVE_POKEMON, 385 & 0xFF, 385 >> 8, 25, 209, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0x21, 0, 0, 0, 0,
+                rom_data.SCRIPT_CMD_GIVE_POKEMON, 386 & 0xFF, 386 >> 8, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0xFF,
+            ])
+            _w32(static_rom, 0x40 + rom_data.OBJECT_EVENT_SCRIPT_POINTER_OFFSET, core.GBA_ROM_POINTER_BASE + 0x1A0)
+            script_rows = rom_data.extract_script_encounters(bytes(static_rom), static_maps)
+            self.assertEqual(script_rows["385"][0]["method"], "赠送")
+            self.assertEqual(script_rows["385"][0]["min_level"], 25)
+            self.assertNotIn("386", script_rows)
             static_rom[0x10 + 2] = 1
             _w32(static_rom, 0x10 + 12, core.GBA_ROM_POINTER_BASE + 0x80)
             _w32(static_rom, 0x80 + rom_data.COORD_EVENT_SCRIPT_POINTER_OFFSET, core.GBA_ROM_POINTER_BASE + 0x140)
