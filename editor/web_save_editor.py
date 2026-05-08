@@ -66,7 +66,7 @@ STATE = State()
 
 
 def table_sort_rank(table: str) -> int:
-    return {"species": 0, "abilities": 1, "moves": 2, "items": 3, "natures": 4, "balls": 5}.get(table, 9)
+    return {"species": 0, "maps": 1, "abilities": 2, "moves": 3, "items": 4, "natures": 5, "balls": 6}.get(table, 9)
 
 
 def load_save(path: Path | None = None) -> None:
@@ -340,6 +340,7 @@ def api_names():
             "moves": {},
             "abilities": {},
             "items": {},
+            "maps": [],
             "character_map_count": 0,
             "rom_used_character_key_count": 0,
             "rom_unknown_character_key_count": 0,
@@ -390,6 +391,31 @@ def api_names():
             rows.append(row)
         return rows
 
+    def map_rows():
+        rows = []
+        for entry in sorted(raw.get("maps", []), key=lambda row: row.get("sort_id", 0)):
+            detail = dict(entry.get("detail") or {})
+            map_group = detail.get("map_group", "")
+            map_number = detail.get("map_number", "")
+            map_id = entry.get("id") or f"{map_group}-{map_number}"
+            name = entry.get("name") or entry.get("decoded") or f"地图 {map_id}"
+            rows.append({
+                "table": "maps",
+                "table_label": "地图",
+                "id": str(map_id),
+                "sort_id": entry.get("sort_id", 0),
+                "name": name,
+                "decoded": entry.get("decoded") or name,
+                "tokens": [],
+                "observed": False,
+                "locations": [],
+                "unknown_count": 0,
+                "description": entry.get("description") or "",
+                "detail": detail,
+                "raw_hex": "",
+            })
+        return rows
+
     static_rows = []
     for nature_id, name in enumerate(NATURE_NAMES):
         static_rows.append({
@@ -411,10 +437,11 @@ def api_names():
         })
     save = STATE.save
     species_rows = table("species", "宝可梦")
+    maps_rows = map_rows()
     move_rows = table("moves", "招式")
     ability_rows = table("abilities", "特性")
     item_rows = table("items", "道具")
-    rows = [*species_rows, *move_rows, *ability_rows, *item_rows]
+    rows = [*species_rows, *maps_rows, *move_rows, *ability_rows, *item_rows]
     observed_key_count = count_observed_charmap_keys(rows)
     stats = {
         "rom_loaded": bool(STATE.rom_path and STATE.rom_path.exists()),
@@ -430,6 +457,7 @@ def api_names():
             "moves": len(raw.get("moves", {})),
             "abilities": len(raw.get("abilities", {})),
             "items": len(raw.get("items", {})),
+            "maps": len(raw.get("maps", [])),
         },
         "charmap": {
             "official": int(raw.get("character_map_count", 0)),
@@ -442,11 +470,12 @@ def api_names():
     return {
         "ok": True,
         "species": species_rows,
+        "maps": maps_rows,
         "moves": move_rows,
         "abilities": ability_rows,
         "items": item_rows,
         "stats": stats,
-        "rows": sorted(rows, key=lambda row: (table_sort_rank(row["table"]), row["id"])),
+        "rows": sorted(rows, key=lambda row: (table_sort_rank(row["table"]), row.get("sort_id", row["id"]))),
         "static_rows": static_rows,
         "table_info": dictionary_table_info(),
     }
@@ -457,6 +486,10 @@ def dictionary_table_info() -> dict[str, dict[str, str]]:
         "species": {
             "label": "宝可梦",
             "description": "ROM 种族名称表，并补充 base stats：基础能力、属性、性别比例、经验曲线、蛋组、特性、野生携带道具和野生 Encounter。",
+        },
+        "maps": {
+            "label": "地图",
+            "description": "ROM 地图实体表，按 MapHeader 聚合显示地图名、连接关系和野生 Encounter，并支持与宝可梦字典互相跳转。",
         },
         "moves": {
             "label": "招式",
@@ -1343,7 +1376,7 @@ function escapeJsString(text) {
 }
 function romLink(table, id, text) {
   if (!id) return escapeHtml(text || "空");
-  return `<button type="button" class="link" onclick="jumpToRom('${table}', ${id}); event.stopPropagation();">${escapeHtml(text)}</button>`;
+  return `<button type="button" class="link" onclick="jumpToRom('${escapeJsString(table)}', '${escapeJsString(String(id))}'); event.stopPropagation();">${escapeHtml(text)}</button>`;
 }
 function displayName(table, id, text) {
   return `<span class="id-chip">#${id}</span> ${romLink(table, id, text)}`;
@@ -2073,7 +2106,7 @@ async function loadExperienceLevel(species, level, experience) {
 }
 function renderNames() {
   if (!names) return;
-  const dictionaryTabs = [["species", "宝可梦"], ["abilities", "特性"], ["moves", "招式"], ["items", "道具"], ["type_chart", "属性克制"]];
+  const dictionaryTabs = [["species", "宝可梦"], ["maps", "地图"], ["abilities", "特性"], ["moves", "招式"], ["items", "道具"], ["type_chart", "属性克制"]];
   if (!dictionaryTabs.some(([id]) => id === collectTable)) collectTable = "species";
   const isTypeChart = collectTable === "type_chart";
   const rows = isTypeChart ? [] : filteredNameRows();
@@ -2096,7 +2129,7 @@ function renderDictionaryTable(rows) {
   const columns = dictionaryColumns(collectTable);
   const head = columns.map(col => `<th>${escapeHtml(col.label)}</th>`).join("");
   const body = rows.map(({r, idx}) => {
-    const selectedClass = selected && selected.table === r.table && selected.id === r.id ? "selected" : "";
+    const selectedClass = selected && selected.table === r.table && String(selected.id) === String(r.id) ? "selected" : "";
     const cells = columns.map(col => `<td class="${col.className || ""}">${dictionaryCell(r, col.key)}</td>`).join("");
     return `<tr id="rom-${r.table}-${r.id}" class="${selectedClass}" onclick="selectNameIndex(${idx})">${cells}</tr>`;
   }).join("");
@@ -2106,6 +2139,9 @@ function dictionaryColumns(table) {
   const common = [{key:"id", label:"ID"}, {key:"name", label:"名称", className:"name-cell"}];
   if (table === "species") {
     return [...common, {key:"types", label:"属性", className:"types-cell"}, {key:"baseStats", label:"种族值"}, {key:"abilities", label:"特性"}, {key:"growthRate", label:"经验曲线"}, {key:"genderRatio", label:"性别"}, {key:"encounters", label:"Encounter"}, {key:"locations", label:"存档引用"}];
+  }
+  if (table === "maps") {
+    return [{key:"mapId", label:"ID"}, {key:"name", label:"名称", className:"name-cell"}, {key:"mapSize", label:"尺寸"}, {key:"connections", label:"Connections", className:"description-cell"}, {key:"mapEncounters", label:"Encounters", className:"description-cell"}];
   }
   if (table === "moves") {
     return [...common, {key:"pp", label:"PP"}, {key:"description", label:"描述", className:"description-cell"}, {key:"locations", label:"存档引用"}];
@@ -2121,6 +2157,7 @@ function dictionaryColumns(table) {
 function dictionaryCell(row, key) {
   const detail = row.detail || {};
   if (key === "id") return `<span class="num">#${row.id}</span>`;
+  if (key === "mapId") return `<span class="num">${escapeHtml(row.id)}</span>`;
   if (key === "table") return escapeHtml(row.table_label || row.table || "");
   if (key === "name") return dictionaryNameCell(row);
   if (key === "tokens") return escapeHtml((row.tokens || []).join(" ") || "无");
@@ -2132,7 +2169,10 @@ function dictionaryCell(row, key) {
   if (key === "abilities") return chipList((detail.abilities || []).map(a => `#${a.id} ${a.name}`));
   if (key === "growthRate") return escapeHtml(detail.growth_rate || "");
   if (key === "genderRatio") return escapeHtml(detail.gender_ratio || "");
-  if (key === "encounters") return escapeHtml(encounterSummary(detail.encounters || []));
+  if (key === "encounters") return dictionarySpeciesEncounterLinks(detail.encounters || [], 3);
+  if (key === "connections") return dictionaryMapConnectionLinks(detail.connections || [], 4);
+  if (key === "mapEncounters") return dictionaryMapEncounterLinks(detail.encounters || [], 4);
+  if (key === "mapSize") return detail.layout ? `${escapeHtml(detail.layout.width)}x${escapeHtml(detail.layout.height)}` : "";
   if (key === "pp") return `<span class="num">${row.pp ?? detail.pp ?? ""}</span>`;
   if (key === "pocket") return escapeHtml(detail.pocket || "");
   if (key === "price") return detail.price !== undefined ? `<span class="num">${detail.price}</span>` : "";
@@ -2154,6 +2194,34 @@ function dictionaryLocationButtons(locations, limit=0) {
   const visible = limit ? locations.slice(0, limit) : locations;
   const more = limit && locations.length > limit ? `<span class="muted">+${locations.length - limit}</span>` : "";
   return `<span class="chip-list">${visible.map(location => `<button type="button" class="data-chip location-link" onclick="jumpToSaveLocation('${escapeJsString(location)}'); event.stopPropagation();">${escapeHtml(location)}</button>`).join("")}${more}</span>`;
+}
+function dictionaryMapConnectionLinks(connections, limit=0) {
+  if (!connections.length) return `<span class="muted">无</span>`;
+  const visible = limit ? connections.slice(0, limit) : connections;
+  const more = limit && connections.length > limit ? `<span class="muted">+${connections.length - limit}</span>` : "";
+  return `<span class="chip-list">${visible.map(connection => {
+    const label = `${connection.direction_name || ""} ${connection.name || connection.map_id || ""}`.trim();
+    return `<button type="button" class="data-chip location-link" onclick="jumpToRom('maps', '${escapeJsString(connection.map_id)}'); event.stopPropagation();">${escapeHtml(label)}</button>`;
+  }).join("")}${more}</span>`;
+}
+function dictionaryMapEncounterLinks(encounters, limit=0) {
+  if (!encounters.length) return `<span class="muted">无</span>`;
+  const visible = limit ? encounters.slice(0, limit) : encounters;
+  const more = limit && encounters.length > limit ? `<span class="muted">+${encounters.length - limit}</span>` : "";
+  return `<span class="chip-list">${visible.map(encounter => {
+    const label = `#${encounter.species_id} ${encounter.species_name} ${encounter.method} ${encounterLevelLabel(encounter)} ${encounterRateLabel(encounter)}`;
+    return `<button type="button" class="data-chip location-link" onclick="jumpToRom('species', '${escapeJsString(String(encounter.species_id))}'); event.stopPropagation();">${escapeHtml(label)}</button>`;
+  }).join("")}${more}</span>`;
+}
+function dictionarySpeciesEncounterLinks(encounters, limit=0) {
+  if (!encounters.length) return `<span class="muted">无</span>`;
+  const visible = limit ? encounters.slice(0, limit) : encounters;
+  const more = limit && encounters.length > limit ? `<span class="muted">+${encounters.length - limit}</span>` : "";
+  return `<span class="chip-list">${visible.map(encounter => {
+    const mapId = `${encounter.map_group}-${encounter.map_number}`;
+    const label = `${encounter.location} ${encounter.method} ${encounterLevelLabel(encounter)} ${encounterRateLabel(encounter)}`;
+    return `<button type="button" class="data-chip location-link" onclick="jumpToRom('maps', '${escapeJsString(mapId)}'); event.stopPropagation();">${escapeHtml(label)}</button>`;
+  }).join("")}${more}</span>`;
 }
 async function jumpToSaveLocation(label) {
   if (!state?.ok) return;
@@ -2227,8 +2295,10 @@ function encounterSummary(encounters) {
   return encounters.length > 3 ? `${first}；+${encounters.length - 3}` : first;
 }
 function encounterLabel(encounter) {
-  const level = encounter.min_level === encounter.max_level ? `Lv${encounter.min_level}` : `Lv${encounter.min_level}-${encounter.max_level}`;
-  return `${encounter.location} ${encounter.method} ${level}`;
+  return `${encounter.location} ${encounter.method} ${encounterLevelLabel(encounter)}`;
+}
+function encounterLevelLabel(encounter) {
+  return encounter.min_level === encounter.max_level ? `Lv${encounter.min_level}` : `Lv${encounter.min_level}-${encounter.max_level}`;
 }
 function encounterRateLabel(encounter) {
   const rate = Number(encounter.rate);
@@ -2343,10 +2413,10 @@ async function reloadNames() {
 }
 function nameRow(table, id) {
   const tableRows = names?.[table] || [];
-  return tableRows.find(row => row.id === id);
+  return tableRows.find(row => String(row.id) === String(id));
 }
 function nameIndex(table, id) {
-  return (names?.rows || []).findIndex(row => row.table === table && row.id === id);
+  return (names?.rows || []).findIndex(row => row.table === table && String(row.id) === String(id));
 }
 function selectNameRow(table, id) {
   const row = nameRow(table, id);
@@ -2406,7 +2476,20 @@ function dictionaryInspectorHtml(row) {
     fields.push(["捕获率", detail.catch_rate]);
     fields.push(["击败经验", detail.exp_yield]);
     fields.push(["野生携带", (detail.wild_items || []).map(item => `#${item.id} ${item.name}`).join("；")]);
-    fields.push(["Encounter", (detail.encounters || []).map(encounter => `${encounterLabel(encounter)}，几率 ${encounterRateLabel(encounter)}`).join("；"), true]);
+    fields.push(["Encounter", dictionarySpeciesEncounterLinks(detail.encounters || []), true, true]);
+  }
+  if (row.table === "maps") {
+    fields.push(["地图编号", row.id]);
+    fields.push(["地图代号", detail.map_key || ""]);
+    fields.push(["MapSec", detail.region_map_section_id]);
+    if (detail.layout) fields.push(["尺寸", `${detail.layout.width}x${detail.layout.height}`]);
+    fields.push(["Header offset", detail.header_offset !== undefined ? `0x${Number(detail.header_offset).toString(16).toUpperCase()}` : ""]);
+    fields.push(["Layout ID", detail.map_layout_id]);
+    fields.push(["Music", detail.music]);
+    fields.push(["Map Type", detail.map_type]);
+    fields.push(["Weather", detail.weather]);
+    fields.push(["Connections", dictionaryMapConnectionLinks(detail.connections || []), true, true]);
+    fields.push(["Encounters", dictionaryMapEncounterLinks(detail.encounters || []), true, true]);
   }
   if (row.locations?.length) fields.push(["存档引用", dictionaryLocationButtons(row.locations), true, true]);
   return `<div class="detail-grid">${fields.filter(([, value]) => value !== undefined && value !== null && String(value) !== "").map(([label, value, wide, html]) => `<div class="detail-field ${wide ? "wide" : ""}"><span class="detail-label">${escapeHtml(label)}</span><div class="detail-value">${html ? value : escapeHtml(value)}</div></div>`).join("")}</div>`;
@@ -2441,6 +2524,12 @@ function detailLinesForDictionaryRow(row) {
     if (detail.exp_yield !== undefined) lines.push(`击败经验：${detail.exp_yield}`);
     if (detail.wild_items?.length) lines.push(`野生携带：${detail.wild_items.map(item => `#${item.id} ${item.name}`).join("；")}`);
     if (detail.encounters?.length) lines.push(`Encounter：${encounterSummary(detail.encounters)}`);
+  }
+  if (row.table === "maps") {
+    if (detail.map_key) lines.push(`地图代号：${detail.map_key}`);
+    if (detail.layout) lines.push(`尺寸：${detail.layout.width}x${detail.layout.height}`);
+    if (detail.connections?.length) lines.push(`连接：${detail.connections.map(connection => `${connection.direction_name} ${connection.name}`).join("；")}`);
+    if (detail.encounters?.length) lines.push(`Encounter：${detail.encounters.map(encounter => `#${encounter.species_id} ${encounter.species_name} ${encounter.method} ${encounterLevelLabel(encounter)} ${encounterRateLabel(encounter)}`).join("；")}`);
   }
   return lines.filter(Boolean);
 }

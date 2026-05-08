@@ -56,6 +56,28 @@ WILD_ENCOUNTER_METHODS = (
     (12, "碎岩", 5),
     (16, "钓鱼", 10),
 )
+ACTIVE_MAP_GROUPS_OFFSET = 0xE8C020
+ORIGINAL_MAP_GROUPS_OFFSET = 0x486578
+REGION_MAP_ENTRIES_OFFSET = 0x5A1480
+REGION_MAP_ENTRY_SIZE = 8
+MAP_HEADER_SIZE = 0x1C
+MAP_LAYOUT_SIZE = 0x18
+MAP_EVENTS_SIZE = 0x14
+MAP_CONNECTION_SIZE = 0x0C
+MAX_MAP_GROUPS = 80
+MAX_MAPS_PER_GROUP = 300
+POKEEMERALD_MAP_GROUP_LENGTHS = (
+    57, 5, 5, 6, 7, 8, 9, 7, 7, 14, 8, 17, 10, 23, 13, 15, 15,
+    2, 2, 2, 3, 1, 1, 1, 108, 61, 89, 2, 1, 13, 1, 1, 3, 1,
+)
+CONNECTION_DIRECTIONS = {
+    1: "下",
+    2: "上",
+    3: "左",
+    4: "右",
+    5: "潜水",
+    6: "上浮",
+}
 POKEEMERALD_ENCOUNTER_MAP_GROUPS = {
     0: (
         "PetalburgCity", "SlateportCity", "MauvilleCity", "RustboroCity", "FortreeCity", "LilycoveCity",
@@ -7393,6 +7415,247 @@ def encounter_map_name_from_key(key: str) -> str:
     return key.replace("_", " ")
 
 
+def read_pointer(rom: bytes, offset: int) -> int:
+    return u32(rom, offset)
+
+
+def read_s32(rom: bytes, offset: int) -> int:
+    return int.from_bytes(rom[offset : offset + 4], "little", signed=True) if offset + 4 <= len(rom) else 0
+
+
+def valid_rom_offset(offset: int | None, rom: bytes, size: int = 1) -> bool:
+    return offset is not None and 0 <= offset <= len(rom) - size
+
+
+def plausible_map_header(rom: bytes, offset: int | None) -> bool:
+    if not valid_rom_offset(offset, rom, MAP_HEADER_SIZE):
+        return False
+    layout_offset = gba_pointer_to_offset(read_pointer(rom, offset), len(rom))
+    events_offset = gba_pointer_to_offset(read_pointer(rom, offset + 4), len(rom))
+    scripts_pointer = read_pointer(rom, offset + 8)
+    connections_pointer = read_pointer(rom, offset + 12)
+    if not valid_rom_offset(layout_offset, rom, MAP_LAYOUT_SIZE) or not valid_rom_offset(events_offset, rom, MAP_EVENTS_SIZE):
+        return False
+    if scripts_pointer and not valid_rom_offset(gba_pointer_to_offset(scripts_pointer, len(rom)), rom):
+        return False
+    if connections_pointer and not valid_rom_offset(gba_pointer_to_offset(connections_pointer, len(rom)), rom):
+        return False
+    return True
+
+
+def map_group_pointer_offsets(rom: bytes, table_offset: int) -> list[int]:
+    groups = []
+    if not valid_rom_offset(table_offset, rom, 4):
+        return groups
+    for group_index in range(MAX_MAP_GROUPS):
+        pointer_offset = table_offset + group_index * 4
+        if not valid_rom_offset(pointer_offset, rom, 4):
+            break
+        group_offset = gba_pointer_to_offset(read_pointer(rom, pointer_offset), len(rom))
+        if not valid_rom_offset(group_offset, rom, 4):
+            break
+        first_header = gba_pointer_to_offset(read_pointer(rom, group_offset), len(rom))
+        if not plausible_map_header(rom, first_header):
+            break
+        groups.append(group_offset)
+    return groups
+
+
+def score_map_group_table(rom: bytes, table_offset: int) -> int:
+    score = 0
+    group_offsets = map_group_pointer_offsets(rom, table_offset)
+    for group_index, group_offset in enumerate(group_offsets):
+        for map_number in range(map_count_limit_for_group(rom, group_offsets, group_index)):
+            entry_offset = group_offset + map_number * 4
+            if not valid_rom_offset(entry_offset, rom, 4):
+                break
+            header_offset = gba_pointer_to_offset(read_pointer(rom, entry_offset), len(rom))
+            if not plausible_map_header(rom, header_offset):
+                break
+            score += 1
+    return score
+
+
+def active_map_groups_offset(rom: bytes) -> int | None:
+    candidates = [ACTIVE_MAP_GROUPS_OFFSET, ORIGINAL_MAP_GROUPS_OFFSET]
+    scored = [(score_map_group_table(rom, offset), offset) for offset in candidates]
+    score, offset = max(scored, default=(0, 0))
+    return offset if score else None
+
+
+def map_count_limit_for_group(rom: bytes, group_offsets: list[int], group_index: int) -> int:
+    if group_index < len(POKEEMERALD_MAP_GROUP_LENGTHS):
+        return POKEEMERALD_MAP_GROUP_LENGTHS[group_index]
+    group_offset = group_offsets[group_index]
+    if group_index + 1 < len(group_offsets):
+        next_offset = group_offsets[group_index + 1]
+        if next_offset > group_offset and (next_offset - group_offset) % 4 == 0:
+            return min(MAX_MAPS_PER_GROUP, (next_offset - group_offset) // 4)
+    return MAX_MAPS_PER_GROUP
+
+
+def region_map_name(rom: bytes, region_map_section_id: int) -> str:
+    entry_offset = REGION_MAP_ENTRIES_OFFSET + region_map_section_id * REGION_MAP_ENTRY_SIZE
+    if not valid_rom_offset(entry_offset, rom, REGION_MAP_ENTRY_SIZE):
+        return ""
+    name_offset = gba_pointer_to_offset(read_pointer(rom, entry_offset), len(rom))
+    if not valid_rom_offset(name_offset, rom):
+        return ""
+    end = rom.find(bytes([TEXT_TERMINATOR]), name_offset, min(len(rom), name_offset + 80))
+    if end < 0:
+        return ""
+    return decode_tokens(tokenize_name(rom[name_offset : end + 1])).strip()
+
+
+def region_map_entry(rom: bytes, region_map_section_id: int) -> dict:
+    entry_offset = REGION_MAP_ENTRIES_OFFSET + region_map_section_id * REGION_MAP_ENTRY_SIZE
+    if not valid_rom_offset(entry_offset, rom, REGION_MAP_ENTRY_SIZE):
+        return {}
+    return {
+        "name": region_map_name(rom, region_map_section_id),
+        "x": rom[entry_offset + 4],
+        "y": rom[entry_offset + 5],
+        "width": rom[entry_offset + 6],
+        "height": rom[entry_offset + 7],
+    }
+
+
+def map_key_for_group_number(map_group: int, map_number: int) -> str:
+    key = encounter_map_key(map_group, map_number)
+    return key or f"group{map_group}_map{map_number}"
+
+
+def map_id(map_group: int, map_number: int) -> str:
+    return f"{map_group}-{map_number}"
+
+
+def map_sort_id(map_group: int, map_number: int) -> int:
+    return map_group * 1000 + map_number
+
+
+def map_encounters_by_location(encounters: dict[str, list[dict]], species_table: dict[str, dict]) -> dict[tuple[int, int], list[dict]]:
+    by_location: dict[tuple[int, int], list[dict]] = {}
+    for species_id, rows in encounters.items():
+        species_name = species_table.get(str(species_id), {}).get("name") or f"species {species_id}"
+        for encounter in rows:
+            entry = {
+                "species_id": int(species_id),
+                "species_name": species_name,
+                "method": encounter["method"],
+                "rate": encounter["rate"],
+                "min_level": encounter["min_level"],
+                "max_level": encounter["max_level"],
+            }
+            key = (int(encounter["map_group"]), int(encounter["map_number"]))
+            by_location.setdefault(key, []).append(entry)
+    for rows in by_location.values():
+        rows.sort(key=lambda row: (row["species_id"], row["method"], row["min_level"], row["max_level"]))
+    return by_location
+
+
+def extract_map_entities(rom: bytes, encounters: dict[str, list[dict]], species_table: dict[str, dict]) -> list[dict]:
+    table_offset = active_map_groups_offset(rom)
+    if table_offset is None:
+        return []
+    group_offsets = map_group_pointer_offsets(rom, table_offset)
+    maps: list[dict] = []
+    by_id: dict[str, dict] = {}
+    encounters_by_location = map_encounters_by_location(encounters, species_table)
+    for map_group, group_offset in enumerate(group_offsets):
+        for map_number in range(map_count_limit_for_group(rom, group_offsets, map_group)):
+            entry_offset = group_offset + map_number * 4
+            if not valid_rom_offset(entry_offset, rom, 4):
+                break
+            header_offset = gba_pointer_to_offset(read_pointer(rom, entry_offset), len(rom))
+            if not plausible_map_header(rom, header_offset):
+                break
+            layout_offset = gba_pointer_to_offset(read_pointer(rom, header_offset), len(rom))
+            events_offset = gba_pointer_to_offset(read_pointer(rom, header_offset + 4), len(rom))
+            scripts_pointer = read_pointer(rom, header_offset + 8)
+            connections_offset = gba_pointer_to_offset(read_pointer(rom, header_offset + 12), len(rom))
+            region_id = rom[header_offset + 0x14]
+            region_entry = region_map_entry(rom, region_id)
+            width = read_s32(rom, layout_offset)
+            height = read_s32(rom, layout_offset + 4)
+            flags = rom[header_offset + 0x1A]
+            row = {
+                "table": "maps",
+                "table_label": "地图",
+                "id": map_id(map_group, map_number),
+                "sort_id": map_sort_id(map_group, map_number),
+                "name": region_entry.get("name") or encounter_map_name(map_group, map_number),
+                "decoded": region_entry.get("name") or encounter_map_name(map_group, map_number),
+                "tokens": [],
+                "description": "",
+                "detail": {
+                    "map_group": map_group,
+                    "map_number": map_number,
+                    "map_key": map_key_for_group_number(map_group, map_number),
+                    "region_map_section_id": region_id,
+                    "region_map": region_entry,
+                    "header_offset": header_offset,
+                    "layout_offset": layout_offset,
+                    "events_offset": events_offset,
+                    "scripts_offset": gba_pointer_to_offset(scripts_pointer, len(rom)) if scripts_pointer else None,
+                    "connections_offset": connections_offset,
+                    "music": u16(rom, header_offset + 0x10),
+                    "map_layout_id": u16(rom, header_offset + 0x12),
+                    "cave": rom[header_offset + 0x15],
+                    "weather": rom[header_offset + 0x16],
+                    "map_type": rom[header_offset + 0x17],
+                    "allow_cycling": bool(flags & 0x01),
+                    "allow_escaping": bool(flags & 0x02),
+                    "allow_running": bool(flags & 0x04),
+                    "show_map_name": flags >> 3,
+                    "battle_type": rom[header_offset + 0x1B],
+                    "layout": {
+                        "width": width,
+                        "height": height,
+                        "border_offset": gba_pointer_to_offset(read_pointer(rom, layout_offset + 8), len(rom)),
+                        "map_offset": gba_pointer_to_offset(read_pointer(rom, layout_offset + 12), len(rom)),
+                        "primary_tileset_offset": gba_pointer_to_offset(read_pointer(rom, layout_offset + 16), len(rom)),
+                        "secondary_tileset_offset": gba_pointer_to_offset(read_pointer(rom, layout_offset + 20), len(rom)),
+                    },
+                    "events": {
+                        "object_count": rom[events_offset],
+                        "warp_count": rom[events_offset + 1],
+                        "coord_count": rom[events_offset + 2],
+                        "bg_count": rom[events_offset + 3],
+                    },
+                    "connections": [],
+                    "encounters": encounters_by_location.get((map_group, map_number), []),
+                },
+            }
+            maps.append(row)
+            by_id[row["id"]] = row
+    for row in maps:
+        detail = row["detail"]
+        connections = []
+        connections_offset = detail.get("connections_offset")
+        if valid_rom_offset(connections_offset, rom, 8):
+            count = read_s32(rom, connections_offset)
+            list_offset = gba_pointer_to_offset(read_pointer(rom, connections_offset + 4), len(rom))
+            if 0 <= count <= 32 and valid_rom_offset(list_offset, rom, count * MAP_CONNECTION_SIZE):
+                for index in range(count):
+                    item_offset = list_offset + index * MAP_CONNECTION_SIZE
+                    direction = rom[item_offset]
+                    target_group = rom[item_offset + 8]
+                    target_number = rom[item_offset + 9]
+                    target_id = map_id(target_group, target_number)
+                    target = by_id.get(target_id)
+                    connections.append({
+                        "direction": direction,
+                        "direction_name": CONNECTION_DIRECTIONS.get(direction, f"方向 {direction}"),
+                        "offset": read_s32(rom, item_offset + 4),
+                        "map_group": target_group,
+                        "map_number": target_number,
+                        "map_id": target_id,
+                        "name": target.get("name") if target else encounter_map_name(target_group, target_number),
+                    })
+        detail["connections"] = connections
+    return maps
+
+
 def extract_wild_encounters(rom: bytes) -> dict[str, list[dict]]:
     encounters: dict[str, dict[tuple[int, int, str], dict]] = {}
     for index in range(WILD_ENCOUNTER_MAX_HEADERS):
@@ -7553,6 +7816,7 @@ def extract_rom_text(rom_path: Path | None = DEFAULT_ROM) -> dict:
     enrich_items(tables["items"], rom)
     encounters = extract_wild_encounters(rom)
     enrich_species(tables["species"], rom, tables["abilities"], tables["items"], encounters)
+    maps = extract_map_entities(rom, encounters, tables["species"])
     used_keys = collect_used_charmap_keys(tables)
     charmap = official_charmap()
     return {
@@ -7583,12 +7847,19 @@ def extract_rom_text(rom_path: Path | None = DEFAULT_ROM) -> dict:
             "record_count": sum(1 for rows in encounters.values() for _row in rows),
             "species_count": len(encounters),
         },
+        "maps_summary": {
+            "active_groups_offset": active_map_groups_offset(rom),
+            "map_count": len(maps),
+            "group_count": len({row["detail"]["map_group"] for row in maps}),
+            "encounter_map_count": len({(row["detail"]["map_group"], row["detail"]["map_number"]) for row in maps if row["detail"].get("encounters")}),
+        },
         "text_model": {
             "source": "embedded Pokemon_GBA_Font_Patch PMRSEFRLG_charmap.txt plus ROM-specific 71=U+2009",
             "terminator": f"{TEXT_TERMINATOR:02X}",
             "controls": {f"{key:02X}": value for key, value in CONTROL_TOKENS.items()},
             "token_policy": "longest-match against embedded official charmap; xx00 two-byte Chinese tokens are preserved",
         },
+        "maps": maps,
         **tables,
     }
 

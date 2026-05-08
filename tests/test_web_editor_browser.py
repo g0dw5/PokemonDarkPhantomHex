@@ -187,14 +187,16 @@ class WebEditorBrowserTest(unittest.TestCase):
             expect(self.page.locator(".metric")).to_have_count(0)
             expect(self.page.locator("#inspector-title")).to_have_text("未选择字典项")
 
-            for tab_name in ("宝可梦", "特性", "招式", "道具"):
+            for tab_name in ("宝可梦", "地图", "特性", "招式", "道具"):
                 self.page.locator(".dictionary-tabs").get_by_role("button", name=tab_name).click()
                 expect(self.page.locator(".dictionary-table thead")).not_to_contain_text("字码")
                 expect(self.page.locator(".dictionary-table thead")).not_to_contain_text("描述来源")
 
             self.page.evaluate("""() => {
-                const species = {table: "species", table_label: "宝可梦", id: 25, name: "皮卡丘", decoded: "皮卡丘", detail: {types: ["电", "飞行"], base_stats: {hp: 35, attack: 55, defense: 40, speed: 90, sp_attack: 50, sp_defense: 50}, growth_rate: "中速", gender_ratio: "雌雄各半"}};
-                names = {ok: true, rows: [species], species: [species], items: [], moves: [], abilities: [], stats: {rom: {}, charmap: {}}, table_info: {}};
+                const species = {table: "species", table_label: "宝可梦", id: 25, name: "皮卡丘", decoded: "皮卡丘", detail: {types: ["电", "飞行"], base_stats: {hp: 35, attack: 55, defense: 40, speed: 90, sp_attack: 50, sp_defense: 50}, growth_rate: "中速", gender_ratio: "雌雄各半", encounters: [{map_group: 0, map_number: 18, location: "103号道路", method: "草丛", min_level: 3, max_level: 6, rate: 20}]}};
+                const map103 = {table: "maps", table_label: "地图", id: "0-18", sort_id: 18, name: "103号道路", decoded: "103号道路", detail: {map_group: 0, map_number: 18, map_key: "Route103", region_map_section_id: 18, layout: {width: 80, height: 22}, connections: [{direction_name: "右", map_id: "0-19", name: "104号道路"}], encounters: [{species_id: 25, species_name: "皮卡丘", method: "草丛", min_level: 3, max_level: 6, rate: 20}]}};
+                const map104 = {table: "maps", table_label: "地图", id: "0-19", sort_id: 19, name: "104号道路", decoded: "104号道路", detail: {map_group: 0, map_number: 19, map_key: "Route104", region_map_section_id: 19, layout: {width: 90, height: 30}, connections: [{direction_name: "左", map_id: "0-18", name: "103号道路"}], encounters: []}};
+                names = {ok: true, rows: [species, map103, map104], species: [species], maps: [map103, map104], items: [], moves: [], abilities: [], stats: {rom: {}, charmap: {}}, table_info: {}};
                 tab = "names";
                 collectTable = "species";
                 render();
@@ -208,12 +210,24 @@ class WebEditorBrowserTest(unittest.TestCase):
             expect(self.page.locator(".dictionary-species .base-stat-value").first).to_have_text("35")
             self.page.locator(".dictionary-species tbody tr").first.click()
             expect(self.page.locator("#detail .type-badge")).to_have_count(2)
+            self.page.locator("#detail").get_by_role("button", name=re.compile("103号道路 草丛")).click()
+            expect(self.page.locator("#inspector-title")).to_contain_text("地图 #0-18")
+            expect(self.page.locator(".dictionary-maps")).to_be_visible()
+            expect(self.page.locator(".dictionary-maps thead")).to_contain_text("Connections")
+            expect(self.page.locator(".dictionary-maps thead")).to_contain_text("Encounters")
+            self.page.locator("#detail").get_by_role("button", name=re.compile("右 104号道路")).click()
+            expect(self.page.locator("#inspector-title")).to_contain_text("地图 #0-19")
+            self.page.locator("#detail").get_by_role("button", name=re.compile("左 103号道路")).click()
+            expect(self.page.locator("#inspector-title")).to_contain_text("地图 #0-18")
+            self.page.locator("#detail").get_by_role("button", name=re.compile("皮卡丘 草丛")).click()
+            expect(self.page.locator("#inspector-title")).to_contain_text("宝可梦 #25")
 
             self.page.evaluate("""() => {
                 const row = {table: "items", table_label: "道具", id: 13, name: "伤药", decoded: "伤药", tokens: ["03"], locations: ["电脑道具 #1 x8"], detail: {price: 300, pocket: "道具"}};
-                names = {ok: true, rows: [row], items: [row], species: [], moves: [], abilities: [], stats: {rom: {}, charmap: {}}, table_info: {}};
+                names = {ok: true, rows: [row], items: [row], species: [], maps: [], moves: [], abilities: [], stats: {rom: {}, charmap: {}}, table_info: {}};
                 tab = "names";
                 collectTable = "items";
+                collectSearch = "";
                 render();
             }""")
             self.page.get_by_role("button", name="电脑道具 #1 x8").click()
