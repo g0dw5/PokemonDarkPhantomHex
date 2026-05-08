@@ -37,7 +37,7 @@ PYTHONPYCACHEPREFIX=.pycache python3 tests/run_browser_tests.py
 - 队伍/盒子宝可梦修改页会按当前 species/level 从 ROM 约束生成性别、特性和招式下拉；选择招式时会同步填入该招式默认 PP，仍可手动调整 PP
 - 招式约束覆盖自身升级、前置形态升级、自身遗传、前置形态遗传和 TM/HM；当前等级还不能学的未来升级招式会在下拉中置灰
 - 背包和携带道具展示 TM/HM 时会追加对应技能名
-- 提供只读 ROM 字典表，按内置官方字码表展示名称、描述、属性克制、野生 Encounter 和各类详细字段，并支持从背包/宝可梦列表跳转到对应条目
+- 提供只读 ROM 字典表，按内置官方字码表展示名称、描述、属性克制、ROM Encounter 和各类详细字段，并支持从背包/宝可梦列表跳转到对应条目
 - 重算宝可梦数据 checksum 和存档 section checksum
 - 保存前自动创建 `.bak-时间戳.sav` 备份
 - 校验存档 section、队伍宝可梦 checksum、等级、EV/IV、HP 等基础合法性
@@ -158,7 +158,7 @@ PYTHONPYCACHEPREFIX=.pycache python3 tests/run_browser_tests.py
 - 基础特性描述指针表在 `0x31BAD4`，覆盖 `ability 0..77`；扩展特性描述指针表在 `0x1BFFE00`，覆盖 `ability 78..150`。
 - 道具描述使用 item 记录内的描述指针，当前字典表同时展示价格、口袋、类型、携带效果参数和 secondary id。
 - species 字典详情来自 base stats 表，展示基础能力、属性、性别比例、经验曲线、蛋组、特性和野生携带道具。
-- species 字典详情还会从当前 ROM 的野生 Encounter 表聚合出现位置、方式、等级范围、遭遇率和槽位；地图组/地图号会按 Emerald `map_groups` 顺序映射成 UI 可读地图名，并保留原始地图编号字段用于核对。
+- species 字典详情还会从当前 ROM 的野生 Encounter 表和可证明的 ROM 脚本来源聚合出现位置、方式、等级范围、遭遇率和槽位；地图组/地图号会按 Emerald `map_groups` 顺序映射成 UI 可读地图名，并保留原始地图编号字段用于核对。Encounter 逆向规则见 [docs/encounters.md](docs/encounters.md)。
 
 ### ROM species 图像资源表
 
@@ -416,15 +416,16 @@ wild list 每项 4 bytes：`min_level u8`、`max_level u8`、`species u16`。槽
 
 地图名映射参考 pret/pokeemerald 的 `data/maps/map_groups.json`，同时在数据里保留 `location_id` 形式的原始地图组/地图号。
 
-除野生表外，当前工具还会从地图脚本、object event、coord event、bg event 的脚本指针扫描直接获得类来源：
+除野生表外，当前工具还会从地图脚本、object event、coord event、bg event 的脚本指针扫描直接获得可证明来源；更完整的证据模型和反误判规则见 [docs/encounters.md](docs/encounters.md)：
 
 | 命令 | 来源 |
 | --- | --- |
 | `0xB6 setwildbattle` | `method = 定点` |
 | `0x79 givepokemon` | `method = 赠送` |
 | `0x7A giveegg` | `method = 蛋` |
+| `setvar 0x8004/0x8005` + `special 0x01E2` | `method = 特殊事件` |
 
-脚本来源没有概率字段；例如雷公在当前 ROM 中通过 `setwildbattle` 机制定位。进化来源不并入 Encounter 显示；需要由额外 runtime 状态决定的菜单/交换类 special 会先记录逆向依据，避免把树果粉末、对战设施等非宝可梦获得逻辑误判为来源。
+脚本来源没有概率字段；例如雷公在当前 ROM 中通过 `setwildbattle` 机制定位。进化来源不并入 Encounter 显示；需要由额外 runtime 状态决定的菜单/交换类 special 不展示，除非已经逆向到当前 ROM 的直接证据。
 
 ### ROM 特性描述表
 

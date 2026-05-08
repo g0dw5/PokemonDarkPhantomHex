@@ -358,6 +358,17 @@ class BackendEditorTest(unittest.TestCase):
             script_rows = rom_data.extract_script_encounters(bytes(static_rom), static_maps)
             self.assertEqual(script_rows["151"][0]["method"], "特殊事件")
             self.assertEqual(script_rows["151"][0]["min_level"], 30)
+            self.assertEqual(script_rows["151"][0]["special_id"], rom_data.SCRIPT_SPECIAL_START_BATTLE)
+            self.assertEqual(script_rows["151"][0]["species_var"], rom_data.SCRIPT_VAR_SPECIAL_BATTLE_SPECIES)
+            static_rom[0x160 : 0x189] = bytes([
+                0x16, 0x04, 0x80, 3, 0, 0x16, 0x05, 0x80, 35, 0, 0x25, 0xFD, 0x01,
+                0x4F, 0x7F, 0, 0x34, 0x92, 0x26, 0x08,
+                0x16, 0x04, 0x80, 250, 0, 0x16, 0x05, 0x80, 70, 0, 0x16, 0x06, 0x80, 0, 0,
+                0x25, 0xE2, 0x01, 0x29, 0xC1, 0x08,
+            ])
+            script_rows = rom_data.extract_script_encounters(bytes(static_rom), static_maps)
+            self.assertNotIn("3", script_rows)
+            self.assertEqual(script_rows["250"][0]["method"], "特殊事件")
             static_rom[0x180 : 0x189] = bytes([0x6A, 0xDC, 0x01, rom_data.SCRIPT_CMD_SET_WILD_BATTLE, 267 & 0xFF, 267 >> 8, 50, 0, 0])
             _w32(static_rom, 0x40 + rom_data.OBJECT_EVENT_SCRIPT_POINTER_OFFSET, core.GBA_ROM_POINTER_BASE + 0x180)
             script_rows = rom_data.extract_script_encounters(bytes(static_rom), static_maps)

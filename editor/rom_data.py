@@ -80,6 +80,12 @@ SCRIPT_STATIC_ENCOUNTER_SCAN_BYTES = 768
 SCRIPT_CMD_SET_WILD_BATTLE = 0xB6
 SCRIPT_CMD_GIVE_POKEMON = 0x79
 SCRIPT_CMD_GIVE_EGG = 0x7A
+SCRIPT_CMD_SETVAR = 0x16
+SCRIPT_CMD_SPECIAL = 0x25
+SCRIPT_VAR_SPECIAL_BATTLE_SPECIES = 0x8004
+SCRIPT_VAR_SPECIAL_BATTLE_LEVEL = 0x8005
+SCRIPT_VAR_SPECIAL_BATTLE_ITEM = 0x8006
+SCRIPT_SPECIAL_START_BATTLE = 0x01E2
 SCRIPT_COMMAND_LENGTHS = {
     0x00: 1,
     0x02: 1,
@@ -7991,14 +7997,23 @@ def script_scan_end(rom: bytes, script_offset: int, global_offsets: list[int]) -
 def extract_special_battle_commands(script: bytes) -> list[dict]:
     rows = []
     for command_offset in range(max(0, len(script) - 4)):
-        if script[command_offset : command_offset + 3] != b"\x16\x04\x80":
+        if script[command_offset] != SCRIPT_CMD_SETVAR:
+            continue
+        if int.from_bytes(script[command_offset + 1 : command_offset + 3], "little") != SCRIPT_VAR_SPECIAL_BATTLE_SPECIES:
             continue
         species = int.from_bytes(script[command_offset + 3 : command_offset + 5], "little")
         window = script[command_offset : min(len(script), command_offset + 80)]
-        level_pos = window.find(b"\x16\x05\x80")
-        item_pos = window.find(b"\x16\x06\x80")
-        battle_pos = window.find(b"\x25\xe2\x01")
+        level_pattern = bytes([SCRIPT_CMD_SETVAR]) + SCRIPT_VAR_SPECIAL_BATTLE_LEVEL.to_bytes(2, "little")
+        item_pattern = bytes([SCRIPT_CMD_SETVAR]) + SCRIPT_VAR_SPECIAL_BATTLE_ITEM.to_bytes(2, "little")
+        species_pattern = bytes([SCRIPT_CMD_SETVAR]) + SCRIPT_VAR_SPECIAL_BATTLE_SPECIES.to_bytes(2, "little")
+        battle_pattern = bytes([SCRIPT_CMD_SPECIAL]) + SCRIPT_SPECIAL_START_BATTLE.to_bytes(2, "little")
+        level_pos = window.find(level_pattern)
+        item_pos = window.find(item_pattern)
+        battle_pos = window.find(battle_pattern)
+        next_species_pos = window.find(species_pattern, 1)
         if level_pos < 0 or battle_pos < 0 or level_pos > battle_pos:
+            continue
+        if next_species_pos >= 0 and next_species_pos < battle_pos:
             continue
         level = int.from_bytes(window[level_pos + 3 : level_pos + 5], "little")
         item = int.from_bytes(window[item_pos + 3 : item_pos + 5], "little") if 0 <= item_pos < battle_pos else 0
@@ -8009,17 +8024,122 @@ def extract_special_battle_commands(script: bytes) -> list[dict]:
             "species": species,
             "level": level,
             "item": item,
+            "special_id": SCRIPT_SPECIAL_START_BATTLE,
         })
     return rows
+
+
+def script_encounter_base(row: dict, detail: dict, script_target: dict, script_offset: int, command_offset: int) -> dict:
+    return {
+        "map_group": detail.get("map_group"),
+        "map_number": detail.get("map_number"),
+        "map_key": detail.get("map_key"),
+        "map_id": row.get("id"),
+        "location_id": f"地图 {row.get('id')}",
+        "location": row.get("name") or row.get("decoded") or f"地图 {row.get('id')}",
+        "script_offset": script_offset + command_offset,
+        "script_source": script_target.get("script_source"),
+        "script_source_index": script_target.get("script_source_index"),
+        "object_id": script_target.get("script_source_index") if script_target.get("script_source") == "object" else None,
+    }
+
+
+def add_script_encounter(encounters: dict[str, list[dict]], seen: set[tuple[int, str, int, int, str]], species: int, row: dict, level: int, source_type: str, encounter: dict) -> None:
+    key = (species, str(row["id"]), level, encounter["script_offset"], source_type)
+    if key in seen:
+        return
+    seen.add(key)
+    encounters.setdefault(str(species), []).append(encounter)
+
+
+def extract_setwildbattle_encounters(script: bytes, row: dict, detail: dict, script_target: dict, script_offset: int, encounters: dict[str, list[dict]], seen: set[tuple[int, str, int, int, str]]) -> None:
+    for command_offset, command in enumerate(script[:-5]):
+        if command != SCRIPT_CMD_SET_WILD_BATTLE:
+            continue
+        species = int.from_bytes(script[command_offset + 1 : command_offset + 3], "little")
+        level = script[command_offset + 3]
+        item = int.from_bytes(script[command_offset + 4 : command_offset + 6], "little")
+        if not (1 <= species < SPECIES_COUNT and 1 <= level <= 100 and 0 <= item < 1000):
+            continue
+        encounter = {
+            **script_encounter_base(row, detail, script_target, script_offset, command_offset),
+            "method": "定点",
+            "min_level": level,
+            "max_level": level,
+            "source_type": "static",
+            "item": item,
+            "source_note": "ROM 脚本 0xB6 setwildbattle 直接设置 species/level/item。",
+        }
+        add_script_encounter(encounters, seen, species, row, level, "static", encounter)
+
+
+def extract_gift_encounters(script: bytes, row: dict, detail: dict, script_target: dict, script_offset: int, parsed_command_offsets: set[int], encounters: dict[str, list[dict]], seen: set[tuple[int, str, int, int, str]]) -> None:
+    for command_offset, command in enumerate(script[:-5]):
+        if command != SCRIPT_CMD_GIVE_POKEMON or command_offset not in parsed_command_offsets:
+            continue
+        species = int.from_bytes(script[command_offset + 1 : command_offset + 3], "little")
+        level = script[command_offset + 3]
+        item = int.from_bytes(script[command_offset + 4 : command_offset + 6], "little")
+        if not (1 <= species < SPECIES_COUNT and 1 <= level <= 100 and 0 <= item < 1000):
+            continue
+        encounter = {
+            **script_encounter_base(row, detail, script_target, script_offset, command_offset),
+            "method": "赠送",
+            "min_level": level,
+            "max_level": level,
+            "source_type": "gift",
+            "item": item,
+            "source_note": "ROM 脚本 0x79 givepokemon。",
+        }
+        add_script_encounter(encounters, seen, species, row, level, "gift", encounter)
+
+
+def extract_script_special_battle_encounters(script: bytes, row: dict, detail: dict, script_target: dict, script_offset: int, encounters: dict[str, list[dict]], seen: set[tuple[int, str, int, int, str]]) -> None:
+    for special in extract_special_battle_commands(script):
+        species = special["species"]
+        level = special["level"]
+        command_offset = special["command_offset"]
+        encounter = {
+            **script_encounter_base(row, detail, script_target, script_offset, command_offset),
+            "method": "特殊事件",
+            "min_level": level,
+            "max_level": level,
+            "source_type": "script_special",
+            "item": special["item"],
+            "special_id": special["special_id"],
+            "species_var": SCRIPT_VAR_SPECIAL_BATTLE_SPECIES,
+            "level_var": SCRIPT_VAR_SPECIAL_BATTLE_LEVEL,
+            "item_var": SCRIPT_VAR_SPECIAL_BATTLE_ITEM,
+            "source_note": "ROM 脚本 setvar 0x8004/0x8005 后在同一段调用 special 0x01E2。",
+        }
+        add_script_encounter(encounters, seen, species, row, level, "script_special", encounter)
+
+
+def extract_egg_encounters(script: bytes, row: dict, detail: dict, script_target: dict, script_offset: int, parsed_command_offsets: set[int], encounters: dict[str, list[dict]], seen: set[tuple[int, str, int, int, str]]) -> None:
+    for command_offset, command in enumerate(script[:-2]):
+        if command != SCRIPT_CMD_GIVE_EGG:
+            continue
+        if command_offset not in parsed_command_offsets:
+            continue
+        species = int.from_bytes(script[command_offset + 1 : command_offset + 3], "little")
+        next_command = script[command_offset + 3] if command_offset + 3 < len(script) else 0x02
+        if not (1 <= species < SPECIES_COUNT and next_command in SCRIPT_COMMAND_LENGTHS):
+            continue
+        level = 5
+        encounter = {
+            **script_encounter_base(row, detail, script_target, script_offset, command_offset),
+            "method": "蛋",
+            "min_level": level,
+            "max_level": level,
+            "source_type": "egg",
+            "source_note": "ROM 脚本 0x7A giveegg。",
+        }
+        add_script_encounter(encounters, seen, species, row, level, "egg", encounter)
 
 
 def extract_script_encounters(rom: bytes, maps: list[dict]) -> dict[str, list[dict]]:
     encounters: dict[str, list[dict]] = {}
     seen: set[tuple[int, str, int, int, str]] = set()
-    commands = {
-        SCRIPT_CMD_SET_WILD_BATTLE: ("定点", "static"),
-        SCRIPT_CMD_GIVE_POKEMON: ("赠送", "gift"),
-    }
     global_offsets = global_script_offsets(rom, maps)
     for row in maps:
         detail = row.get("detail") or {}
@@ -8029,94 +8149,10 @@ def extract_script_encounters(rom: bytes, maps: list[dict]) -> dict[str, list[di
             scan_end = script_scan_end(rom, script_offset, global_offsets)
             script = rom[script_offset:scan_end]
             parsed_command_offsets = script_command_offsets(script)
-            for command_offset, command in enumerate(script[:-5]):
-                if command not in commands:
-                    continue
-                if command != SCRIPT_CMD_SET_WILD_BATTLE and command_offset not in parsed_command_offsets:
-                    continue
-                method, source_type = commands[command]
-                species = int.from_bytes(script[command_offset + 1 : command_offset + 3], "little")
-                level = script[command_offset + 3]
-                item = int.from_bytes(script[command_offset + 4 : command_offset + 6], "little")
-                if not (1 <= species < SPECIES_COUNT and 1 <= level <= 100 and 0 <= item < 1000):
-                    continue
-                key = (species, str(row["id"]), level, script_offset + command_offset, source_type)
-                if key in seen:
-                    continue
-                seen.add(key)
-                encounters.setdefault(str(species), []).append({
-                    "map_group": detail.get("map_group"),
-                    "map_number": detail.get("map_number"),
-                    "map_key": detail.get("map_key"),
-                    "map_id": row.get("id"),
-                    "location_id": f"地图 {row.get('id')}",
-                    "location": row.get("name") or row.get("decoded") or f"地图 {row.get('id')}",
-                    "method": method,
-                    "min_level": level,
-                    "max_level": level,
-                    "source_type": source_type,
-                    "script_offset": script_offset + command_offset,
-                    "script_source": script_target.get("script_source"),
-                    "script_source_index": script_target.get("script_source_index"),
-                    "object_id": script_target.get("script_source_index") if script_target.get("script_source") == "object" else None,
-                    "item": item,
-                })
-            for special in extract_special_battle_commands(script):
-                species = special["species"]
-                level = special["level"]
-                command_offset = special["command_offset"]
-                key = (species, str(row["id"]), level, script_offset + command_offset, "script_special")
-                if key in seen:
-                    continue
-                seen.add(key)
-                encounters.setdefault(str(species), []).append({
-                    "map_group": detail.get("map_group"),
-                    "map_number": detail.get("map_number"),
-                    "map_key": detail.get("map_key"),
-                    "map_id": row.get("id"),
-                    "location_id": f"地图 {row.get('id')}",
-                    "location": row.get("name") or row.get("decoded") or f"地图 {row.get('id')}",
-                    "method": "特殊事件",
-                    "min_level": level,
-                    "max_level": level,
-                    "source_type": "script_special",
-                    "script_offset": script_offset + command_offset,
-                    "script_source": script_target.get("script_source"),
-                    "script_source_index": script_target.get("script_source_index"),
-                    "object_id": script_target.get("script_source_index") if script_target.get("script_source") == "object" else None,
-                    "item": special["item"],
-                    "source_note": "ROM 脚本 setvar 0x8004/0x8005 后调用 special 0x01E2。",
-                })
-            for command_offset, command in enumerate(script[:-2]):
-                if command != SCRIPT_CMD_GIVE_EGG:
-                    continue
-                if command_offset not in parsed_command_offsets:
-                    continue
-                species = int.from_bytes(script[command_offset + 1 : command_offset + 3], "little")
-                next_command = script[command_offset + 3] if command_offset + 3 < len(script) else 0x02
-                if not (1 <= species < SPECIES_COUNT and next_command in SCRIPT_COMMAND_LENGTHS):
-                    continue
-                level = 5
-                key = (species, str(row["id"]), level, script_offset + command_offset, "egg")
-                if key in seen:
-                    continue
-                seen.add(key)
-                encounters.setdefault(str(species), []).append({
-                    "map_group": detail.get("map_group"),
-                    "map_number": detail.get("map_number"),
-                    "map_key": detail.get("map_key"),
-                    "map_id": row.get("id"),
-                    "location_id": f"地图 {row.get('id')}",
-                    "location": row.get("name") or row.get("decoded") or f"地图 {row.get('id')}",
-                    "method": "蛋",
-                    "min_level": level,
-                    "max_level": level,
-                    "source_type": "egg",
-                    "script_offset": script_offset + command_offset,
-                    "script_source": script_target.get("script_source"),
-                    "script_source_index": script_target.get("script_source_index"),
-                    "object_id": script_target.get("script_source_index") if script_target.get("script_source") == "object" else None,
-                })
+            extract_setwildbattle_encounters(script, row, detail, script_target, script_offset, encounters, seen)
+            extract_gift_encounters(script, row, detail, script_target, script_offset, parsed_command_offsets, encounters, seen)
+            extract_script_special_battle_encounters(script, row, detail, script_target, script_offset, encounters, seen)
+            extract_egg_encounters(script, row, detail, script_target, script_offset, parsed_command_offsets, encounters, seen)
     return {species: sorted(rows, key=lambda row: (str(row["map_id"]), row["min_level"], row["script_offset"])) for species, rows in encounters.items()}
 
 
@@ -8177,7 +8213,7 @@ def merge_script_encounters(species_table: dict[str, dict], maps: list[dict], sc
                 "max_level": encounter["max_level"],
                 "source_type": encounter["source_type"],
             }
-            for key in ("rate", "encounter_rate", "script_offset", "object_id", "source_note"):
+            for key in ("rate", "encounter_rate", "script_offset", "object_id", "source_note", "special_id", "species_var", "level_var", "item_var"):
                 if key in encounter:
                     map_encounter[key] = encounter[key]
             map_row.setdefault("detail", {}).setdefault("encounters", []).append(map_encounter)
