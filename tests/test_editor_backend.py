@@ -91,8 +91,8 @@ def fake_rom(path: Path) -> None:
     wild_header = rom_data.WILD_ENCOUNTER_HEADERS_OFFSET
     wild_info = 0x613000
     wild_list = 0x613100
-    rom[wild_header] = 1
-    rom[wild_header + 1] = 2
+    rom[wild_header] = 0
+    rom[wild_header + 1] = 18
     _w32(rom, wild_header + 4, core.GBA_ROM_POINTER_BASE + wild_info)
     rom[wild_header + rom_data.WILD_ENCOUNTER_HEADER_SIZE] = 0xFF
     rom[wild_header + rom_data.WILD_ENCOUNTER_HEADER_SIZE + 1] = 0xFF
@@ -270,7 +270,9 @@ class BackendEditorTest(unittest.TestCase):
             rom_text = rom_data.extract_rom_text(rom_path)
             self.assertEqual(rom_text["abilities"]["78"]["description"], "ABC")
             encounters = rom_text["species"]["25"]["detail"]["encounters"]
-            self.assertEqual(encounters[0]["location"], "地图 1-2")
+            self.assertEqual(encounters[0]["location"], "103号道路")
+            self.assertEqual(encounters[0]["location_id"], "地图 0-18")
+            self.assertEqual(encounters[0]["map_key"], "Route103")
             self.assertEqual(encounters[0]["method"], "草丛")
             self.assertEqual((encounters[0]["min_level"], encounters[0]["max_level"]), (3, 6))
 

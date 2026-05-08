@@ -275,7 +275,7 @@ class WebEditorBrowserTest(unittest.TestCase):
             write_save_fixture(save_path)
             self.goto_loaded_save(save_path)
             self.page.evaluate("""() => {
-                const species = {table: "species", table_label: "宝可梦", id: 25, name: "皮卡丘", decoded: "皮卡丘", tokens: ["01"], detail: {types: ["电"], encounters: [{location: "地图 1-2", method: "草丛", min_level: 3, max_level: 6, rate: 20, slots: [1, 2]}]}};
+                const species = {table: "species", table_label: "宝可梦", id: 25, name: "皮卡丘", decoded: "皮卡丘", tokens: ["01"], detail: {types: ["电"], encounters: [{location: "103号道路", method: "草丛", min_level: 3, max_level: 6, rate: 20, slots: [1, 2]}]}};
                 names = {...names, rows: [species], species: [species]};
                 renderDatalists();
             }""")
@@ -288,7 +288,7 @@ class WebEditorBrowserTest(unittest.TestCase):
             expect(self.page.locator("#detail")).not_to_contain_text("合法性通过")
             expect(self.page.locator("#form")).to_contain_text("写入宝可梦")
             expect(self.page.locator("#form-types")).to_contain_text("电")
-            expect(self.page.locator("#form-encounters")).to_contain_text("地图 1-2 草丛 Lv3-6")
+            expect(self.page.locator("#form-encounters")).to_contain_text("103号道路 草丛 Lv3-6")
             self.assertLess(
                 self.page.locator("#move-controls").evaluate("node => [...node.parentElement.children].indexOf(node)"),
                 self.page.locator("#form-encounters").evaluate("node => [...node.parentElement.children].indexOf(node)"),
@@ -351,7 +351,7 @@ class WebEditorBrowserTest(unittest.TestCase):
             expect(self.page.locator(".party-grid .box-slot.occupied.selected")).to_have_count(1)
             expect(self.page.locator(".pokemon-table tbody tr.selected")).to_have_count(1)
             expect(self.page.locator("#form")).to_contain_text("写入宝可梦")
-            expect(self.page.locator("#form-encounters")).to_contain_text("地图 1-2 草丛 Lv3-6")
+            expect(self.page.locator("#form-encounters")).to_contain_text("103号道路 草丛 Lv3-6")
             self.page.locator("#held_item").fill("#189 · 神奇糖果")
             self.page.locator("#level").fill("50")
             self.page.locator("#friendship").fill("220")

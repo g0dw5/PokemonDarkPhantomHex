@@ -56,6 +56,104 @@ WILD_ENCOUNTER_METHODS = (
     (12, "碎岩", 5),
     (16, "钓鱼", 10),
 )
+POKEEMERALD_ENCOUNTER_MAP_GROUPS = {
+    0: (
+        "PetalburgCity", "SlateportCity", "MauvilleCity", "RustboroCity", "FortreeCity", "LilycoveCity",
+        "MossdeepCity", "SootopolisCity", "EverGrandeCity", "LittlerootTown", "OldaleTown", "DewfordTown",
+        "LavaridgeTown", "FallarborTown", "VerdanturfTown", "PacifidlogTown", "Route101", "Route102",
+        "Route103", "Route104", "Route105", "Route106", "Route107", "Route108", "Route109", "Route110",
+        "Route111", "Route112", "Route113", "Route114", "Route115", "Route116", "Route117", "Route118",
+        "Route119", "Route120", "Route121", "Route122", "Route123", "Route124", "Route125", "Route126",
+        "Route127", "Route128", "Route129", "Route130", "Route131", "Route132", "Route133", "Route134",
+        "Underwater_Route124", "Underwater_Route126", "Underwater_Route127", "Underwater_Route128",
+        "Underwater_Route129", "Underwater_Route105", "Underwater_Route125",
+    ),
+    24: (
+        "MeteorFalls_1F_1R", "MeteorFalls_1F_2R", "MeteorFalls_B1F_1R", "MeteorFalls_B1F_2R",
+        "RusturfTunnel", "Underwater_SootopolisCity", "DesertRuins", "GraniteCave_1F", "GraniteCave_B1F",
+        "GraniteCave_B2F", "GraniteCave_StevensRoom", "PetalburgWoods", "MtChimney", "JaggedPass",
+        "FieryPath", "MtPyre_1F", "MtPyre_2F", "MtPyre_3F", "MtPyre_4F", "MtPyre_5F", "MtPyre_6F",
+        "MtPyre_Exterior", "MtPyre_Summit", "AquaHideout_1F", "AquaHideout_B1F", "AquaHideout_B2F",
+        "Underwater_SeafloorCavern", "SeafloorCavern_Entrance", "SeafloorCavern_Room1",
+        "SeafloorCavern_Room2", "SeafloorCavern_Room3", "SeafloorCavern_Room4", "SeafloorCavern_Room5",
+        "SeafloorCavern_Room6", "SeafloorCavern_Room7", "SeafloorCavern_Room8", "SeafloorCavern_Room9",
+        "CaveOfOrigin_Entrance", "CaveOfOrigin_1F", "CaveOfOrigin_UnusedRubySapphireMap1",
+        "CaveOfOrigin_UnusedRubySapphireMap2", "CaveOfOrigin_UnusedRubySapphireMap3", "CaveOfOrigin_B1F",
+        "VictoryRoad_1F", "VictoryRoad_B1F", "VictoryRoad_B2F", "ShoalCave_LowTideEntranceRoom",
+        "ShoalCave_LowTideInnerRoom", "ShoalCave_LowTideStairsRoom", "ShoalCave_LowTideLowerRoom",
+        "ShoalCave_HighTideEntranceRoom", "ShoalCave_HighTideInnerRoom", "NewMauville_Entrance",
+        "NewMauville_Inside", "AbandonedShip_Deck", "AbandonedShip_Corridors_1F", "AbandonedShip_Rooms_1F",
+        "AbandonedShip_Corridors_B1F", "AbandonedShip_Rooms_B1F", "AbandonedShip_Rooms2_B1F",
+        "AbandonedShip_Underwater1", "AbandonedShip_Room_B1F", "AbandonedShip_Rooms2_1F",
+        "AbandonedShip_CaptainsOffice", "AbandonedShip_Underwater2", "AbandonedShip_HiddenFloorCorridors",
+        "AbandonedShip_HiddenFloorRooms", "IslandCave", "AncientTomb", "Underwater_Route134",
+        "Underwater_SealedChamber", "SealedChamber_OuterRoom", "SealedChamber_InnerRoom", "ScorchedSlab",
+        "AquaHideout_UnusedRubyMap1", "AquaHideout_UnusedRubyMap2", "AquaHideout_UnusedRubyMap3",
+        "SkyPillar_Entrance", "SkyPillar_Outside", "SkyPillar_1F", "SkyPillar_2F", "SkyPillar_3F",
+        "SkyPillar_4F", "ShoalCave_LowTideIceRoom", "SkyPillar_5F", "SkyPillar_Top", "MagmaHideout_1F",
+        "MagmaHideout_2F_1R", "MagmaHideout_2F_2R", "MagmaHideout_3F_1R", "MagmaHideout_3F_2R",
+        "MagmaHideout_4F", "MagmaHideout_3F_3R", "MagmaHideout_2F_3R", "MirageTower_1F",
+        "MirageTower_2F", "MirageTower_3F", "MirageTower_4F", "DesertUnderpass", "ArtisanCave_B1F",
+        "ArtisanCave_1F", "Underwater_MarineCave", "MarineCave_Entrance", "MarineCave_End",
+        "TerraCave_Entrance", "TerraCave_End", "AlteringCave", "MeteorFalls_StevensCave",
+    ),
+    26: (
+        "SafariZone_Northwest", "SafariZone_North", "SafariZone_Southwest", "SafariZone_South",
+        "BattleFrontier_OutsideWest", "BattleFrontier_BattleTowerLobby", "BattleFrontier_BattleTowerElevator",
+        "BattleFrontier_BattleTowerCorridor", "BattleFrontier_BattleTowerBattleRoom", "SouthernIsland_Exterior",
+        "SouthernIsland_Interior", "SafariZone_RestHouse", "SafariZone_Northeast", "SafariZone_Southeast",
+        "BattleFrontier_OutsideEast",
+    ),
+}
+MAP_NAME_PREFIXES = {
+    "PetalburgCity": "橙华市",
+    "SlateportCity": "凯那市",
+    "MauvilleCity": "紫堇市",
+    "RustboroCity": "卡那兹市",
+    "FortreeCity": "茵郁市",
+    "LilycoveCity": "水静市",
+    "MossdeepCity": "绿岭市",
+    "SootopolisCity": "琉璃市",
+    "EverGrandeCity": "彩幽市",
+    "LittlerootTown": "未白镇",
+    "OldaleTown": "古辰镇",
+    "DewfordTown": "武斗镇",
+    "LavaridgeTown": "釜炎镇",
+    "FallarborTown": "秋叶镇",
+    "VerdanturfTown": "绿荫镇",
+    "PacifidlogTown": "暮水镇",
+    "MeteorFalls": "流星瀑布",
+    "RusturfTunnel": "卡绿隧道",
+    "DesertRuins": "沙漠遗迹",
+    "GraniteCave": "石之洞窟",
+    "PetalburgWoods": "橙华森林",
+    "MtChimney": "烟囱山",
+    "JaggedPass": "凹凸山道",
+    "FieryPath": "热焰小径",
+    "MtPyre": "送神火山",
+    "AquaHideout": "水舰队基地",
+    "SeafloorCavern": "海底洞窟",
+    "CaveOfOrigin": "觉醒寺",
+    "VictoryRoad": "冠军之路",
+    "ShoalCave": "浅滩洞穴",
+    "NewMauville": "新紫堇",
+    "AbandonedShip": "废弃船",
+    "IslandCave": "小岛横穴",
+    "AncientTomb": "古代坟墓",
+    "SealedChamber": "布告石室",
+    "ScorchedSlab": "日照岩户",
+    "SkyPillar": "天空之柱",
+    "MagmaHideout": "熔岩队基地",
+    "MirageTower": "幻影之塔",
+    "DesertUnderpass": "沙漠地下道",
+    "ArtisanCave": "工匠之穴",
+    "MarineCave": "海之窟",
+    "TerraCave": "陆之窟",
+    "AlteringCave": "变化洞窟",
+    "SafariZone": "狩猎地带",
+    "SouthernIsland": "南方小岛",
+    "BattleFrontier": "对战开拓区",
+}
 GBA_ROM_POINTER_BASE = 0x08000000
 TEXT_TERMINATOR = 0xFF
 CONTROL_TOKENS = {
@@ -7264,6 +7362,37 @@ def gender_ratio_label(value: int) -> str:
     return f"雄 {male_percent:.1f}% / 雌 {female_percent:.1f}%"
 
 
+def encounter_map_key(map_group: int, map_number: int) -> str:
+    maps = POKEEMERALD_ENCOUNTER_MAP_GROUPS.get(map_group)
+    if maps and 0 <= map_number < len(maps):
+        return maps[map_number]
+    return ""
+
+
+def encounter_map_name(map_group: int, map_number: int) -> str:
+    key = encounter_map_key(map_group, map_number)
+    if not key:
+        return f"地图 {map_group}-{map_number}"
+    if key.startswith("Route") and key[5:].isdigit():
+        return f"{key[5:]}号道路"
+    if key.startswith("Underwater_Route") and key[16:].isdigit():
+        return f"{key[16:]}号水下"
+    if key.startswith("Underwater_"):
+        base = encounter_map_name_from_key(key.removeprefix("Underwater_"))
+        return f"{base} 水下"
+    return encounter_map_name_from_key(key)
+
+
+def encounter_map_name_from_key(key: str) -> str:
+    for prefix, label in MAP_NAME_PREFIXES.items():
+        if key == prefix:
+            return label
+        if key.startswith(f"{prefix}_"):
+            suffix = key[len(prefix) + 1 :].replace("_", " ")
+            return f"{label} {suffix}"
+    return key.replace("_", " ")
+
+
 def extract_wild_encounters(rom: bytes) -> dict[str, list[dict]]:
     encounters: dict[str, dict[tuple[int, int, str], dict]] = {}
     for index in range(WILD_ENCOUNTER_MAX_HEADERS):
@@ -7297,7 +7426,9 @@ def extract_wild_encounters(rom: bytes) -> dict[str, list[dict]]:
                 row = encounters.setdefault(str(species), {}).setdefault(aggregate_key, {
                     "map_group": map_group,
                     "map_number": map_number,
-                    "location": f"地图 {map_group}-{map_number}",
+                    "map_key": encounter_map_key(map_group, map_number),
+                    "location_id": f"地图 {map_group}-{map_number}",
+                    "location": encounter_map_name(map_group, map_number),
                     "method": method,
                     "rate": encounter_rate,
                     "min_level": min_level,
