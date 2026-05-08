@@ -1475,7 +1475,7 @@ function renderPartyStorageGrid() {
     const pokemon = state.party.find(p => Number(p.slot) === slot);
     if (!pokemon) return `<div id="party-slot-${slot}" class="box-slot party-slot"><span class="box-slot-index">${slot}</span></div>`;
     const index = state.party.indexOf(pokemon);
-    const label = `${pokemon.species_name} · 队伍 ${slot}`;
+    const label = pokemon.species_name;
     return `<div id="party-slot-${slot}" class="box-slot party-slot occupied ${isPokemonSelected("party", index)?"selected":""}" title="${escapeHtml(label)}" data-name="${escapeHtml(label)}" onclick="selectPartyFromStorage(${index}); event.stopPropagation();"><span class="box-slot-index">${slot}</span>${spriteCanvasTag(`party-grid-${slot}`, pokemon.species, pokemon.is_shiny, "box-mini-sprite")}</div>`;
   }).join("");
   return `<div class="party-grid">${slots}</div>`;
@@ -1532,7 +1532,7 @@ function renderBoxGrid(box, active) {
     if (!pokemon) return `<div class="box-slot"><span class="box-slot-index">${slot}</span></div>`;
     const index = state.boxes.indexOf(pokemon);
     const click = ` onclick="selectBoxFromStorage(${index}); event.stopPropagation();"`;
-    const label = `${pokemon.species_name} · ${box}-${slot}`;
+    const label = pokemon.species_name;
     return `<div id="box-slot-${box}-${slot}" class="box-slot occupied ${isPokemonSelected("box", index)?"selected":""}" title="${escapeHtml(label)}" data-name="${escapeHtml(label)}"${click}><span class="box-slot-index">${slot}</span>${spriteCanvasTag(`box-grid-${box}-${slot}`, pokemon.species, pokemon.is_shiny, "box-mini-sprite")}</div>`;
   }).join("");
   return `<div class="box-grid ${active ? "active" : ""}">${slots}</div>`;
