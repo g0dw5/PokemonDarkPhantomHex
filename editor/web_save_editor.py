@@ -2251,7 +2251,7 @@ function dictionaryMapEncounterLinks(encounters, limit=0) {
   return `<span class="encounter-groups">${groups}${more}</span>`;
 }
 function groupMapEncounters(encounters) {
-  const order = ["草丛", "钓鱼", "冲浪", "碎岩", "定点", "赠送", "蛋", "其他"];
+  const order = ["草丛", "钓鱼", "冲浪", "碎岩", "定点", "特殊垂钓", "特殊事件", "谜题事件", "赠送", "蛋", "其他"];
   const buckets = new Map();
   for (const encounter of encounters || []) {
     const label = encounterMethodGroup(encounter.method);
@@ -2262,13 +2262,16 @@ function groupMapEncounters(encounters) {
 }
 function encounterMethodGroup(method) {
   if (["旧钓竿", "好钓竿", "超级钓竿", "钓鱼"].includes(method)) return "钓鱼";
-  if (["草丛", "冲浪", "碎岩", "定点", "赠送", "蛋"].includes(method)) return method;
+  if (["草丛", "冲浪", "碎岩", "定点", "特殊垂钓", "特殊事件", "谜题事件", "赠送", "蛋"].includes(method)) return method;
   return "其他";
 }
 function dictionarySpeciesEncounterLinks(encounters, limit=0) {
   const items = encounters.map(encounter => {
-    const mapId = `${encounter.map_group}-${encounter.map_number}`;
     const label = `${encounter.location} ${encounter.method} ${encounterLevelLabel(encounter)} ${encounterRateLabel(encounter)}`;
+    if (encounter.map_group === undefined || encounter.map_number === undefined) {
+      return `<span class="data-chip">${escapeHtml(label)}</span>`;
+    }
+    const mapId = `${encounter.map_group}-${encounter.map_number}`;
     return `<button type="button" class="data-chip location-link" onclick="jumpToRom('maps', '${escapeJsString(mapId)}'); event.stopPropagation();">${escapeHtml(label)}</button>`;
   });
   if (!items.length) return `<span class="muted">无</span>`;

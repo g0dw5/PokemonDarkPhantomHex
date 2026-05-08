@@ -305,7 +305,7 @@ class BackendEditorTest(unittest.TestCase):
                 encounter
                 for species_entry in rom_text["species"].values()
                 for encounter in species_entry["detail"].get("encounters", [])
-                if (encounter["map_group"], encounter["map_number"], encounter["method"]) == (0, 18, "草丛")
+                if (encounter.get("map_group"), encounter.get("map_number"), encounter["method"]) == (0, 18, "草丛")
             ]
             self.assertEqual(sum(encounter["rate"] for encounter in grass_018), 100)
             names = editor.api_names()
@@ -315,7 +315,20 @@ class BackendEditorTest(unittest.TestCase):
             bulbasaur_encounters = rom_text["species"]["1"]["detail"]["encounters"]
             self.assertTrue(bulbasaur_encounters)
             self.assertEqual(bulbasaur_encounters[0]["rate"], 20)
+            feebas_encounters = rom_text["species"]["328"]["detail"]["encounters"]
+            self.assertTrue(any(row["method"] == "特殊垂钓" and row.get("rate") == 50 for row in feebas_encounters))
+            latias_encounters = rom_text["species"]["407"]["detail"]["encounters"]
+            self.assertTrue(any(row["method"] == "游走" and row.get("location") == "丰缘全域" for row in latias_encounters))
+            special_rows = rom_data.extract_special_event_encounters([
+                {"id": "0-34", "name": "119号道路", "detail": {"map_group": 0, "map_number": 34, "map_key": "Route119"}},
+                {"id": "26-57", "name": "遥远的孤岛", "detail": {"map_group": 26, "map_number": 57, "map_key": "FarawayIsland_Interior"}},
+                {"id": "26-58", "name": "诞生之岛", "detail": {"map_group": 26, "map_number": 58, "map_key": "BirthIsland_Exterior"}},
+            ])
+            self.assertEqual(special_rows["328"][0]["map_id"], "0-34")
+            self.assertEqual(special_rows["151"][0]["map_id"], "26-57")
+            self.assertEqual(special_rows["410"][0]["method"], "谜题事件")
             self.assertEqual(rom_text["wild_encounters"]["header_offset"], 0xEA2D34)
+            self.assertEqual(rom_text["wild_encounters"]["special_event_record_count"], 12)
 
             static_rom = bytearray(0x400)
             _w32(static_rom, 0x14, core.GBA_ROM_POINTER_BASE + 0x40)

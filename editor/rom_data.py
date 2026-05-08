@@ -113,6 +113,117 @@ SCRIPT_COMMAND_LENGTHS = {
     SCRIPT_CMD_GIVE_EGG: 3,
     SCRIPT_CMD_SET_WILD_BATTLE: 6,
 }
+SPECIAL_EVENT_ENCOUNTER_SPECS = [
+    {
+        "species": 328,
+        "map_id": "0-34",
+        "method": "特殊垂钓",
+        "source_type": "special_fishing",
+        "min_level": 20,
+        "max_level": 25,
+        "rate": 50,
+        "source_note": "119号道路笨笨鱼水格：钓鱼位于命中水格时绕过普通野生表。",
+    },
+    {
+        "species": 407,
+        "location": "丰缘全域",
+        "method": "游走",
+        "source_type": "roamer",
+        "min_level": 40,
+        "max_level": 40,
+        "source_note": "通关后电视颜色选择决定拉帝亚斯/拉帝欧斯之一在丰缘游走。",
+    },
+    {
+        "species": 408,
+        "location": "丰缘全域",
+        "method": "游走",
+        "source_type": "roamer",
+        "min_level": 40,
+        "max_level": 40,
+        "source_note": "通关后电视颜色选择决定拉帝亚斯/拉帝欧斯之一在丰缘游走。",
+    },
+    {
+        "species": 407,
+        "map_id": "26-10",
+        "method": "特殊事件",
+        "source_type": "event_static",
+        "min_level": 50,
+        "max_level": 50,
+        "source_note": "南方小岛无限船票事件，出现对象取决于通关后电视颜色选择。",
+    },
+    {
+        "species": 408,
+        "map_id": "26-10",
+        "method": "特殊事件",
+        "source_type": "event_static",
+        "min_level": 50,
+        "max_level": 50,
+        "source_note": "南方小岛无限船票事件，出现对象取决于通关后电视颜色选择。",
+    },
+    {
+        "species": 151,
+        "map_id": "26-57",
+        "method": "特殊事件",
+        "source_type": "event_static",
+        "min_level": 30,
+        "max_level": 30,
+        "source_note": "遥远的孤岛古航海图事件。",
+    },
+    {
+        "species": 410,
+        "map_id": "26-58",
+        "method": "谜题事件",
+        "source_type": "puzzle_event",
+        "min_level": 30,
+        "max_level": 30,
+        "source_note": "诞生之岛三角谜题事件。",
+    },
+    {
+        "species": 250,
+        "map_id": "26-75",
+        "method": "特殊事件",
+        "source_type": "event_static",
+        "min_level": 70,
+        "max_level": 70,
+        "source_note": "肚脐岩/神之领域顶层凤王事件。",
+    },
+    {
+        "species": 249,
+        "map_id": "26-87",
+        "method": "特殊事件",
+        "source_type": "event_static",
+        "min_level": 70,
+        "max_level": 70,
+        "source_note": "肚脐岩/神之领域底层洛奇亚事件。",
+    },
+    {
+        "species": 401,
+        "map_id": "24-6",
+        "method": "谜题事件",
+        "source_type": "puzzle_event",
+        "min_level": 40,
+        "max_level": 40,
+        "source_note": "沙漠遗迹谜题事件。",
+    },
+    {
+        "species": 402,
+        "map_id": "24-67",
+        "method": "谜题事件",
+        "source_type": "puzzle_event",
+        "min_level": 40,
+        "max_level": 40,
+        "source_note": "小岛横穴谜题事件。",
+    },
+    {
+        "species": 403,
+        "map_id": "24-68",
+        "method": "谜题事件",
+        "source_type": "puzzle_event",
+        "min_level": 40,
+        "max_level": 40,
+        "source_note": "古代坟墓谜题事件。",
+    },
+]
 ACTIVE_MAP_GROUPS_OFFSET = 0xE8C020
 ORIGINAL_MAP_GROUPS_OFFSET = 0x486578
 REGION_MAP_ENTRIES_OFFSET = 0x5A1480
@@ -8058,6 +8169,36 @@ def extract_static_script_encounters(rom: bytes, maps: list[dict]) -> dict[str, 
     }
 
 
+def extract_special_event_encounters(maps: list[dict]) -> dict[str, list[dict]]:
+    maps_by_id = {str(row.get("id")): row for row in maps}
+    encounters: dict[str, list[dict]] = {}
+    for spec in SPECIAL_EVENT_ENCOUNTER_SPECS:
+        map_row = maps_by_id.get(str(spec.get("map_id")))
+        detail = map_row.get("detail") if map_row else {}
+        location = map_row.get("name") if map_row else spec.get("location", "特殊来源")
+        encounter = {
+            "location": location,
+            "location_id": f"地图 {map_row['id']}" if map_row else spec.get("location_id", "特殊来源"),
+            "method": spec["method"],
+            "min_level": spec["min_level"],
+            "max_level": spec["max_level"],
+            "source_type": spec["source_type"],
+            "source_note": spec.get("source_note", ""),
+        }
+        if map_row:
+            encounter.update({
+                "map_group": detail.get("map_group"),
+                "map_number": detail.get("map_number"),
+                "map_key": detail.get("map_key"),
+                "map_id": map_row.get("id"),
+            })
+        if "rate" in spec:
+            encounter["rate"] = spec["rate"]
+            encounter["encounter_rate"] = spec["rate"]
+        encounters.setdefault(str(spec["species"]), []).append(encounter)
+    return encounters
+
+
 def merge_script_encounters(species_table: dict[str, dict], maps: list[dict], script_encounters: dict[str, list[dict]]) -> None:
     maps_by_id = {str(row.get("id")): row for row in maps}
     for species_id, rows in script_encounters.items():
@@ -8069,16 +8210,18 @@ def merge_script_encounters(species_table: dict[str, dict], maps: list[dict], sc
             map_row = maps_by_id.get(str(encounter.get("map_id")))
             if not map_row:
                 continue
-            map_row.setdefault("detail", {}).setdefault("encounters", []).append({
+            map_encounter = {
                 "species_id": int(species_id),
                 "species_name": species_name,
                 "method": encounter["method"],
                 "min_level": encounter["min_level"],
                 "max_level": encounter["max_level"],
                 "source_type": encounter["source_type"],
-                "script_offset": encounter["script_offset"],
-                "object_id": encounter["object_id"],
-            })
+            }
+            for key in ("rate", "encounter_rate", "script_offset", "object_id", "source_note"):
+                if key in encounter:
+                    map_encounter[key] = encounter[key]
+            map_row.setdefault("detail", {}).setdefault("encounters", []).append(map_encounter)
     for row in species_table.values():
         encounters = row.get("detail", {}).get("encounters")
         if encounters:
@@ -8204,7 +8347,9 @@ def extract_rom_text(rom_path: Path | None = DEFAULT_ROM) -> dict:
     maps = extract_map_entities(rom, encounters, tables["species"])
     apply_map_display_names_to_encounters(encounters, maps)
     script_encounters = extract_script_encounters(rom, maps)
+    special_event_encounters = extract_special_event_encounters(maps)
     merge_script_encounters(tables["species"], maps, script_encounters)
+    merge_script_encounters(tables["species"], maps, special_event_encounters)
     used_keys = collect_used_charmap_keys(tables)
     charmap = official_charmap()
     return {
@@ -8236,6 +8381,8 @@ def extract_rom_text(rom_path: Path | None = DEFAULT_ROM) -> dict:
             "species_count": len(encounters),
             "script_record_count": sum(1 for rows in script_encounters.values() for _row in rows),
             "script_species_count": len(script_encounters),
+            "special_event_record_count": sum(1 for rows in special_event_encounters.values() for _row in rows),
+            "special_event_species_count": len(special_event_encounters),
         },
         "maps_summary": {
             "active_groups_offset": active_map_groups_offset(rom),
