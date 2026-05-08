@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import bisect
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -113,7 +114,7 @@ SCRIPT_COMMAND_LENGTHS = {
     SCRIPT_CMD_GIVE_EGG: 3,
     SCRIPT_CMD_SET_WILD_BATTLE: 6,
 }
-SPECIAL_EVENT_ENCOUNTER_SPECS = [
+SPECIAL_CASE_ENCOUNTER_SPECS = [
     {
         "species": 328,
         "map_id": "0-34",
@@ -123,105 +124,6 @@ SPECIAL_EVENT_ENCOUNTER_SPECS = [
         "max_level": 25,
         "rate": 50,
         "source_note": "119号道路笨笨鱼水格：钓鱼位于命中水格时绕过普通野生表。",
-    },
-    {
-        "species": 407,
-        "location": "丰缘全域",
-        "method": "游走",
-        "source_type": "roamer",
-        "min_level": 40,
-        "max_level": 40,
-        "source_note": "通关后电视颜色选择决定拉帝亚斯/拉帝欧斯之一在丰缘游走。",
-    },
-    {
-        "species": 408,
-        "location": "丰缘全域",
-        "method": "游走",
-        "source_type": "roamer",
-        "min_level": 40,
-        "max_level": 40,
-        "source_note": "通关后电视颜色选择决定拉帝亚斯/拉帝欧斯之一在丰缘游走。",
-    },
-    {
-        "species": 407,
-        "map_id": "26-10",
-        "method": "特殊事件",
-        "source_type": "event_static",
-        "min_level": 50,
-        "max_level": 50,
-        "source_note": "南方小岛无限船票事件，出现对象取决于通关后电视颜色选择。",
-    },
-    {
-        "species": 408,
-        "map_id": "26-10",
-        "method": "特殊事件",
-        "source_type": "event_static",
-        "min_level": 50,
-        "max_level": 50,
-        "source_note": "南方小岛无限船票事件，出现对象取决于通关后电视颜色选择。",
-    },
-    {
-        "species": 151,
-        "map_id": "26-57",
-        "method": "特殊事件",
-        "source_type": "event_static",
-        "min_level": 30,
-        "max_level": 30,
-        "source_note": "遥远的孤岛古航海图事件。",
-    },
-    {
-        "species": 410,
-        "map_id": "26-58",
-        "method": "谜题事件",
-        "source_type": "puzzle_event",
-        "min_level": 30,
-        "max_level": 30,
-        "source_note": "诞生之岛三角谜题事件。",
-    },
-    {
-        "species": 250,
-        "map_id": "26-75",
-        "method": "特殊事件",
-        "source_type": "event_static",
-        "min_level": 70,
-        "max_level": 70,
-        "source_note": "肚脐岩/神之领域顶层凤王事件。",
-    },
-    {
-        "species": 249,
-        "map_id": "26-87",
-        "method": "特殊事件",
-        "source_type": "event_static",
-        "min_level": 70,
-        "max_level": 70,
-        "source_note": "肚脐岩/神之领域底层洛奇亚事件。",
-    },
-    {
-        "species": 401,
-        "map_id": "24-6",
-        "method": "谜题事件",
-        "source_type": "puzzle_event",
-        "min_level": 40,
-        "max_level": 40,
-        "source_note": "沙漠遗迹谜题事件。",
-    },
-    {
-        "species": 402,
-        "map_id": "24-67",
-        "method": "谜题事件",
-        "source_type": "puzzle_event",
-        "min_level": 40,
-        "max_level": 40,
-        "source_note": "小岛横穴谜题事件。",
-    },
-    {
-        "species": 403,
-        "map_id": "24-68",
-        "method": "谜题事件",
-        "source_type": "puzzle_event",
-        "min_level": 40,
-        "max_level": 40,
-        "source_note": "古代坟墓谜题事件。",
     },
 ]
 ACTIVE_MAP_GROUPS_OFFSET = 0xE8C020
@@ -8076,6 +7978,41 @@ def script_command_offsets(script: bytes) -> set[int]:
     return offsets
 
 
+def global_script_offsets(rom: bytes, maps: list[dict]) -> list[int]:
+    return sorted({target["script_offset"] for row in maps for target in map_script_pointers(rom, row)})
+
+
+def script_scan_end(rom: bytes, script_offset: int, global_offsets: list[int]) -> int:
+    index = bisect.bisect_right(global_offsets, script_offset)
+    next_offset = global_offsets[index] if index < len(global_offsets) else len(rom)
+    return min(len(rom), script_offset + SCRIPT_STATIC_ENCOUNTER_SCAN_BYTES, next_offset)
+
+
+def extract_special_battle_commands(script: bytes) -> list[dict]:
+    rows = []
+    for command_offset in range(max(0, len(script) - 4)):
+        if script[command_offset : command_offset + 3] != b"\x16\x04\x80":
+            continue
+        species = int.from_bytes(script[command_offset + 3 : command_offset + 5], "little")
+        window = script[command_offset : min(len(script), command_offset + 80)]
+        level_pos = window.find(b"\x16\x05\x80")
+        item_pos = window.find(b"\x16\x06\x80")
+        battle_pos = window.find(b"\x25\xe2\x01")
+        if level_pos < 0 or battle_pos < 0 or level_pos > battle_pos:
+            continue
+        level = int.from_bytes(window[level_pos + 3 : level_pos + 5], "little")
+        item = int.from_bytes(window[item_pos + 3 : item_pos + 5], "little") if 0 <= item_pos < battle_pos else 0
+        if not (1 <= species < SPECIES_COUNT and 1 <= level <= 100 and 0 <= item < 1000):
+            continue
+        rows.append({
+            "command_offset": command_offset,
+            "species": species,
+            "level": level,
+            "item": item,
+        })
+    return rows
+
+
 def extract_script_encounters(rom: bytes, maps: list[dict]) -> dict[str, list[dict]]:
     encounters: dict[str, list[dict]] = {}
     seen: set[tuple[int, str, int, int, str]] = set()
@@ -8083,23 +8020,19 @@ def extract_script_encounters(rom: bytes, maps: list[dict]) -> dict[str, list[di
         SCRIPT_CMD_SET_WILD_BATTLE: ("定点", "static"),
         SCRIPT_CMD_GIVE_POKEMON: ("赠送", "gift"),
     }
+    global_offsets = global_script_offsets(rom, maps)
     for row in maps:
         detail = row.get("detail") or {}
         script_targets = sorted(map_script_pointers(rom, row), key=lambda item: item["script_offset"])
-        for target_index, script_target in enumerate(script_targets):
+        for script_target in script_targets:
             script_offset = script_target["script_offset"]
-            scan_end = min(len(rom), script_offset + SCRIPT_STATIC_ENCOUNTER_SCAN_BYTES)
-            for next_target in script_targets[target_index + 1 :]:
-                next_offset = next_target["script_offset"]
-                if next_offset > script_offset:
-                    scan_end = min(scan_end, next_offset)
-                    break
+            scan_end = script_scan_end(rom, script_offset, global_offsets)
             script = rom[script_offset:scan_end]
             parsed_command_offsets = script_command_offsets(script)
             for command_offset, command in enumerate(script[:-5]):
                 if command not in commands:
                     continue
-                if command_offset not in parsed_command_offsets:
+                if command != SCRIPT_CMD_SET_WILD_BATTLE and command_offset not in parsed_command_offsets:
                     continue
                 method, source_type = commands[command]
                 species = int.from_bytes(script[command_offset + 1 : command_offset + 3], "little")
@@ -8127,6 +8060,32 @@ def extract_script_encounters(rom: bytes, maps: list[dict]) -> dict[str, list[di
                     "script_source_index": script_target.get("script_source_index"),
                     "object_id": script_target.get("script_source_index") if script_target.get("script_source") == "object" else None,
                     "item": item,
+                })
+            for special in extract_special_battle_commands(script):
+                species = special["species"]
+                level = special["level"]
+                command_offset = special["command_offset"]
+                key = (species, str(row["id"]), level, script_offset + command_offset, "script_special")
+                if key in seen:
+                    continue
+                seen.add(key)
+                encounters.setdefault(str(species), []).append({
+                    "map_group": detail.get("map_group"),
+                    "map_number": detail.get("map_number"),
+                    "map_key": detail.get("map_key"),
+                    "map_id": row.get("id"),
+                    "location_id": f"地图 {row.get('id')}",
+                    "location": row.get("name") or row.get("decoded") or f"地图 {row.get('id')}",
+                    "method": "特殊事件",
+                    "min_level": level,
+                    "max_level": level,
+                    "source_type": "script_special",
+                    "script_offset": script_offset + command_offset,
+                    "script_source": script_target.get("script_source"),
+                    "script_source_index": script_target.get("script_source_index"),
+                    "object_id": script_target.get("script_source_index") if script_target.get("script_source") == "object" else None,
+                    "item": special["item"],
+                    "source_note": "ROM 脚本 setvar 0x8004/0x8005 后调用 special 0x01E2。",
                 })
             for command_offset, command in enumerate(script[:-2]):
                 if command != SCRIPT_CMD_GIVE_EGG:
@@ -8169,10 +8128,10 @@ def extract_static_script_encounters(rom: bytes, maps: list[dict]) -> dict[str, 
     }
 
 
-def extract_special_event_encounters(maps: list[dict]) -> dict[str, list[dict]]:
+def extract_special_case_encounters(maps: list[dict]) -> dict[str, list[dict]]:
     maps_by_id = {str(row.get("id")): row for row in maps}
     encounters: dict[str, list[dict]] = {}
-    for spec in SPECIAL_EVENT_ENCOUNTER_SPECS:
+    for spec in SPECIAL_CASE_ENCOUNTER_SPECS:
         map_row = maps_by_id.get(str(spec.get("map_id")))
         detail = map_row.get("detail") if map_row else {}
         location = map_row.get("name") if map_row else spec.get("location", "特殊来源")
@@ -8347,9 +8306,9 @@ def extract_rom_text(rom_path: Path | None = DEFAULT_ROM) -> dict:
     maps = extract_map_entities(rom, encounters, tables["species"])
     apply_map_display_names_to_encounters(encounters, maps)
     script_encounters = extract_script_encounters(rom, maps)
-    special_event_encounters = extract_special_event_encounters(maps)
+    special_case_encounters = extract_special_case_encounters(maps)
     merge_script_encounters(tables["species"], maps, script_encounters)
-    merge_script_encounters(tables["species"], maps, special_event_encounters)
+    merge_script_encounters(tables["species"], maps, special_case_encounters)
     used_keys = collect_used_charmap_keys(tables)
     charmap = official_charmap()
     return {
@@ -8381,8 +8340,8 @@ def extract_rom_text(rom_path: Path | None = DEFAULT_ROM) -> dict:
             "species_count": len(encounters),
             "script_record_count": sum(1 for rows in script_encounters.values() for _row in rows),
             "script_species_count": len(script_encounters),
-            "special_event_record_count": sum(1 for rows in special_event_encounters.values() for _row in rows),
-            "special_event_species_count": len(special_event_encounters),
+            "special_case_record_count": sum(1 for rows in special_case_encounters.values() for _row in rows),
+            "special_case_species_count": len(special_case_encounters),
         },
         "maps_summary": {
             "active_groups_offset": active_map_groups_offset(rom),

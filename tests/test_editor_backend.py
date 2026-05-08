@@ -317,18 +317,14 @@ class BackendEditorTest(unittest.TestCase):
             self.assertEqual(bulbasaur_encounters[0]["rate"], 20)
             feebas_encounters = rom_text["species"]["328"]["detail"]["encounters"]
             self.assertTrue(any(row["method"] == "特殊垂钓" and row.get("rate") == 50 for row in feebas_encounters))
-            latias_encounters = rom_text["species"]["407"]["detail"]["encounters"]
-            self.assertTrue(any(row["method"] == "游走" and row.get("location") == "丰缘全域" for row in latias_encounters))
-            special_rows = rom_data.extract_special_event_encounters([
+            special_rows = rom_data.extract_special_case_encounters([
                 {"id": "0-34", "name": "119号道路", "detail": {"map_group": 0, "map_number": 34, "map_key": "Route119"}},
                 {"id": "26-57", "name": "遥远的孤岛", "detail": {"map_group": 26, "map_number": 57, "map_key": "FarawayIsland_Interior"}},
                 {"id": "26-58", "name": "诞生之岛", "detail": {"map_group": 26, "map_number": 58, "map_key": "BirthIsland_Exterior"}},
             ])
             self.assertEqual(special_rows["328"][0]["map_id"], "0-34")
-            self.assertEqual(special_rows["151"][0]["map_id"], "26-57")
-            self.assertEqual(special_rows["410"][0]["method"], "谜题事件")
             self.assertEqual(rom_text["wild_encounters"]["header_offset"], 0xEA2D34)
-            self.assertEqual(rom_text["wild_encounters"]["special_event_record_count"], 12)
+            self.assertEqual(rom_text["wild_encounters"]["special_case_record_count"], 1)
 
             static_rom = bytearray(0x400)
             _w32(static_rom, 0x14, core.GBA_ROM_POINTER_BASE + 0x40)
@@ -357,6 +353,15 @@ class BackendEditorTest(unittest.TestCase):
             static_rom[0x140 : 0x144] = bytes([rom_data.SCRIPT_CMD_GIVE_EGG, 356 & 0xFF, 356 >> 8, 0x31])
             script_rows = rom_data.extract_script_encounters(bytes(static_rom), static_maps)
             self.assertEqual(script_rows["356"][0]["method"], "蛋")
+            static_rom[0x160 : 0x172] = bytes([0x16, 0x04, 0x80, 151, 0, 0x16, 0x05, 0x80, 30, 0, 0x16, 0x06, 0x80, 0, 0, 0x25, 0xE2, 0x01])
+            _w32(static_rom, 0x40 + rom_data.OBJECT_EVENT_SCRIPT_POINTER_OFFSET, core.GBA_ROM_POINTER_BASE + 0x160)
+            script_rows = rom_data.extract_script_encounters(bytes(static_rom), static_maps)
+            self.assertEqual(script_rows["151"][0]["method"], "特殊事件")
+            self.assertEqual(script_rows["151"][0]["min_level"], 30)
+            static_rom[0x180 : 0x189] = bytes([0x6A, 0xDC, 0x01, rom_data.SCRIPT_CMD_SET_WILD_BATTLE, 267 & 0xFF, 267 >> 8, 50, 0, 0])
+            _w32(static_rom, 0x40 + rom_data.OBJECT_EVENT_SCRIPT_POINTER_OFFSET, core.GBA_ROM_POINTER_BASE + 0x180)
+            script_rows = rom_data.extract_script_encounters(bytes(static_rom), static_maps)
+            self.assertEqual(script_rows["267"][0]["method"], "定点")
             self.assertEqual(rom_data.map_display_name(24, 81, "天空之柱"), "天空之柱 3F")
             self.assertEqual(rom_data.map_display_name(35, 2, "启程之路"), "启程之路")
             named_encounters = {"18": [{"map_group": 35, "map_number": 2, "location": "地图 35-2"}]}
