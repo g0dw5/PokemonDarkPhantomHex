@@ -342,6 +342,9 @@ class BackendEditorTest(unittest.TestCase):
             _w32(static_rom, 0x40 + rom_data.OBJECT_EVENT_SCRIPT_POINTER_OFFSET, core.GBA_ROM_POINTER_BASE + 0x130)
             script_rows = rom_data.extract_script_encounters(bytes(static_rom), static_maps)
             self.assertEqual(script_rows["1"][0]["method"], "赠送")
+            static_rom[0x130 : 0x141] = bytes([0x69, 0x6B, rom_data.SCRIPT_CMD_GIVE_POKEMON, 398 & 0xFF, 398 >> 8, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+            script_rows = rom_data.extract_script_encounters(bytes(static_rom), static_maps)
+            self.assertEqual(script_rows["398"][0]["method"], "赠送")
             static_rom[0x1A0 : 0x1C5] = bytes([
                 0x16, 0x01, 0x40, 1, 0,
                 0x68, 0x55, 0x00, 0x00,
@@ -389,6 +392,8 @@ class BackendEditorTest(unittest.TestCase):
             self.assertEqual(rom_data.map_display_name(24, 81, "天空之柱"), "天空之柱 3F")
             self.assertEqual(rom_data.map_display_name(35, 2, "启程之路"), "启程之路")
             self.assertEqual(rom_data.map_display_name(32, 1, "119号道路"), "天气研究所 2F")
+            self.assertEqual(rom_data.map_display_name(24, 10, "石之洞窟"), "石之洞窟 大吾处")
+            self.assertEqual(rom_data.map_display_name(14, 7, "绿岭市"), "绿岭市 大吾家")
             named_encounters = {"18": [{"map_group": 35, "map_number": 2, "location": "地图 35-2"}]}
             rom_data.apply_map_display_names_to_encounters(named_encounters, [{
                 "id": "35-2",

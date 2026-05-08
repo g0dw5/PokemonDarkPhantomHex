@@ -128,7 +128,9 @@ SCRIPT_COMMAND_LENGTHS = {
     0x64: 3,
     0x67: 5,
     0x68: 1,
+    0x69: 1,
     0x6A: 1,
+    0x6B: 1,
     0x6C: 1,
     0x80: 4,
     0x97: 2,
@@ -184,6 +186,11 @@ POKEEMERALD_ENCOUNTER_MAP_GROUPS = {
         "Underwater_Route124", "Underwater_Route126", "Underwater_Route127", "Underwater_Route128",
         "Underwater_Route129", "Underwater_Route105", "Underwater_Route125",
     ),
+    14: (
+        "MossdeepCity_House1", "MossdeepCity_House2", "MossdeepCity_PokemonCenter_1F",
+        "MossdeepCity_PokemonCenter_2F", "MossdeepCity_Mart", "MossdeepCity_SpaceCenter_1F",
+        "MossdeepCity_SpaceCenter_2F", "MossdeepCity_StevensHouse",
+    ),
     24: (
         "MeteorFalls_1F_1R", "MeteorFalls_1F_2R", "MeteorFalls_B1F_1R", "MeteorFalls_B1F_2R",
         "RusturfTunnel", "Underwater_SootopolisCity", "DesertRuins", "GraniteCave_1F", "GraniteCave_B1F",
@@ -223,6 +230,10 @@ POKEEMERALD_ENCOUNTER_MAP_GROUPS = {
     32: (
         "WeatherInstitute_1F", "WeatherInstitute_2F", "Route119_House",
     ),
+}
+MAP_NAME_OVERRIDES = {
+    "GraniteCave_StevensRoom": "石之洞窟 大吾处",
+    "MossdeepCity_StevensHouse": "绿岭市 大吾家",
 }
 MAP_NAME_PREFIXES = {
     "PetalburgCity": "橙华市",
@@ -7504,6 +7515,8 @@ def encounter_map_name(map_group: int, map_number: int) -> str:
 
 
 def encounter_map_name_from_key(key: str) -> str:
+    if key in MAP_NAME_OVERRIDES:
+        return MAP_NAME_OVERRIDES[key]
     for prefix, label in MAP_NAME_PREFIXES.items():
         if key == prefix:
             return label
@@ -7969,7 +7982,8 @@ def plausible_script_pointer(rom: bytes, pointer: int) -> int | None:
     first = rom[offset]
     common_script_commands = {
         0x02, 0x03, 0x04, 0x05, 0x06, 0x09, 0x0F, 0x16, 0x19, 0x21, 0x25, 0x26, 0x27, 0x2B,
-        0x5A, 0x5C, 0x66, 0x67, 0x68, 0x6A, 0x6C, SCRIPT_CMD_GIVE_POKEMON, SCRIPT_CMD_GIVE_EGG,
+        0x51, 0x53, 0x55, 0x5A, 0x5C, 0x66, 0x67, 0x68, 0x69, 0x6A, 0x6B, 0x6C,
+        SCRIPT_CMD_GIVE_POKEMON, SCRIPT_CMD_GIVE_EGG,
         SCRIPT_CMD_SET_WILD_BATTLE,
     }
     return offset if first in common_script_commands else None
