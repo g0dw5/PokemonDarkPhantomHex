@@ -1580,7 +1580,7 @@ function pokemonEncounterPanel(speciesId) {
   const row = nameRow("species", speciesId);
   const encounters = row?.detail?.encounters || [];
   if (!encounters.length) return `<div class="detail-field encounter-panel"><span class="detail-label">Encounter</span><div class="detail-value muted">无 Encounter 数据</div></div>`;
-  return `<div class="detail-field encounter-panel"><span class="detail-label">Encounter</span><div class="encounter-list">${encounters.slice(0, 6).map(encounter => `<span>${escapeHtml(encounterLabel(encounter))} · 几率 ${escapeHtml(encounter.rate)} · 槽位 ${escapeHtml((encounter.slots || []).join("/"))}</span>`).join("")}${encounters.length > 6 ? `<span class="muted">+${encounters.length - 6}</span>` : ""}</div></div>`;
+  return `<div class="detail-field encounter-panel"><span class="detail-label">Encounter</span><div class="encounter-list">${encounters.slice(0, 6).map(encounter => `<span>${escapeHtml(encounterLabel(encounter))} · 几率 ${escapeHtml(encounterRateLabel(encounter))}</span>`).join("")}${encounters.length > 6 ? `<span class="muted">+${encounters.length - 6}</span>` : ""}</div></div>`;
 }
 function refreshFormSpeciesMeta() {
   const typeTarget = document.getElementById("form-types");
@@ -2230,6 +2230,11 @@ function encounterLabel(encounter) {
   const level = encounter.min_level === encounter.max_level ? `Lv${encounter.min_level}` : `Lv${encounter.min_level}-${encounter.max_level}`;
   return `${encounter.location} ${encounter.method} ${level}`;
 }
+function encounterRateLabel(encounter) {
+  const rate = Number(encounter.rate);
+  if (!Number.isFinite(rate)) return "";
+  return `${rate}%`;
+}
 function renderTypeChart() {
   const profile = typeDefenseProfile(typeDefenseA, typeDefenseB);
   const head = `<tr><th>攻击 \\ 防守</th>${TYPE_CHART_IDS.map(id => `<th>${escapeHtml(TYPE_NAMES[id])}</th>`).join("")}</tr>`;
@@ -2401,7 +2406,7 @@ function dictionaryInspectorHtml(row) {
     fields.push(["捕获率", detail.catch_rate]);
     fields.push(["击败经验", detail.exp_yield]);
     fields.push(["野生携带", (detail.wild_items || []).map(item => `#${item.id} ${item.name}`).join("；")]);
-    fields.push(["Encounter", (detail.encounters || []).map(encounter => `${encounterLabel(encounter)}，几率 ${encounter.rate}，槽位 ${(encounter.slots || []).join("/")}`).join("；"), true]);
+    fields.push(["Encounter", (detail.encounters || []).map(encounter => `${encounterLabel(encounter)}，几率 ${encounterRateLabel(encounter)}`).join("；"), true]);
   }
   if (row.locations?.length) fields.push(["存档引用", dictionaryLocationButtons(row.locations), true, true]);
   return `<div class="detail-grid">${fields.filter(([, value]) => value !== undefined && value !== null && String(value) !== "").map(([label, value, wide, html]) => `<div class="detail-field ${wide ? "wide" : ""}"><span class="detail-label">${escapeHtml(label)}</span><div class="detail-value">${html ? value : escapeHtml(value)}</div></div>`).join("")}</div>`;
