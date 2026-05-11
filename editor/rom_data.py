@@ -7398,7 +7398,7 @@ def extract_table(rom: bytes, spec: TableSpec) -> dict[str, dict]:
 def extract_move_descriptions(rom: bytes) -> dict[int, str]:
     descriptions: dict[int, str] = {}
     for move_id in range(1, MOVE_COUNT):
-        pointer_offset = MOVE_DESCRIPTION_POINTERS_OFFSET + move_id * 4
+        pointer_offset = MOVE_DESCRIPTION_POINTERS_OFFSET + (move_id - 1) * 4
         if pointer_offset + 4 > len(rom):
             break
         pointer = int.from_bytes(rom[pointer_offset : pointer_offset + 4], "little")

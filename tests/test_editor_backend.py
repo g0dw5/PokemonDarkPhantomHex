@@ -50,6 +50,13 @@ def fake_rom(path: Path) -> None:
     for move_id, pp in ((33, 35), (45, 30), (150, 15), (151, 10)):
         rom[core.MOVE_DATA_OFFSET + move_id * core.MOVE_DATA_SIZE + core.MOVE_PP_OFFSET] = pp
 
+    move6_desc_offset = 0x614100
+    move7_desc_offset = 0x614110
+    _w32(rom, rom_data.MOVE_DESCRIPTION_POINTERS_OFFSET + (6 - 1) * 4, core.GBA_ROM_POINTER_BASE + move6_desc_offset)
+    _w32(rom, rom_data.MOVE_DESCRIPTION_POINTERS_OFFSET + (7 - 1) * 4, core.GBA_ROM_POINTER_BASE + move7_desc_offset)
+    rom[move6_desc_offset : move6_desc_offset + 4] = bytes([0xBB, 0xBC, 0xBD, 0xFF])
+    rom[move7_desc_offset : move7_desc_offset + 4] = bytes([0xBC, 0xBD, 0xBE, 0xFF])
+
     learnset_offset = 0x610000
     pointer_offset = core.LEVEL_UP_LEARNSET_POINTERS_OFFSET + (species + core.LEVEL_UP_LEARNSET_SPECIES_OFFSET) * 4
     _w32(rom, pointer_offset, core.GBA_ROM_POINTER_BASE + learnset_offset)
@@ -293,6 +300,8 @@ class BackendEditorTest(unittest.TestCase):
             self.assertTrue(api_constraints["available"])
             self.assertTrue(api_constraints["moves"])
             rom_text = rom_data.extract_rom_text(rom_path)
+            self.assertEqual(rom_text["moves"]["6"]["description"], "ABC")
+            self.assertEqual(rom_text["moves"]["7"]["description"], "BCD")
             self.assertEqual(rom_text["abilities"]["78"]["description"], "ABC")
             encounters = rom_text["species"]["25"]["detail"]["encounters"]
             self.assertEqual(encounters[0]["location"], "103号道路")
